@@ -95,7 +95,8 @@ export function SaveDashboard() {
           Dashboard
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          O save fica no browser (memória + IndexedDB). O servidor só entrega o{" "}
+          Sessão do save aberto: copiar descobertas para o arquivo e devolver
+          o que você guardou. O JSON fica no browser; o servidor só entrega o{" "}
           <code>mapping.json</code>.
         </p>
       </div>

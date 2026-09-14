@@ -26,9 +26,13 @@ export function CategoryView({ category }: { category: Category }) {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Fase 3</CardTitle>
+            <CardTitle>
+              {category === "exosuit" ? "Fase 3 · só layout" : "Fase 3"}
+            </CardTitle>
             <CardDescription>
-              Esta categoria entra depois do round-trip de naves.
+              {category === "exosuit"
+                ? "Arquivar quantidade de slots e posição das tecnologias, se o JSON deixar separar."
+                : "Esta categoria entra no save aberto e no arquivo depois das naves."}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">

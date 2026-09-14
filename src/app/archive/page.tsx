@@ -14,14 +14,16 @@ export default function ArchivePage() {
           Arquivo pessoal
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Itens exportados do save. Implementação na Fase 2.
+          Aqui ficam as descobertas que você guarda. O save aberto só serve para
+          copiar de/para este arquivo (Fase 2).
         </p>
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Vazio por enquanto</CardTitle>
+          <CardTitle>Ainda vazio</CardTitle>
           <CardDescription>
-            O SQLite já existe. A listagem e o arquivar entram na Fase 2.
+            Na Fase 2 esta é a home: lista por categoria (naves, MTs, pets…).
+            Inventário de itens não entra. Traje só como layout.
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">

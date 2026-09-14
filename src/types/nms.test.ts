@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CATEGORIES, CATEGORY_META, isCategory } from "@/types/nms";
+import {
+  CATEGORIES,
+  CATEGORY_META,
+  isCategory,
+  REORDERABLE_CATEGORIES,
+} from "@/types/nms";
 
 describe("categories", () => {
   it("covers every CATEGORIES entry in CATEGORY_META", () => {
@@ -17,6 +22,19 @@ describe("categories", () => {
     expect(isCategory("ship")).toBe(true);
     expect(isCategory("wonder")).toBe(true);
     expect(isCategory("WeaponOwnership")).toBe(false);
+    expect(isCategory("inventory")).toBe(false);
     expect(isCategory("")).toBe(false);
+  });
+
+  it("does not treat inventory as an archive category", () => {
+    expect((CATEGORIES as readonly string[]).includes("inventory")).toBe(false);
+  });
+
+  it("marks ships, multitools and companions as reorderable", () => {
+    expect([...REORDERABLE_CATEGORIES]).toEqual([
+      "ship",
+      "multitool",
+      "companion",
+    ]);
   });
 });
