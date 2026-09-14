@@ -6,12 +6,14 @@ data/
 .env
 .env.local
 .env.*.local
+!.env.example
 
 # Node / Next
 node_modules/
 .next/
 out/
 dist/
+/coverage
 
 # Fixtures reais de save (sintéticos podem ser versionados)
 tests/fixtures/*.hg
@@ -22,3 +24,12 @@ tests/fixtures/*save*.json
 *.swp
 .idea/
 .vscode/
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
