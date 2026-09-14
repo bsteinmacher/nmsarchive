@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "NMS Archive",
   description:
-    "Arquivo pessoal de naves, multi-ferramentas e itens de No Man's Sky.",
+    "Arquivo pessoal de naves, multi-ferramentas e descobertas de No Man's Sky.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

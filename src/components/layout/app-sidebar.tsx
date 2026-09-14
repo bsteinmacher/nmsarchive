@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Archive,
-  Box,
   Dog,
   Home,
   Landmark,
@@ -44,7 +43,6 @@ const CATEGORY_ICONS: Record<Category, ComponentType<{ className?: string }>> = 
   companion: Dog,
   wonder: Sparkles,
   exosuit: Shirt,
-  inventory: Box,
   base: Landmark,
 };
 
@@ -72,7 +70,24 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Categorias</SidebarGroupLabel>
+          <SidebarGroupLabel>Arquivo pessoal</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={active("/archive")}
+                  render={<Link href="/archive" />}
+                >
+                  <Archive />
+                  <span>Descobertas</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarSeparator />
+        <SidebarGroup>
+          <SidebarGroupLabel>Save aberto</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {CATEGORIES.map((category) => {
@@ -95,18 +110,9 @@ export function AppSidebar() {
         </SidebarGroup>
         <SidebarSeparator />
         <SidebarGroup>
-          <SidebarGroupLabel>Arquivo</SidebarGroupLabel>
+          <SidebarGroupLabel>App</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={active("/archive")}
-                  render={<Link href="/archive" />}
-                >
-                  <Archive />
-                  <span>Arquivo pessoal</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={active("/settings")}
@@ -123,7 +129,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <ThemeToggle />
         <p className="px-2 pb-2 text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Fase 1 · o save nunca sobe ao servidor
+          Fase 1 · o arquivo é o produto; o save é a ponte
         </p>
         <Package className="mx-auto mb-2 hidden size-4 text-muted-foreground group-data-[collapsible=icon]:block" />
       </SidebarFooter>
