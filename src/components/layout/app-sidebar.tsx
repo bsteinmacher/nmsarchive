@@ -1,6 +1,7 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -49,6 +50,9 @@ const CATEGORY_ICONS: Record<Category, ComponentType<{ className?: string }>> = 
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const active = (href: string) => mounted && pathname === href;
 
   return (
     <Sidebar collapsible="icon">
@@ -57,7 +61,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               size="lg"
-              isActive={pathname === "/"}
+              isActive={active("/")}
               render={<Link href="/" />}
             >
               <Home />
@@ -77,7 +81,7 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={category}>
                     <SidebarMenuButton
-                      isActive={pathname === meta.href}
+                      isActive={active(meta.href)}
                       render={<Link href={meta.href} />}
                     >
                       <Icon />
@@ -96,7 +100,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={pathname === "/archive"}
+                  isActive={active("/archive")}
                   render={<Link href="/archive" />}
                 >
                   <Archive />
@@ -105,7 +109,7 @@ export function AppSidebar() {
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={pathname === "/settings"}
+                  isActive={active("/settings")}
                   render={<Link href="/settings" />}
                 >
                   <Settings />
@@ -119,7 +123,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <ThemeToggle />
         <p className="px-2 pb-2 text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Fase 0 · o save nunca sobe ao servidor
+          Fase 1 · o save nunca sobe ao servidor
         </p>
         <Package className="mx-auto mb-2 hidden size-4 text-muted-foreground group-data-[collapsible=icon]:block" />
       </SidebarFooter>
