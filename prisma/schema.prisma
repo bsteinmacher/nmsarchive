@@ -1,0 +1,87 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Save {
+  id          String   @id @default(uuid())
+  fileName    String
+  platform    String
+  gameVersion Int?
+  formatHint  String?
+  playerName  String?
+  saveName    String?
+  galaxy      Int?
+  playTimeSec BigInt?
+  sha256      String
+  slotHint    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  items       ArchivedItem[]
+  operations  OperationLog[]
+
+  @@index([sha256])
+}
+
+model ArchivedItem {
+  id             String   @id @default(uuid())
+  category       String
+  name           String
+  seed           String
+  description    String
+  metadata       Json
+  screenshotPath String?
+  coordinates    String?
+  galaxy         Int?
+  sourceSaveId   String?
+  sourceSave     Save?    @relation(fields: [sourceSaveId], references: [id], onDelete: SetNull)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  tags           ItemTag[]
+  operations     OperationLog[]
+
+  @@index([category])
+  @@index([seed])
+  @@index([galaxy])
+}
+
+model Tag {
+  id    String    @id @default(uuid())
+  slug  String    @unique
+  label String
+  items ItemTag[]
+}
+
+model ItemTag {
+  itemId String
+  tagId  String
+  item   ArchivedItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  tag    Tag          @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([itemId, tagId])
+  @@index([tagId])
+}
+
+model OperationLog {
+  id        String        @id @default(uuid())
+  action    String
+  category  String?
+  itemId    String?
+  item      ArchivedItem? @relation(fields: [itemId], references: [id], onDelete: SetNull)
+  saveId    String?
+  save      Save?         @relation(fields: [saveId], references: [id], onDelete: SetNull)
+  detail    Json?
+  createdAt DateTime      @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}
+
+model AppSetting {
+  key   String @id
+  value Json
+}

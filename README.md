@@ -2,11 +2,31 @@
 
 Ferramenta web open-source para catalogar, armazenar e transferir naves, multi-ferramentas, cargueiras, fragatas, pets, wonders e bases entre saves de **No Man's Sky**.
 
-O plano de desenvolvimento (pesquisa de formato `.hg`, schema Prisma, fases e riscos) está em [`PLAN.md`](./PLAN.md).
+O plano está em [`PLAN.md`](./PLAN.md).
 
 ## Status
 
-Planejamento. A implementação começa pela Fase 0 (scaffold) e Fase 1 (MVP: carregar save, listar naves, export/import).
+Fase 0 — scaffold (Next.js, shadcn/ui, Prisma/SQLite, tRPC, Docker). Parser de `.hg` entra na Fase 1.
+
+## Desenvolvimento
+
+```bash
+cp .env.example .env
+mkdir -p data
+npx prisma migrate dev
+npm run dev
+```
+
+Abre [http://localhost:3000](http://localhost:3000).
+
+## Docker
+
+```bash
+mkdir -p data
+docker compose up --build
+```
+
+O app escuta em `127.0.0.1:3000`. O SQLite fica em `./data`.
 
 ## Saves locais
 
