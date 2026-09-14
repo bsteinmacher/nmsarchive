@@ -8,6 +8,7 @@ import { ThemeProvider } from "@/components/theme/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { SaveSessionHydrator } from "@/components/save/save-session-hydrator";
 import { trpc } from "@/lib/trpc";
 
 function getQueryClient() {
@@ -44,6 +45,7 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <trpc.Provider client={trpcClient} queryClient={queryClient}>
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
+            <SaveSessionHydrator />
             <SidebarProvider>{children}</SidebarProvider>
           </TooltipProvider>
           <Toaster />

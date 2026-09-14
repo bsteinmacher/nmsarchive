@@ -12,7 +12,7 @@ export const appRouter = createTRPCRouter({
     return {
       ok: true as const,
       service: "nmsarchive",
-      phase: 0,
+      phase: 1,
       database: "sqlite",
       saves,
       items,

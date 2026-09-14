@@ -6,7 +6,7 @@ O plano está em [`PLAN.md`](./PLAN.md).
 
 ## Status
 
-Fase 0 — scaffold (Next.js, shadcn/ui, Prisma/SQLite, tRPC, Docker). Parser de `.hg` entra na Fase 1.
+Fase 1 — parser LZ4 + mapping no cliente, dashboard do save, naves, export/import `.nmsitem` e download de `save.hg`. O save completo **nunca** vai para o servidor.
 
 ## Desenvolvimento
 
@@ -18,6 +18,23 @@ npm run dev
 ```
 
 Abre [http://localhost:3000](http://localhost:3000).
+
+```bash
+npm test
+```
+
+Vitest cobre o codec LZ4, o walk do `mapping.json` e, se existir, o fixture local `.others/save2.hg` (gitignored). Sem esse arquivo o teste de integração é skip.
+
+## Save no browser
+
+1. Escolha `save.hg` (Steam/GOG). O parse roda num Web Worker.
+2. JSON desofuscado fica em memória + IndexedDB.
+3. Exporta `.nmsitem` / importa no primeiro slot vazio de `ShipOwnership` (sem expandir o array).
+4. “Baixar save” recomprime com LZ4 block (`0xFEEDA1E5`). Há backup do original.
+
+O endpoint `/api/mapping` só cacheia o `mapping.json` do [MBINCompiler](https://github.com/monkeyman192/MBINCompiler/releases/latest). Não aceita upload de save.
+
+JSON do jogo é decodificado em **Latin-1** no round-trip (IDs procedimentais quebram UTF-8). A UI pode mostrar UTF-8 lossy.
 
 ## Docker
 
