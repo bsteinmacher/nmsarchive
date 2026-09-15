@@ -1,3 +1,4 @@
+import { formatGalaxy } from "./galaxies";
 import { asArray, asNumber, asRecord, asString } from "./value";
 
 export const GAME_MODES: Record<number, string> = {
@@ -8,15 +9,6 @@ export const GAME_MODES: Record<number, string> = {
   4: "Survival",
   5: "Permadeath",
   6: "Seasonal",
-};
-
-export const GALAXIES: Record<number, string> = {
-  0: "Euclid",
-  1: "Hilbert Dimension",
-  2: "Calypso",
-  3: "Hesperius Dimension",
-  4: "Hyades",
-  5: "Ickjamatew",
 };
 
 export type PlayerSummary = {
@@ -67,7 +59,7 @@ export function summarizePlayer(json: unknown): PlayerSummary {
     gameMode,
     gameModeLabel: GAME_MODES[gameMode] ?? `modo ${gameMode}`,
     galaxy,
-    galaxyLabel: GALAXIES[galaxy] ?? `galáxia ${galaxy}`,
+    galaxyLabel: formatGalaxy(galaxy),
     playTimeSec: asNumber(common.TotalPlayTime) ?? asNumber(player.TimeAlive) ?? 0,
     units: asNumber(player.Units) ?? 0,
     nanites: asNumber(player.Nanites) ?? 0,

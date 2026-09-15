@@ -24,7 +24,7 @@ export const CATEGORY_META: Record<
     label: "Naves",
     href: "/ship",
     description:
-      "Slots do save aberto (vazios visíveis) e naves guardadas no arquivo.",
+      "Slots do save aberto (vazios visíveis, arraste para reordenar) e naves guardadas no arquivo.",
   },
   multitool: {
     label: "Multi-ferramentas",

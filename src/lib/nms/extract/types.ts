@@ -17,4 +17,6 @@ export type ExtractedShip = ExtractedItem<{
 }> & {
   className: string;
   filename: string;
+  shipType: string;
+  empty: boolean;
 };

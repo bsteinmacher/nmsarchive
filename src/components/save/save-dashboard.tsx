@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, FileJson, Trash2 } from "lucide-react";
+import { Download, FileJson, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,12 +30,42 @@ import { formatPlayTime } from "@/lib/nms/player";
 import { gameVersionMismatch, parseNmsItem } from "@/lib/nmsitem";
 import { downloadNmsItemZip } from "@/lib/nmsitem-zip";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
+import { CurrencyEditDialog, type CurrencyField } from "./currencies-dialog";
 import { UploadDropzone } from "./upload-dropzone";
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-lg border bg-muted/20 px-3 py-2">
       <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-heading text-lg font-medium tabular-nums">{value}</p>
+    </div>
+  );
+}
+
+function CurrencyStat({
+  label,
+  value,
+  onEdit,
+}: {
+  label: string;
+  value: string;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="rounded-lg border bg-muted/20 px-3 py-2">
+      <div className="flex items-center justify-between gap-1">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <Button
+          type="button"
+          size="icon-xs"
+          variant="ghost"
+          aria-label={`Editar ${label}`}
+          className="text-muted-foreground hover:text-foreground"
+          onClick={onEdit}
+        >
+          <Pencil aria-hidden="true" className="size-3" />
+        </Button>
+      </div>
       <p className="font-heading text-lg font-medium tabular-nums">{value}</p>
     </div>
   );
@@ -58,11 +88,14 @@ export function SaveDashboard() {
     typeof parseNmsItem
   > | null>(null);
   const [versionWarning, setVersionWarning] = useState<string | null>(null);
+  const [editingCurrency, setEditingCurrency] = useState<CurrencyField | null>(
+    null,
+  );
 
   async function commitImport(item: ReturnType<typeof parseNmsItem>) {
     try {
       const index = await importShip(item);
-      toast.success(`Nave importada no slot ${index}`);
+      toast.success(`Nave importada no slot ${index + 1}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha no import");
     } finally {
@@ -92,11 +125,11 @@ export function SaveDashboard() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">
-          Dashboard
+          Save aberto
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sessão do save aberto: copiar descobertas para o arquivo e devolver
-          o que você guardou. O JSON fica no browser; o servidor só entrega o{" "}
+          Sessão deste browser: abrir um .hg, conferir moedas e galáxia, copiar
+          naves. O JSON fica no IndexedDB; o servidor só entrega o{" "}
           <code>mapping.json</code>.
         </p>
       </div>
@@ -128,18 +161,26 @@ export function SaveDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Stat
-                label="Galáxia"
-                value={`${summary.galaxyLabel} (${summary.galaxy})`}
-              />
+              <Stat label="Galáxia" value={summary.galaxyLabel} />
               <Stat label="Tempo de jogo" value={formatPlayTime(summary.playTimeSec)} />
               <Stat label="Modo" value={summary.gameModeLabel} />
-              <Stat label="Units" value={summary.units.toLocaleString("pt-BR")} />
-              <Stat label="Nanites" value={summary.nanites.toLocaleString("pt-BR")} />
-              <Stat
-                label="Quicksilver"
-                value={summary.specials.toLocaleString("pt-BR")}
-              />
+              <div className="col-span-full grid gap-3 sm:grid-cols-3">
+                <CurrencyStat
+                  label="Units"
+                  value={summary.units.toLocaleString("pt-BR")}
+                  onEdit={() => setEditingCurrency("units")}
+                />
+                <CurrencyStat
+                  label="Nanites"
+                  value={summary.nanites.toLocaleString("pt-BR")}
+                  onEdit={() => setEditingCurrency("nanites")}
+                />
+                <CurrencyStat
+                  label="Quicksilver"
+                  value={summary.specials.toLocaleString("pt-BR")}
+                  onEdit={() => setEditingCurrency("specials")}
+                />
+              </div>
               <Stat
                 label="Naves"
                 value={`${summary.shipCount} / ${summary.shipSlots}`}
@@ -262,6 +303,11 @@ export function SaveDashboard() {
           </div>
         </>
       ) : null}
+
+      <CurrencyEditDialog
+        field={editingCurrency}
+        onClose={() => setEditingCurrency(null)}
+      />
 
       <Dialog
         open={pendingItem != null}

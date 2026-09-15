@@ -25,6 +25,7 @@ export function ShipDetailDialog({
   onOpenChange: (open: boolean) => void;
 }) {
   const exportShip = useSaveSession((s) => s.exportShip);
+  const slot = ship ? ship.index + 1 : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -32,9 +33,15 @@ export function ShipDetailDialog({
         <DialogHeader>
           <DialogTitle>{ship?.name ?? "Nave"}</DialogTitle>
           <DialogDescription>
-            Classe {ship?.className ?? "?"} · {ship?.seed} · slot {ship?.index}
+            Slot {slot ?? "—"} · Classe {ship?.className ?? "?"} ·{" "}
+            {ship?.shipType || "tipo desconhecido"} · {ship?.seed}
           </DialogDescription>
         </DialogHeader>
+        {ship?.filename ? (
+          <p className="font-mono text-xs break-all text-muted-foreground">
+            Filename: {ship.filename}
+          </p>
+        ) : null}
         {ship ? <JsonTree value={ship.payload} /> : null}
         <DialogFooter>
           <Button

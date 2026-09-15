@@ -6,7 +6,7 @@ O plano está em [`PLAN.md`](./PLAN.md).
 
 ## Status
 
-Fase 1 feita (parser LZ4 + mapping no cliente, dashboard do save, naves, `.nmsitem`). Próximo: Fase 1b (Ship Type, slots vazios, reordenar, moedas, galáxia 1–256) e depois Fase 2 (SQLite = home do arquivo).
+Fase 1 e **Fase 1b** feitas (parser, naves com Ship Type/vazios/drag, moedas, galáxia 1–256, download `.hg`). Próximo: Fase 2 (SQLite = home do arquivo). Falta 1.7 (teste in-game).
 
 O save completo **nunca** vai para o servidor.
 

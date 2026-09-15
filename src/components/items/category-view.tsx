@@ -19,7 +19,11 @@ export function CategoryView({ category }: { category: Category }) {
         <h1 className="font-heading text-2xl font-medium tracking-tight">
           {meta.label}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">{meta.description}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {category === "ship"
+            ? "Slots do save aberto, com vazios visíveis. Arraste para reordenar. Arquivar de verdade entra na Fase 2."
+            : meta.description}
+        </p>
       </div>
       {category === "ship" ? (
         <ShipPanel />

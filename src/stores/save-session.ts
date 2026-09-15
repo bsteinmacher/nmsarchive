@@ -12,7 +12,12 @@ import {
   summarizePlayer,
   type PlayerSummary,
 } from "@/lib/nms/player";
-import { insertShip } from "@/lib/nms/write";
+import {
+  insertShip,
+  reorderShipOwnership,
+  setPlayerCurrencies,
+  type PlayerCurrencies,
+} from "@/lib/nms/write";
 import {
   buildNmsItem,
   type NmsItemFile,
@@ -46,6 +51,8 @@ type SaveSessionState = {
   importShip: (item: NmsItemFile) => Promise<number>;
   exportShip: (index: number) => NmsItemFile;
   exportAllShips: () => NmsItemFile[];
+  reorderShips: (from: number, to: number) => Promise<void>;
+  updateCurrencies: (coins: Partial<PlayerCurrencies>) => Promise<void>;
   downloadRewritten: () => Promise<Uint8Array>;
   downloadOriginal: () => Uint8Array;
 };
@@ -207,7 +214,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   exportShip: (index) => {
     const { ships, summary } = get();
     const ship = ships.find((s) => s.index === index);
-    if (!ship || !summary) throw new Error("Nave não encontrada.");
+    if (!ship || ship.empty || !summary) throw new Error("Nave não encontrada.");
     return buildNmsItem({
       category: "ship",
       name: ship.name,
@@ -221,16 +228,37 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   exportAllShips: () => {
     const { ships, summary } = get();
     if (!summary) throw new Error("Nenhum save aberto.");
-    return ships.map((ship) =>
-      buildNmsItem({
-        category: "ship",
-        name: ship.name,
-        seed: ship.seed,
-        payload: ship.payload,
-        gameVersion: summary.gameVersion,
-        galaxy: summary.galaxy,
-      }),
-    );
+    return ships
+      .filter((ship) => !ship.empty)
+      .map((ship) =>
+        buildNmsItem({
+          category: "ship",
+          name: ship.name,
+          seed: ship.seed,
+          payload: ship.payload,
+          gameVersion: summary.gameVersion,
+          galaxy: summary.galaxy,
+        }),
+      );
+  },
+
+  reorderShips: async (from, to) => {
+    if (mappedJson == null) throw new Error("Nenhum save aberto.");
+    if (from === to) return;
+    const result = reorderShipOwnership(mappedJson, from, to);
+    if (!result.ok) throw new Error(result.error);
+    mappedJson = result.json;
+    await idbSet(IDB_JSON, mappedJson);
+    set(applyParsed(mappedJson, {}));
+  },
+
+  updateCurrencies: async (coins) => {
+    if (mappedJson == null) throw new Error("Nenhum save aberto.");
+    const result = setPlayerCurrencies(mappedJson, coins);
+    if (!result.ok) throw new Error(result.error);
+    mappedJson = result.json;
+    await idbSet(IDB_JSON, mappedJson);
+    set(applyParsed(mappedJson, {}));
   },
 
   downloadRewritten: async () => {
