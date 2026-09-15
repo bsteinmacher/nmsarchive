@@ -601,8 +601,8 @@ nmsarchive/
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx
-│   │   ├── page.tsx              # Fase 1: dashboard do save (provisório). Fase 2: home do arquivo
-│   │   ├── save/page.tsx         # dashboard do save aberto (mover na Fase 2)
+│   │   ├── page.tsx              # Fase 2: home do arquivo
+│   │   ├── save/page.tsx         # dashboard do save aberto
 │   │   ├── archive/page.tsx
 │   │   ├── archive/[category]/page.tsx
 │   │   ├── settings/page.tsx
@@ -745,6 +745,8 @@ A Fase 1 entregou um editor de naves. Isto alinhou o save session com o que o ar
 ---
 
 ### Fase 2 — Banco e arquivo pessoal (o produto)
+
+**Status: feita** (checklist 2.1–2.4). Não começar a Fase 3.
 
 **Objetivo:** o que você guarda sobrevive ao fechar o browser. A home passa a ser o arquivo.
 
@@ -947,10 +949,10 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 [x] 1b.3 dialog Units / Nanites / QS
 [x] 1b.4 galáxia display 1–256
 [x] 1b.5 sidebar Arquivo vs Save aberto
-[ ] 2.1 routers items/saves/logs
-[ ] 2.2 backup sqlite hook
-[ ] 2.3 home = arquivo + categorias do archive
-[ ] 2.4 mover dashboard para /save
+[x] 2.1 routers items/saves/logs
+[x] 2.2 backup sqlite hook
+[x] 2.3 home = arquivo + categorias do archive
+[x] 2.4 mover dashboard para /save
 [ ] 3.x adapters (multitool + companion c/ reorder → traje layout → … → wonder)
 [ ] 4.x tags/screenshots/filtros
 [ ] 5.x docs + compose + mapping updater + galaxies.ts completo

@@ -21,7 +21,7 @@ export function CategoryView({ category }: { category: Category }) {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {category === "ship"
-            ? "Slots do save aberto, com vazios visíveis. Arraste para reordenar. Arquivar de verdade entra na Fase 2."
+            ? "Slots do save aberto, com vazios visíveis. Arraste para reordenar. Use Arquivar para mandar uma nave ao arquivo pessoal."
             : meta.description}
         </p>
       </div>

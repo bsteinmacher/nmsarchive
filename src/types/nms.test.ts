@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  archiveHref,
   CATEGORIES,
   CATEGORY_META,
   isCategory,
@@ -36,5 +37,10 @@ describe("categories", () => {
       "multitool",
       "companion",
     ]);
+  });
+
+  it("builds archive hrefs", () => {
+    expect(archiveHref()).toBe("/");
+    expect(archiveHref("ship")).toBe("/archive/ship");
   });
 });

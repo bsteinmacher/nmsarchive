@@ -1,7 +1,7 @@
 "use client";
 
-import { SaveDashboard } from "@/components/save/save-dashboard";
+import { ArchiveHome } from "@/components/items/archive-home";
 
 export default function HomePage() {
-  return <SaveDashboard />;
+  return <ArchiveHome />;
 }

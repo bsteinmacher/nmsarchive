@@ -19,10 +19,12 @@ export function ShipDetailDialog({
   ship,
   open,
   onOpenChange,
+  onArchive,
 }: {
   ship: ExtractedShip | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onArchive?: (ship: ExtractedShip) => void;
 }) {
   const exportShip = useSaveSession((s) => s.exportShip);
   const slot = ship ? ship.index + 1 : null;
@@ -44,6 +46,16 @@ export function ShipDetailDialog({
         ) : null}
         {ship ? <JsonTree value={ship.payload} /> : null}
         <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (!ship) return;
+              onArchive?.(ship);
+            }}
+          >
+            Arquivar
+          </Button>
           <Button
             type="button"
             onClick={() => {

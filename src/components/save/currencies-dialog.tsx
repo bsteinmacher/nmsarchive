@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useId, useState, type FormEvent } from "react";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ export function CurrencyEditDialog({
   const inputId = useId();
   const hintId = useId();
   const errorId = useId();
+  const [fieldKey, setFieldKey] = useState<CurrencyField | null>(null);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
   const meta = field ? FIELD_META[field] : null;
@@ -60,11 +61,14 @@ export function CurrencyEditDialog({
   const unitsOutOfRange =
     field === "units" && parsed != null && unitsOutsideRange(parsed);
 
-  useEffect(() => {
-    if (!field || !summary) return;
+  if (field && summary && field !== fieldKey) {
+    setFieldKey(field);
     setValue(String(summary[field]));
     setError(null);
-  }, [field, summary]);
+  }
+  if (!field && fieldKey != null) {
+    setFieldKey(null);
+  }
 
   async function commit() {
     if (!field || !meta) return;
