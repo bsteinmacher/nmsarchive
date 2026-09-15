@@ -1,4 +1,8 @@
 import { prisma } from "@/server/db";
+import { itemsRouter } from "@/server/trpc/routers/items";
+import { logsRouter } from "@/server/trpc/routers/logs";
+import { savesRouter } from "@/server/trpc/routers/saves";
+import { settingsRouter } from "@/server/trpc/routers/settings";
 import { createTRPCRouter, publicProcedure } from "@/server/trpc/trpc";
 
 export const appRouter = createTRPCRouter({
@@ -12,12 +16,16 @@ export const appRouter = createTRPCRouter({
     return {
       ok: true as const,
       service: "nmsarchive",
-      phase: 1,
+      phase: 2,
       database: "sqlite",
       saves,
       items,
     };
   }),
+  saves: savesRouter,
+  items: itemsRouter,
+  logs: logsRouter,
+  settings: settingsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -3,7 +3,9 @@
 import { create } from "zustand";
 import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
 import { encodeHgClient, parseHgClient } from "@/lib/nms/client";
+import { detect } from "@/lib/nms/detect";
 import { listShips, type ExtractedShip } from "@/lib/nms/extract";
+import { sha256Hex } from "@/lib/sha256";
 import {
   parseMappingFile,
   type MappingFile,
@@ -32,6 +34,8 @@ type SessionMeta = {
   fileName: string;
   unknownKeys: string[];
   mappingVersion: string;
+  sha256?: string;
+  formatHint?: string;
 };
 
 type Status = "idle" | "hydrating" | "loading" | "ready" | "error";
@@ -42,6 +46,8 @@ type SaveSessionState = {
   error: string | null;
   fileName: string | null;
   mappingVersion: string | null;
+  sha256: string | null;
+  formatHint: string | null;
   unknownKeys: string[];
   summary: PlayerSummary | null;
   ships: ExtractedShip[];
@@ -101,6 +107,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   error: null,
   fileName: null,
   mappingVersion: null,
+  sha256: null,
+  formatHint: null,
   unknownKeys: [],
   summary: null,
   ships: [],
@@ -120,12 +128,20 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
         originalBytes = original as Uint8Array;
         mappingFile = mapping as MappingFile;
         const sessionMeta = meta as SessionMeta;
+        const sha256 =
+          sessionMeta.sha256 ?? (await sha256Hex(originalBytes));
+        const formatHint = sessionMeta.formatHint ?? detect(originalBytes);
+        if (!sessionMeta.sha256) {
+          await idbSet(IDB_META, { ...sessionMeta, sha256, formatHint });
+        }
         set(
           applyParsed(json, {
             hydrated: true,
             fileName: sessionMeta.fileName,
             unknownKeys: sessionMeta.unknownKeys,
             mappingVersion: sessionMeta.mappingVersion,
+            sha256,
+            formatHint,
           }),
         );
         return;
@@ -146,6 +162,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       ]);
       const bytes = new Uint8Array(buffer);
       const parsed = await parseHgClient(bytes, mapping);
+      const sha256 = await sha256Hex(bytes);
+      const formatHint = detect(bytes);
       mappedJson = parsed.json;
       originalBytes = bytes;
       mappingFile = mapping;
@@ -153,6 +171,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
         fileName: file.name,
         unknownKeys: parsed.unknownKeys,
         mappingVersion: parsed.mappingVersion,
+        sha256,
+        formatHint,
       };
       await Promise.all([
         idbSet(IDB_JSON, parsed.json),
@@ -165,6 +185,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
           fileName: file.name,
           unknownKeys: parsed.unknownKeys,
           mappingVersion: parsed.mappingVersion,
+          sha256,
+          formatHint,
         }),
       );
     } catch (err) {
@@ -190,6 +212,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       error: null,
       fileName: null,
       mappingVersion: null,
+      sha256: null,
+      formatHint: null,
       unknownKeys: [],
       summary: null,
       ships: [],

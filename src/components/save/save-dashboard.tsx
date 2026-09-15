@@ -129,8 +129,8 @@ export function SaveDashboard() {
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Sessão deste browser: abrir um .hg, conferir moedas e galáxia, copiar
-          naves. O JSON fica no IndexedDB; o servidor só entrega o{" "}
-          <code>mapping.json</code>.
+          naves. O JSON fica no IndexedDB; o servidor só recebe o item
+          arquivado, nunca o .hg.
         </p>
       </div>
 

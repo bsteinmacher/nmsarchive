@@ -25,6 +25,7 @@ import type { ExtractedShip } from "@/lib/nms/extract/types";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { useSaveSession } from "@/stores/save-session";
 import { ShipDetailDialog } from "./ship-detail-dialog";
+import { ArchiveShipDialog } from "./archive-ship-dialog";
 
 function dash(value: string) {
   return value || "—";
@@ -38,6 +39,7 @@ export function ShipPanel() {
   const exportShip = useSaveSession((s) => s.exportShip);
   const reorderShips = useSaveSession((s) => s.reorderShips);
   const [selected, setSelected] = useState<ExtractedShip | null>(null);
+  const [archiving, setArchiving] = useState<ExtractedShip | null>(null);
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const [liveMessage, setLiveMessage] = useState("");
@@ -78,7 +80,7 @@ export function ShipPanel() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Link href="/" className={cn(buttonVariants())}>
+          <Link href="/save" className={cn(buttonVariants())}>
             Ir ao dashboard
           </Link>
         </CardContent>
@@ -206,6 +208,13 @@ export function ShipPanel() {
                             <Button
                               size="sm"
                               variant="outline"
+                              onClick={() => setArchiving(ship)}
+                            >
+                              Arquivar
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
                               onClick={() => {
                                 try {
                                   downloadNmsItemFile(exportShip(ship.index));
@@ -237,6 +246,17 @@ export function ShipPanel() {
         open={selected != null}
         onOpenChange={(open) => {
           if (!open) setSelected(null);
+        }}
+        onArchive={(ship) => {
+          setSelected(null);
+          setArchiving(ship);
+        }}
+      />
+      <ArchiveShipDialog
+        ship={archiving}
+        open={archiving != null}
+        onOpenChange={(open) => {
+          if (!open) setArchiving(null);
         }}
       />
     </>

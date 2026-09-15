@@ -73,3 +73,7 @@ export function isReorderableCategory(
 ): value is ReorderableCategory {
   return (REORDERABLE_CATEGORIES as readonly string[]).includes(value);
 }
+
+export function archiveHref(category?: Category): "/" | `/archive/${Category}` {
+  return category ? `/archive/${category}` : "/";
+}

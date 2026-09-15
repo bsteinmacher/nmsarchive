@@ -6,7 +6,7 @@ O plano está em [`PLAN.md`](./PLAN.md).
 
 ## Status
 
-Fase 1 e **Fase 1b** feitas (parser, naves com Ship Type/vazios/drag, moedas, galáxia 1–256, download `.hg`). Próximo: Fase 2 (SQLite = home do arquivo). Falta 1.7 (teste in-game).
+Fase 2 feita (SQLite = home do arquivo, arquivar/aplicar naves, backup, settings). Próximo: Fase 3 (demais categorias). Falta 1.7 (teste in-game).
 
 O save completo **nunca** vai para o servidor.
 
@@ -24,7 +24,7 @@ npx prisma migrate dev
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000).
+Abre [http://localhost:3000](http://localhost:3000) — a home é o **arquivo pessoal**. O dashboard do save ficou em `/save`.
 
 ```bash
 npm test
