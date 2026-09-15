@@ -6,7 +6,7 @@ O plano está em [`PLAN.md`](./PLAN.md).
 
 ## Status
 
-Fase 2 feita (SQLite = home do arquivo, arquivar/aplicar naves, backup, settings). Próximo: Fase 3 (demais categorias). Falta 1.7 (teste in-game).
+Fase 3 feita (todas as categorias arquiváveis; naves/MT/pets reordenam; traje = layout). Próximo: Fase 4 (screenshots, tags, filtros). Falta 1.7 (teste in-game).
 
 O save completo **nunca** vai para o servidor.
 

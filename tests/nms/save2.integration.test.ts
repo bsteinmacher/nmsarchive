@@ -4,6 +4,18 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { detect } from "@/lib/nms/detect";
 import { listFilledShips, listShips } from "@/lib/nms/extract/ships";
+import { listMultitools } from "@/lib/nms/extract/multitools";
+import { listCompanions } from "@/lib/nms/extract/companions";
+import {
+  extractExosuitLayout,
+  exosuitHasSubstanceSlots,
+  listExosuit,
+} from "@/lib/nms/extract/exosuit";
+import { listFreighters } from "@/lib/nms/extract/freighters";
+import { listFrigates } from "@/lib/nms/extract/frigates";
+import { listBases } from "@/lib/nms/extract/bases";
+import { listWonders } from "@/lib/nms/extract/wonders";
+import { reorderCategory } from "@/lib/nms/extract";
 import {
   collectHighByteStrings,
   countHighBytes,
@@ -109,6 +121,60 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(after.PrimaryShip).toBe(9);
       expect(asLength(after.ShipOwnership)).toBe(12);
       expect(asLength(after.ShipUsesLegacyColours)).toBe(12);
+    },
+    60_000,
+  );
+
+  it(
+    "lista as categorias da Fase 3 no save2 (MT, pets, traje, frota, wonders)",
+    async () => {
+      const mapping = await loadMappingCached();
+      const bytes = new Uint8Array(readFileSync(savePath));
+      const parsed = parseHg(bytes, mapping);
+
+      const tools = listMultitools(parsed.json);
+      expect(tools).toHaveLength(6);
+      expect(tools.filter((t) => !t.empty)).toHaveLength(4);
+      expect(tools[4]?.empty).toBe(true);
+      expect(tools.some((t) => t.itemType === "Atlas Staff")).toBe(true);
+
+      const pets = listCompanions(parsed.json);
+      expect(pets).toHaveLength(30);
+      expect(pets.filter((p) => !p.empty)).toHaveLength(30);
+
+      const suit = listExosuit(parsed.json);
+      expect(suit).toHaveLength(1);
+      expect(Number(suit[0]?.extra.tech)).toBeGreaterThan(0);
+      expect(Number(suit[0]?.extra.supercharged)).toBe(3);
+      const layout = extractExosuitLayout(parsed.json);
+      expect(layout).toBeTruthy();
+      expect(exosuitHasSubstanceSlots(layout)).toBe(false);
+
+      const freighters = listFreighters(parsed.json);
+      expect(freighters[0]?.empty).toBe(false);
+      expect(freighters[0]?.itemType).toBe("Pirate");
+      expect(freighters.filter((f) => f.empty)).toHaveLength(8);
+
+      expect(listFrigates(parsed.json)).toHaveLength(17);
+      expect(listBases(parsed.json)).toHaveLength(68);
+
+      const wonders = listWonders(parsed.json);
+      const personal = wonders.filter((w) => w.group !== "automatic");
+      const auto = wonders.filter((w) => w.group === "automatic");
+      expect(personal).toHaveLength(12);
+      expect(personal.filter((w) => !w.empty)).toHaveLength(12);
+      expect(auto.length).toBe(15 + 8 + 8 + 11 + 13 + 11);
+      expect(auto.every((w) => w.readonly)).toBe(true);
+
+      const reordered = reorderCategory(parsed.json, "multitool", 2, 4);
+      expect(reordered.ok).toBe(true);
+      if (!reordered.ok) return;
+      const after = listMultitools(reordered.json);
+      expect(after).toHaveLength(6);
+      expect(after[4]?.empty).toBe(false);
+      expect(after[2]?.empty).toBe(true);
+      const player = getPlayerState(reordered.json)!;
+      expect(player.ActiveMultioolIndex).toBe(4);
     },
     60_000,
   );

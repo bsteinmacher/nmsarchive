@@ -39,7 +39,7 @@ describe(".nmsitem", () => {
       gameVersion: 1,
       payload,
     });
-    expect(shipSeedMismatch(item)).toMatch(/Resource.Seed/);
+    expect(shipSeedMismatch(item)).toMatch(/payload/);
   });
 
   it("rejeita JSON sem envelope", () => {

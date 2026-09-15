@@ -11,6 +11,7 @@ function ship(partial: Partial<ExtractedShip> & Pick<ExtractedShip, "index" | "s
     className: "S",
     filename: "FIGHTER_PROC",
     shipType: "Fighter",
+    itemType: "Fighter",
     empty: false,
     ...partial,
   };

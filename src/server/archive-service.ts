@@ -153,12 +153,6 @@ export async function createSaveMetadata(
 }
 
 export async function archiveItem(prisma: PrismaClient, input: ArchiveItemInput) {
-  if (input.category !== "ship") {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Nesta fase só naves podem ser arquivadas.",
-    });
-  }
   if (input.sourceSaveId) {
     const save = await prisma.save.findUnique({
       where: { id: input.sourceSaveId },

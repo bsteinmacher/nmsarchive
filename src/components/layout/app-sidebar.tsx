@@ -150,7 +150,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <ThemeToggle />
         <p className="px-2 pb-2 text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Fase 2 · o save é a ponte
+          Fase 3 · o save é a ponte
         </p>
       </SidebarFooter>
       <SidebarRail />

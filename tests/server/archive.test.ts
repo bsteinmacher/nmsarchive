@@ -98,16 +98,16 @@ describe("archive-service", () => {
     ]);
   });
 
-  it("recusa categoria que não é nave", async () => {
-    await expect(
-      archiveItem(prisma, {
-        category: "multitool",
-        name: "MT",
-        seed: "0x1",
-        description: "ainda não",
-        metadata: { gameVersion: 1, payload: {} },
-        tags: [],
-      }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  it("aceita as categorias arquiváveis da Fase 3", async () => {
+    const archived = await archiveItem(prisma, {
+      category: "multitool",
+      name: "Atlas Sceptre",
+      seed: "0x1",
+      description: "staff atlas",
+      metadata: { gameVersion: 1, shipType: "Atlas Staff", payload: {} },
+      tags: [],
+    });
+    expect(archived.category).toBe("multitool");
+    expect(archived.shipType).toBe("Atlas Staff");
   });
 });
