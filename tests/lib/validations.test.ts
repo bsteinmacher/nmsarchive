@@ -27,6 +27,27 @@ describe("validations", () => {
     expect(parsed.success).toBe(false);
   });
 
+  it("screenshotPath no archive só aceita UUID.webp", () => {
+    const bad = archiveItemInputSchema.safeParse({
+      category: "ship",
+      name: "X",
+      seed: "0xabc",
+      description: "ok",
+      metadata: { gameVersion: 1, payload: {} },
+      screenshotPath: "../secret.webp",
+    });
+    expect(bad.success).toBe(false);
+    const good = archiveItemInputSchema.safeParse({
+      category: "ship",
+      name: "X",
+      seed: "0xabc",
+      description: "ok",
+      metadata: { gameVersion: 1, payload: {} },
+      screenshotPath: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee.webp",
+    });
+    expect(good.success).toBe(true);
+  });
+
   it("sha256 do createMetadata precisa ser 64 hex", () => {
     const bad = saveMetadataInputSchema.safeParse({
       fileName: "save.hg",

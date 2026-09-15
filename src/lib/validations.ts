@@ -44,6 +44,19 @@ export const archivedMetadataSchema = z.object({
 
 export type ArchivedMetadata = z.infer<typeof archivedMetadataSchema>;
 
+export const ITEM_CLASSES = ["S", "A", "B", "C"] as const;
+export type ItemClass = (typeof ITEM_CLASSES)[number];
+
+export const itemClassSchema = z.enum(ITEM_CLASSES);
+
+/** Basename UUID.webp — o único path de screenshot aceito no banco. */
+export const SCREENSHOT_FILE_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.webp$/i;
+
+export const screenshotPathSchema = z
+  .string()
+  .regex(SCREENSHOT_FILE_RE, "Screenshot inválido.");
+
 export const saveMetadataInputSchema = z.object({
   fileName: z.string().trim().min(1).max(260),
   platform: z.string().trim().min(1).max(64),
@@ -63,7 +76,7 @@ export const archiveItemInputSchema = z.object({
   seed: seedSchema,
   description: descriptionSchema,
   metadata: archivedMetadataSchema,
-  screenshotPath: z.string().max(500).optional(),
+  screenshotPath: screenshotPathSchema.optional(),
   coordinates: z.string().trim().max(32).optional(),
   galaxy: z.number().int().min(0).max(255).optional(),
   sourceSaveId: z.string().uuid().optional(),
@@ -74,10 +87,23 @@ export const updateItemInputSchema = z.object({
   id: z.string().uuid(),
   description: descriptionSchema.optional(),
   tags: tagsSchema.optional(),
+  screenshotPath: screenshotPathSchema.nullable().optional(),
+  className: z.string().trim().max(16).nullable().optional(),
+  extra: z.record(z.string(), z.string()).optional(),
 });
 
 export const listItemsInputSchema = z.object({
   category: categorySchema.optional(),
+  className: z.string().trim().min(1).max(16).optional(),
+  itemType: z.string().trim().min(1).max(80).optional(),
+  tags: z.array(z.string().trim().min(1).max(TAG_LABEL_MAX)).max(TAGS_MAX).optional(),
+  galaxy: z.number().int().min(0).max(255).optional(),
+  q: z.string().trim().min(1).max(200).optional(),
+  seed: seedSchema.optional(),
+});
+
+export const listTagsInputSchema = z.object({
+  q: z.string().trim().max(40).optional(),
 });
 
 export const itemIdInputSchema = z.object({

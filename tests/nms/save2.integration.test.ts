@@ -141,6 +141,18 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       const pets = listCompanions(parsed.json);
       expect(pets).toHaveLength(30);
       expect(pets.filter((p) => !p.empty)).toHaveLength(30);
+      expect(pets[0]).toMatchObject({
+        extra: {
+          biome: "Lush",
+          element: "Mecânico",
+          level: "0",
+        },
+      });
+      expect(pets[0]?.extra.classes).toBeUndefined();
+      expect(pets.some((p) => p.extra.biome === "Frozen" && p.extra.element === "Gelo")).toBe(
+        true,
+      );
+      expect(pets.every((p) => p.seed.startsWith("0x"))).toBe(true);
 
       const suit = listExosuit(parsed.json);
       expect(suit).toHaveLength(1);

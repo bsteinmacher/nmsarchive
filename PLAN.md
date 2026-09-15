@@ -768,7 +768,7 @@ Sim, o arquivo tem lista de categorias — é a navegação principal. As catego
 
 ### Fase 3 — Todas as categorias
 
-**Status: feita** (checklist 3.1–3.8). Não começar a Fase 4.
+**Status: feita** (checklist 3.1–3.8). Fase 4 feita — ver bloco abaixo.
 
 Cada categoria é um **adapter** com a mesma interface:
 
@@ -810,11 +810,13 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ### Fase 4 — Screenshots, tags, filtros
 
-1. Upload de screenshot (webp, max 1 MB) → `data/screenshots/<id>.webp`.
+**Status: feita** (checklist 4.1–4.5). Não começar a Fase 5.
+
+1. Upload de screenshot (webp, max 1 MB) → `data/screenshots/<id>.webp`. Path no disco; magic-bytes no servidor (só WebP; JPEG/PNG viram WebP no browser).
 2. Tags com autocomplete (`Tag.slug`).
-3. Filtros no **arquivo**: classe, Ship Type (§2.7.3), tags, galáxia (**display 1–256**, filtro no índice 0–255), texto livre (nome + descrição).
+3. Filtros no **arquivo**: classe, Ship Type / tipo do item, tags, galáxia (**display 1–256**, filtro no índice 0–255), texto livre (nome + descrição).
 4. Grade com thumb; tabela sem thumb.
-5. Comparação visual: item do save vs. arquivado (diff raso de seed/class/Ship Type + JSON diff colapsável).
+5. Comparação visual: item do save vs. arquivado (diff raso de seed/class/tipo + JSON diff colapsável).
 
 **Aceite:** filtrar `S-class` + tag `exotic` retorna o conjunto certo; screenshot aparece no dialog.
 
@@ -967,7 +969,11 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 [x] 3.6 bases (`PersistentPlayerBases`; aviso de .nmsitem grande)
 [x] 3.7 wonders pessoais (`WonderCustomRecords` + extra); automáticos read-only
 [x] 3.8 arquivo `/archive/[category]` + `items.archive` para todas as categorias
-[ ] 4.x tags/screenshots/filtros
+[x] 4.1 screenshot upload webp max 1 MB (`data/screenshots/<uuid>.webp`)
+[x] 4.2 tags com autocomplete (`Tag.slug`)
+[x] 4.3 filtros no arquivo (classe, tipo, tags, galáxia 1–256, texto)
+[x] 4.4 grade com thumb / tabela sem thumb
+[x] 4.5 compare save vs. arquivado (diff raso + JSON colapsável)
 [ ] 5.x docs + compose + mapping updater + galaxies.ts completo
 ```
 

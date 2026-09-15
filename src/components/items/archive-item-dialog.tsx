@@ -11,12 +11,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CompanionRankField } from "@/components/items/companion-rank-field";
 import { getAdapter, isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
+import {
+  companionRankExtra,
+  emptyCompanionRank,
+  formatCompanionRank,
+  type CompanionRank,
+} from "@/lib/nms/extract/companion-battle";
 import { trpc } from "@/lib/trpc";
-import { parseTagInput } from "@/lib/validations";
+import { ScreenshotField } from "@/components/items/screenshot-field";
+import { TagInput } from "@/components/items/tag-input";
 import { useSaveSession } from "@/stores/save-session";
 import { type Category } from "@/types/nms";
 
@@ -42,14 +49,18 @@ export function ArchiveItemDialog({
   const tagsId = useId();
   const errorId = useId();
   const [description, setDescription] = useState("");
-  const [tagsRaw, setTagsRaw] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
+  const [rank, setRank] = useState<CompanionRank>(emptyCompanionRank);
   const [error, setError] = useState<string | null>(null);
   const pending = createMeta.isPending || archive.isPending;
   const adapter = getAdapter(category);
 
   function reset() {
     setDescription("");
-    setTagsRaw("");
+    setTags([]);
+    setScreenshotPath(null);
+    setRank(emptyCompanionRank());
     setError(null);
   }
 
@@ -77,6 +88,7 @@ export function ArchiveItemDialog({
         playTimeSec: summary.playTimeSec,
         sha256,
       });
+      const rankLabel = formatCompanionRank(rank);
       await archive.mutateAsync({
         category,
         name: item.name,
@@ -84,19 +96,28 @@ export function ArchiveItemDialog({
         description: trimmed,
         metadata: {
           gameVersion: summary.gameVersion,
-          className: item.className || undefined,
+          className:
+            category === "companion"
+              ? rankLabel || undefined
+              : item.className || undefined,
           shipType: item.itemType || undefined,
           filename: item.filename || undefined,
-          extra: item.extra,
+          extra:
+            category === "companion"
+              ? companionRankExtra(item.extra, rank)
+              : item.extra,
           payload: item.payload,
         },
         galaxy: summary.galaxy,
         sourceSaveId: save.id,
-        tags: parseTagInput(tagsRaw),
+        tags,
+        screenshotPath: screenshotPath ?? undefined,
       });
       await Promise.all([
         utils.items.list.invalidate(),
         utils.items.counts.invalidate(),
+        utils.items.filterOptions.invalidate(),
+        utils.items.listTags.invalidate(),
         utils.logs.list.invalidate(),
       ]);
       toast.success(`${item.name} foi para o arquivo pessoal.`);
@@ -120,7 +141,7 @@ export function ArchiveItemDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Arquivar {item?.name ?? adapter.label}</DialogTitle>
           <DialogDescription>
@@ -168,18 +189,24 @@ export function ArchiveItemDialog({
           </div>
           <div className="grid gap-2">
             <Label htmlFor={tagsId}>Tags</Label>
-            <Input
+            <TagInput
               id={tagsId}
-              name="tags"
-              value={tagsRaw}
-              onChange={(e) => setTagsRaw(e.target.value)}
-              placeholder="exotic, S-class"
-              autoComplete="off"
+              value={tags}
+              onChange={setTags}
+              placeholder="exotic"
             />
             <p className="text-xs text-muted-foreground">
-              Opcional. Separe com vírgula.
+              Opcional. Digite para ver tags já usadas.
             </p>
           </div>
+          <ScreenshotField
+            path={screenshotPath}
+            onPathChange={setScreenshotPath}
+            disabled={pending}
+          />
+          {category === "companion" ? (
+            <CompanionRankField value={rank} onChange={setRank} disabled={pending} />
+          ) : null}
           <DialogFooter>
             <Button
               type="button"

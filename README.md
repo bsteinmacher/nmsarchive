@@ -6,7 +6,7 @@ O plano está em [`PLAN.md`](./PLAN.md).
 
 ## Status
 
-Fase 3 feita (todas as categorias arquiváveis; naves/MT/pets reordenam; traje = layout). Próximo: Fase 4 (screenshots, tags, filtros). Falta 1.7 (teste in-game).
+Fase 4 feita (screenshots, tags, filtros, compare). Próximo: Fase 5 (deploy, docs, mapping updater). Falta 1.7 (teste in-game).
 
 O save completo **nunca** vai para o servidor.
 

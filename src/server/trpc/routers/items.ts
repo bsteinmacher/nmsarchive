@@ -3,6 +3,7 @@ import {
   archiveItemInputSchema,
   itemIdInputSchema,
   listItemsInputSchema,
+  listTagsInputSchema,
   updateItemInputSchema,
 } from "@/lib/validations";
 import {
@@ -10,7 +11,9 @@ import {
   countItemsByCategory,
   deleteItem,
   getItem,
+  listFilterOptions,
   listItems,
+  listTags,
   updateItem,
 } from "@/server/archive-service";
 import { backupDatabase } from "@/server/backup";
@@ -38,9 +41,17 @@ export const itemsRouter = createTRPCRouter({
     }),
 
   list: publicProcedure.input(listItemsInputSchema).query(async ({ input }) => {
-    const items = await listItems(prisma, input.category);
+    const items = await listItems(prisma, input);
     return { items, total: items.length };
   }),
+
+  filterOptions: publicProcedure
+    .input(listItemsInputSchema.pick({ category: true }))
+    .query(async ({ input }) => listFilterOptions(prisma, input.category)),
+
+  listTags: publicProcedure
+    .input(listTagsInputSchema.optional())
+    .query(async ({ input }) => listTags(prisma, input?.q)),
 
   counts: publicProcedure.query(async () => countItemsByCategory(prisma)),
 
@@ -51,10 +62,16 @@ export const itemsRouter = createTRPCRouter({
   update: publicProcedure
     .input(updateItemInputSchema)
     .mutation(async ({ input }) => {
-      if (input.description == null && !input.tags) {
+      if (
+        input.description == null &&
+        !input.tags &&
+        input.screenshotPath === undefined &&
+        input.className === undefined &&
+        !input.extra
+      ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Informe descrição ou tags para atualizar.",
+          message: "Informe descrição, tags, screenshot ou rank para atualizar.",
         });
       }
       return updateItem(prisma, input);

@@ -1,0 +1,90 @@
+"use client";
+
+import { archiveUiCategory, matchingItems } from "@/lib/archive-match";
+import { formatGalaxy } from "@/lib/nms/galaxies";
+import type { ArchivedItemSummary } from "@/types/archive";
+import { CATEGORY_META, isCategory } from "@/types/nms";
+import { useSaveSession } from "@/stores/save-session";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+
+export function ItemTable({
+  items,
+  onSelect,
+}: {
+  items: ArchivedItemSummary[];
+  onSelect: (id: string) => void;
+}) {
+  const sessionItems = useSaveSession((s) => s.items);
+  const saveReady = useSaveSession((s) => s.status === "ready");
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Nome</TableHead>
+          <TableHead>Classe</TableHead>
+          <TableHead>Tipo</TableHead>
+          <TableHead>Seed</TableHead>
+          <TableHead>Galáxia</TableHead>
+          <TableHead>Tags</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {items.map((item) => {
+          const slots =
+            saveReady && isCategory(item.category)
+              ? matchingItems(
+                  sessionItems[item.category],
+                  item.seed,
+                  item.category,
+                )
+              : [];
+          const uiCategory = archiveUiCategory(item);
+          const typeLabel =
+            item.shipType ||
+            (isCategory(uiCategory)
+              ? CATEGORY_META[uiCategory].label
+              : item.category);
+          return (
+            <TableRow key={item.id}>
+              <TableCell className="font-medium">
+                <button
+                  type="button"
+                  onClick={() => onSelect(item.id)}
+                  className="min-h-8 w-full rounded-md px-1 py-1 text-left hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                >
+                  <span className="break-words whitespace-normal">{item.name}</span>
+                  {slots.length > 0 ? (
+                    <span className="mt-1 block text-xs font-normal text-muted-foreground">
+                      No save · slot {slots[0].slotLabel ?? slots[0].index + 1}
+                    </span>
+                  ) : null}
+                </button>
+              </TableCell>
+              <TableCell>{item.className || "—"}</TableCell>
+              <TableCell className="whitespace-normal">{typeLabel}</TableCell>
+              <TableCell className="font-mono text-xs whitespace-normal break-all">
+                {item.seed}
+              </TableCell>
+              <TableCell className="whitespace-normal">
+                {item.galaxy != null ? formatGalaxy(item.galaxy) : "—"}
+              </TableCell>
+              <TableCell className="whitespace-normal text-muted-foreground">
+                {item.tags.length
+                  ? item.tags.map((t) => t.label).join(" · ")
+                  : "—"}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+    </Table>
+  );
+}

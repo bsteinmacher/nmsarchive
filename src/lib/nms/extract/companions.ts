@@ -2,8 +2,8 @@ import { getPlayerState } from "../player";
 import { remapSlotIndex, reorderSlots } from "../reorder";
 import { asArray, asNumber, asRecord, asString, normalizeSeed } from "../value";
 import { clonePlayer, insertAtFirstEmpty, replaceAtIndex } from "./array";
-import { biomeLabel, displayId } from "./names";
-import { emptySlotLabel } from "./names";
+import { companionBattleStats } from "./companion-battle";
+import { displayId, emptySlotLabel } from "./names";
 import type {
   CategoryAdapter,
   ExtractedSlot,
@@ -52,9 +52,9 @@ export function listCompanions(json: unknown): ExtractedSlot[] {
       };
     }
     const itemType = displayId(rec.CreatureID);
-    const biome = biomeLabel(rec.Biome);
     const descriptors = asArray(rec.Descriptors) ?? [];
     const seed = companionSeedFromPayload(rec);
+    const battle = companionBattleStats(rec);
     return {
       category: "companion",
       index,
@@ -65,9 +65,11 @@ export function listCompanions(json: unknown): ExtractedSlot[] {
       filename: "",
       empty: false,
       extra: {
-        biome,
+        biome: battle.biome,
         species: itemType,
         descriptors: String(descriptors.length),
+        element: battle.element,
+        level: battle.level,
       },
       payload: rec,
     };
@@ -157,8 +159,9 @@ export const companionsAdapter: CategoryAdapter = {
   category: "companion",
   label: "Companions",
   columns: [
-    { id: "itemType", header: "Espécie" },
-    { id: "biome", header: "Biome" },
+    { id: "level", header: "Nível" },
+    { id: "element", header: "Elemento" },
+    { id: "biome", header: "Bioma" },
     { id: "seed", header: "Seed" },
   ],
   list: listCompanions,

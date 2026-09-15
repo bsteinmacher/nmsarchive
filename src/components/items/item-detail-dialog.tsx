@@ -11,10 +11,13 @@ import {
   gameVersionMismatch,
   type NmsItemFile,
 } from "@/lib/nmsitem";
-import { parseTagInput } from "@/lib/validations";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { trpc } from "@/lib/trpc";
+import { ItemCompare } from "@/components/items/item-compare";
 import { JsonTree } from "@/components/items/json-tree";
+import { ScreenshotField } from "@/components/items/screenshot-field";
+import { TagInput } from "@/components/items/tag-input";
+import { CompanionRankField } from "@/components/items/companion-rank-field";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { CATEGORY_META, isCategory } from "@/types/nms";
 import {
@@ -25,10 +28,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "cn";
+import {
+  companionRankExtra,
+  companionRankFromMetadata,
+  emptyCompanionRank,
+  formatCompanionRank,
+  type CompanionRank,
+} from "@/lib/nms/extract/companion-battle";
 
 export function ItemDetailDialog({
   itemId,
@@ -55,7 +64,9 @@ export function ItemDetailDialog({
   const errorId = useId();
   const [draftId, setDraftId] = useState<string | null>(null);
   const [description, setDescription] = useState("");
-  const [tagsRaw, setTagsRaw] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
+  const [rank, setRank] = useState<CompanionRank>(emptyCompanionRank);
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingItem, setPendingItem] = useState<NmsItemFile | null>(null);
@@ -64,7 +75,14 @@ export function ItemDetailDialog({
   if (item && item.id !== draftId) {
     setDraftId(item.id);
     setDescription(item.description);
-    setTagsRaw(item.tags.map((t) => t.label).join(", "));
+    setTags(item.tags.map((t) => t.label));
+    setScreenshotPath(item.screenshotPath);
+    setRank(
+      companionRankFromMetadata({
+        className: item.className,
+        extra: item.metadata.extra,
+      }),
+    );
     setError(null);
     setConfirmDelete(false);
   }
@@ -151,14 +169,23 @@ export function ItemDetailDialog({
       await update.mutateAsync({
         id: item.id,
         description: trimmed,
-        tags: parseTagInput(tagsRaw),
+        tags,
+        screenshotPath,
+        ...(item.category === "companion"
+          ? {
+              className: formatCompanionRank(rank) || null,
+              extra: companionRankExtra(item.metadata.extra ?? {}, rank),
+            }
+          : {}),
       });
       await Promise.all([
         utils.items.get.invalidate({ id: item.id }),
         utils.items.list.invalidate(),
+        utils.items.filterOptions.invalidate(),
+        utils.items.listTags.invalidate(),
         utils.logs.list.invalidate(),
       ]);
-      toast.success("Descrição e tags atualizadas.");
+      toast.success("Alterações salvas.");
       setError(null);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao atualizar");
@@ -230,6 +257,30 @@ export function ItemDetailDialog({
                 </p>
               )}
 
+              <ScreenshotField
+                path={screenshotPath}
+                onPathChange={setScreenshotPath}
+                disabled={update.isPending}
+              />
+
+              {saveReady && matches[0] ? (
+                <ItemCompare
+                  archived={{
+                    seed: item.seed,
+                    className: item.className,
+                    itemType: item.shipType,
+                    payload: item.payload,
+                  }}
+                  save={{
+                    seed: matches[0].seed,
+                    className: matches[0].className,
+                    itemType: matches[0].itemType,
+                    payload: matches[0].payload,
+                  }}
+                  saveLabel={`slot ${matches[0].slotLabel ?? matches[0].index + 1}`}
+                />
+              ) : null}
+
               <form className="grid gap-3" onSubmit={onSaveEdits} noValidate>
                 <div className="grid gap-2">
                   <Label htmlFor={descriptionId}>Descrição</Label>
@@ -248,14 +299,20 @@ export function ItemDetailDialog({
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor={tagsId}>Tags</Label>
-                  <Input
+                  <TagInput
                     id={tagsId}
-                    value={tagsRaw}
-                    onChange={(e) => setTagsRaw(e.target.value)}
-                    placeholder="exotic, S-class"
-                    autoComplete="off"
+                    value={tags}
+                    onChange={setTags}
+                    placeholder="exotic"
                   />
                 </div>
+                {item.category === "companion" ? (
+                  <CompanionRankField
+                    value={rank}
+                    onChange={setRank}
+                    disabled={update.isPending}
+                  />
+                ) : null}
                 <div>
                   <Button
                     type="submit"
@@ -263,7 +320,7 @@ export function ItemDetailDialog({
                     size="sm"
                     disabled={update.isPending}
                   >
-                    {update.isPending ? "Salvando…" : "Salvar descrição"}
+                    {update.isPending ? "Salvando…" : "Salvar alterações"}
                   </Button>
                 </div>
               </form>
