@@ -1,4 +1,5 @@
 import { getPlayerState } from "../player";
+import { shipTypeFromFilename } from "../ship-type";
 import {
   asRecord,
   asString,
@@ -14,15 +15,31 @@ export function isEmptyShipSlot(slot: unknown): boolean {
   return !filename;
 }
 
+export function emptySlotLabel(index: number): string {
+  return `Slot ${index + 1} vazio`;
+}
+
 export function listShips(json: unknown): ExtractedShip[] {
   const player = getPlayerState(json);
   const ships = player?.ShipOwnership;
   if (!Array.isArray(ships)) return [];
 
-  const out: ExtractedShip[] = [];
-  ships.forEach((slot, index) => {
-    if (isEmptyShipSlot(slot)) return;
+  return ships.map((slot, index): ExtractedShip => {
     const rec = asRecord(slot) ?? {};
+    if (isEmptyShipSlot(slot)) {
+      return {
+        category: "ship" as const,
+        index,
+        name: emptySlotLabel(index),
+        seed: "",
+        className: "",
+        filename: "",
+        shipType: "",
+        empty: true,
+        extra: {},
+        payload: rec,
+      };
+    }
     const resource = asRecord(rec.Resource) ?? {};
     const filename = asString(resource.Filename) ?? "";
     const inventory = asRecord(rec.Inventory) ?? {};
@@ -31,18 +48,24 @@ export function listShips(json: unknown): ExtractedShip[] {
     const rawName = asString(rec.Name) ?? "";
     const name = rawName || nameFromFilename(filename);
     const seed = normalizeSeed(resource.Seed);
-    out.push({
-      category: "ship",
+    const shipType = shipTypeFromFilename(filename);
+    return {
+      category: "ship" as const,
       index,
       name,
       seed,
       className,
       filename,
-      extra: { class: className, filename },
+      shipType,
+      empty: false,
+      extra: { class: className, filename, shipType },
       payload: rec,
-    });
+    };
   });
-  return out;
+}
+
+export function listFilledShips(json: unknown): ExtractedShip[] {
+  return listShips(json).filter((ship) => !ship.empty);
 }
 
 export function shipSeedFromPayload(payload: unknown): string {

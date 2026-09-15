@@ -108,6 +108,20 @@ Até a Fase 2 existir de verdade, `/` pode continuar no dashboard do save — ma
 
 Rotas de categoria do save: `/{category}` (já existem). Rotas do arquivo: `/archive` e `/archive/[category]` (Fase 2). Não duplicar a mesma tabela nos dois lugares com o mesmo título.
 
+### 1.6 Skills de UI no Cursor (já instaladas)
+
+Coleção [jakubkrehel/skills](https://github.com/jakubkrehel/skills) instalada **no usuário** (`~/.agents/skills/`), não no git deste repo. O Cursor descobre sozinho. Agents: **usar** em telas, copy e a11y; **não** usar no parser LZ4/mapping/Prisma.
+
+| Skill | Quando |
+|---|---|
+| `better-ui`, `better-layout`, `better-accessibility` | Tabela de naves, dialogs, dropzone, hit areas |
+| `better-writing` | Empty states, Arquivo vs Save aberto, erros |
+| `interface-review` | Passada no fim de uma fase de UI (1b, 2, 4) |
+| `better-colors`, `better-typography` | Só se o tema/shadcn pedir; não converter o design system no meio de uma fase |
+| `break`, `variant` | Iterar um componente isolado |
+
+Invocar pelo nome (`/better-ui`, `/interface-review`) ou aplicar quando a tarefa for claramente visual. Não atrasar aceite funcional por polish.
+
 ---
 
 ## 2. Pesquisa técnica (saves `.hg`)
@@ -255,7 +269,7 @@ Raiz típica (saves recentes):
 | Campo | Uso |
 |---|---|
 | `SaveSummary` | Resumo (“In the X system”) |
-| `Units`, `Nanites`, `Specials` | Moedas (`Specials` = Quicksilver). `Units` pode ser **negativo** (overflow i32). Editáveis no dashboard (ícone → dialog). |
+| `Units`, `Nanites`, `Specials` | Moedas (`Specials` = Quicksilver). Units no jogo: **0 a 4.294.967.295** (uint32, ~4,29 bi). Dashboard: lápis pequeno **por moeda**, dialog edita só aquele campo. Menu único de moedas/galáxia fica para depois (não é o arquivo). |
 | `UniverseAddress.RealityIndex` | Índice **0–255** no save. A comunidade fala **1–256**. Euclid = `0` = “galáxia 1”. Ver §2.7.2 |
 | `UniverseAddress.GalacticAddress` | VoxelX/Y/Z, SolarSystemIndex, PlanetIndex |
 | `Inventory`, `Inventory_TechOnly`, `Inventory_Cargo` | Exosuit |
@@ -411,7 +425,7 @@ Inventário genérico de itens **não** é categoria. Fora do `CATEGORIES`.
 
 Não filtrar vazios na tabela (a Fase 1 fez isso — corrigir na 1b). Export/arquivar/import só em slot preenchido; import ainda cai no primeiro vazio e **não** expande o array.
 
-Reordenar (drag-and-drop na lista): trocar elementos do array, length constante. Slots vazios participam (arrastar a Horizon Vector NX para a 2ª posição, o que estava lá vai para o lugar antigo). Ao mover, atualizar ponteiros do jogo se existirem (`ActiveMultioolIndex`, índice da nave ativa — **probe** na implementação). Não compactar. Primitive compartilhada: `reorderSlots(arr, from, to)`.
+Reordenar (drag-and-drop na lista): trocar elementos do array, length constante. Slots vazios participam (arrastar a Horizon Vector NX para a 2ª posição, o que estava lá vai para o lugar antigo). **Só arrastar** — sem atalho de setas no teclado (confundiu na 1b). Ao mover, atualizar ponteiros do jogo se existirem. Probe no `save2.hg`: `PrimaryShip`, `CorvetteEditAssociatedShipIndex`; array paralelo `ShipUsesLegacyColours` (length 12) reordena junto. `CurrentShip` é Resource, não índice. Não compactar. Primitive: `reorderSlots(arr, from, to)`.
 
 Primeiro em naves (1b); o mesmo gesto em multi-tools e companions na Fase 3.
 
@@ -692,7 +706,7 @@ Cada fase termina com um critério de aceite testável. Prompts sugeridos para o
 
 ### Fase 1 — MVP (carregar save, listar naves, export/import local)
 
-**Status: feita** (parser + testes + dashboard + `/ship` + `.nmsitem` + download `.hg`). Falta 1.7 in-game e o polimento da **Fase 1b**.
+**Status: feita** (parser + testes + dashboard + `/ship` + `.nmsitem` + download `.hg`). Falta 1.7 in-game. **Fase 1b feita** — ver bloco abaixo.
 
 **Objetivo original:** round-trip `save.hg` → JSON → naves na UI → export `.nmsitem` → import para outro slot vazio → download de `save.hg` novo. Sem banco de arquivo pessoal ainda (download do `.nmsitem` basta).
 
@@ -710,15 +724,17 @@ Cada fase termina com um critério de aceite testável. Prompts sugeridos para o
 
 ### Fase 1b — Save aberto usável (antes de virar o arquivo)
 
-A Fase 1 entregou um editor de naves. Isto alinha o save session com o que o arquivo vai precisar, sem ainda o SQLite de itens.
+**Status: feita** (checklist 1b.1–1b.5). Falta só 1.7 in-game (Fase 1).
 
-1. **Tabela de naves:** colunas `Slot | Nome | Classe | Ship Type | Seed | Ações`. Sem Filename na tabela. Slots vazios visíveis (“Slot 3 vazio”).
-2. **Reordenar naves** por drag-and-drop; `ShipOwnership` troca de índice; length fixo. Teste com fixture sintético + `save2.hg`.
-3. **Moedas no dashboard:** ícone ao lado de Units / Nanites / Quicksilver abre um dialog para editar os três (`PlayerStateData.Units|Nanites|Specials`). Avisar overflow i32 em Units. Persistir no JSON da sessão (IndexedDB) e no próximo “Baixar save”.
-4. **Galáxia na UI:** mostrar `index+1` e o nome se conhecido (Euclid, Hilbert, …). Guardar 0–255.
-5. Copy da sidebar: grupo “Arquivo pessoal” vs “Save aberto”. `/` ainda pode ser o dashboard até a Fase 2.
+A Fase 1 entregou um editor de naves. Isto alinhou o save session com o que o arquivo vai precisar, sem ainda o SQLite de itens.
 
-**Aceite:** lista de 12 linhas no `save2.hg` (10 naves + 2 vazios); arrastar uma nave preenchida para um vazio atualiza a ordem; dialog de moedas grava no JSON; galáxia Euclid aparece como 1, não 0.
+1. **Tabela de naves:** colunas `Slot | Nome | Classe | Ship Type | Seed | Ações`. Sem Filename na tabela (fica no dialog). Slots vazios visíveis (“Slot {n} vazio”). `lib/nms/ship-type.ts`.
+2. **Reordenar naves** por drag-and-drop; `ShipOwnership` troca de índice; length fixo; vazios participam. Sem setas no teclado. Teste sintético + `save2.hg`. Ponteiros: `PrimaryShip`, `CorvetteEditAssociatedShipIndex` + `ShipUsesLegacyColours`.
+3. **Moedas no dashboard:** lápis pequeno **em cada** Units / Nanites / Quicksilver; dialog edita só aquele campo (`PlayerStateData.Units|Nanites|Specials`). Units 0–4.294.967.295. IndexedDB + “Baixar save” (Recomprimido LZ4). Menu único de moedas/galáxia = depois, não nesta fase.
+4. **Galáxia na UI:** `display = index+1` (`src/lib/nms/galaxies.ts`). JSON / `.nmsitem` guardam 0–255. Euclid = 1. Save de ref. `save2.hg` = RealityIndex 255 → “256 · Odyalutai”.
+5. Sidebar: “Arquivo pessoal” (`/archive` placeholder) vs “Save aberto” (Dashboard `/` + categorias). Home **não** é `/archive` até a Fase 2.
+
+**Aceite (verificado no browser + Vitest):** 12 linhas no `save2.hg` (10 + 2 vazios); arrastar preenchida ↔ vazio; lápis por moeda grava no JSON; Euclid seria 1 (teste unitário); save2 mostra 256.
 
 **Prompt Cursor:**
 
@@ -838,7 +854,7 @@ O que quebra de verdade:
 | Tecnologia/item ID novo num save antigo | Item some ou vira cubo vermelho |
 | Supercharged slots (`SpecialSlots`) num save que não conhece | Slots extras ignorados ou crash de UI |
 | Corvette → save sem Voyagers | Array desconhecido; potencialmente ignorado |
-| `Units` overflow i32 | Já acontece *in-game*; ao editar, preferir `BigInt`/`number` e não clamar |
+| `Units` acima de ~4,29 bi | Teto uint32 (0–4.294.967.295). Avisar se o valor sair disso; `number` JS cobre o intervalo |
 | Tamanho de inventário acima do vanilla | GoatFungus avisa que o jogo *pode quebrar* |
 | Base `Objects[]` entre updates | Peças de construção removidas / IDs mudados = base fantasma |
 
@@ -926,11 +942,11 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 [x] 1.5 extract ships + página
 [x] 1.6 .nmsitem export/import + download .hg
 [ ] 1.7 teste manual in-game
-[ ] 1b.1 Ship Type + slots vazios na tabela
-[ ] 1b.2 reorder naves (drag)
-[ ] 1b.3 dialog Units / Nanites / QS
-[ ] 1b.4 galáxia display 1–256
-[ ] 1b.5 sidebar Arquivo vs Save aberto
+[x] 1b.1 Ship Type + slots vazios na tabela
+[x] 1b.2 reorder naves (drag)
+[x] 1b.3 dialog Units / Nanites / QS
+[x] 1b.4 galáxia display 1–256
+[x] 1b.5 sidebar Arquivo vs Save aberto
 [ ] 2.1 routers items/saves/logs
 [ ] 2.2 backup sqlite hook
 [ ] 2.3 home = arquivo + categorias do archive
@@ -955,6 +971,7 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 - Formato 2000 (legacy): [MetaIdea/nms-savetool](https://github.com/MetaIdea/nms-savetool)
 - Estrutura JSON de naves/inventário: [pljeroen/nmstoolkit](https://github.com/pljeroen/nmstoolkit), issues GoatFungus (#1030 naves, #533/#1308 pets)
 - Lista de galáxias NMS (256 nomes, 1-based na wiki): preencher `src/lib/nms/galaxies.ts` na Fase 5 / quando couber
+- Skills de UI (Cursor, usuário): [jakubkrehel/skills](https://github.com/jakubkrehel/skills) — ver §1.6
 
 ---
 
@@ -1102,6 +1119,6 @@ model AppSetting {
 
 A Fase 0 e a 1 já estão no repo. Cole no Cursor:
 
-> Implemente a Fase 1b do PLAN.md: na lista de naves, Ship Type no lugar de Filename e slots vazios visíveis; drag-and-drop para reordenar ShipOwnership; no dashboard, ícone para editar Units/Nanites/Quicksilver; galáxia na UI como 1–256 (índice 0–255 no JSON). Fixture `.others/save2.hg`. Não persista o save no servidor. Não comece a Fase 2.
+> Implemente a Fase 1b do PLAN.md: na lista de naves, Ship Type no lugar de Filename e slots vazios visíveis; drag-and-drop para reordenar ShipOwnership; no dashboard, ícone para editar Units/Nanites/Quicksilver; galáxia na UI como 1–256 (índice 0–255 no JSON). Fixture `.others/save2.hg`. Não persista o save no servidor. Não comece a Fase 2. Skills de UI já estão no usuário (`~/.agents/skills/`, §1.6): use better-ui / better-layout / better-writing / better-accessibility nesta fase; interface-review no fim. Não use essas skills no parser.
 
 Depois da 1b (e do round-trip in-game da nave), aí sim a Fase 2 — home = arquivo pessoal.

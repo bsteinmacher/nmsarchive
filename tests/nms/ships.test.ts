@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listShips } from "@/lib/nms/extract/ships";
+import { listFilledShips, listShips } from "@/lib/nms/extract/ships";
 import { insertShip } from "@/lib/nms/write";
 
 const emptySlot = {
@@ -27,15 +27,23 @@ function saveWithSlots(slots: unknown[]) {
 }
 
 describe("extract/insert ships", () => {
-  it("lista só slots com Filename preenchido", () => {
+  it("lista todos os slots, inclusive vazios, com Ship Type", () => {
     const ships = listShips(saveWithSlots([filled, emptySlot]));
-    expect(ships).toHaveLength(1);
+    expect(ships).toHaveLength(2);
     expect(ships[0]).toMatchObject({
       index: 0,
       name: "Golden Vector",
       seed: "0xabcdef",
       className: "S",
+      shipType: "Fighter",
+      empty: false,
     });
+    expect(ships[1]).toMatchObject({
+      index: 1,
+      name: "Slot 2 vazio",
+      empty: true,
+    });
+    expect(listFilledShips(saveWithSlots([filled, emptySlot]))).toHaveLength(1);
   });
 
   it("importa no primeiro slot vazio e recusa se estiver cheio", () => {
@@ -46,6 +54,7 @@ describe("extract/insert ships", () => {
     expect(ok.ok).toBe(true);
     if (ok.ok) {
       expect(ok.index).toBe(1);
+      expect(listFilledShips(ok.json)).toHaveLength(2);
       expect(listShips(ok.json)).toHaveLength(2);
     }
 

@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { detect } from "@/lib/nms/detect";
-import { listShips } from "@/lib/nms/extract/ships";
+import { listFilledShips, listShips } from "@/lib/nms/extract/ships";
 import {
   collectHighByteStrings,
   countHighBytes,
@@ -14,6 +14,8 @@ import {
 import { decodeHg, decodeHgDetailed, encodeHg } from "@/lib/nms/lz4-blocks";
 import { loadMappingCached } from "@/lib/nms/mapping-node";
 import { parseHg, writeHg } from "@/lib/nms/parse";
+import { getPlayerState } from "@/lib/nms/player";
+import { reorderShipOwnership } from "@/lib/nms/write";
 
 const savePath = path.join(process.cwd(), ".others", "save2.hg");
 const hasSave = existsSync(savePath);
@@ -43,8 +45,16 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(parsed.summary.platform).toBe("Win|Final");
       expect(parsed.summary.gameMode).toBe(5);
       expect(parsed.unknownKeys).toEqual([]);
-      expect(parsed.ships.length).toBe(10);
+      expect(parsed.ships).toHaveLength(12);
+      expect(parsed.ships.filter((s) => !s.empty)).toHaveLength(10);
+      expect(parsed.summary.shipCount).toBe(10);
       expect(parsed.summary.shipSlots).toBe(12);
+      expect(parsed.ships[9]?.empty).toBe(true);
+      expect(parsed.ships[9]?.name).toBe("Slot 10 vazio");
+      expect(parsed.ships[11]?.empty).toBe(true);
+      expect(parsed.ships[10]?.shipType).toBe("Fighter");
+      expect(parsed.summary.galaxy).toBe(255);
+      expect(parsed.summary.galaxyLabel).toBe("256 · Odyalutai");
 
       const highBefore = collectHighByteStrings(parseJsonLatin1(decoded.bytes));
       expect(highBefore.length).toBeGreaterThan(0);
@@ -67,8 +77,43 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(createHash("sha256").update(jsonAgain).digest("hex")).toBe(
         createHash("sha256").update(stripped).digest("hex"),
       );
-      expect(listShips(parsed.json)).toHaveLength(10);
+      expect(listShips(parsed.json)).toHaveLength(12);
+      expect(listFilledShips(parsed.json)).toHaveLength(10);
+    },
+    60_000,
+  );
+
+  it(
+    "reordena ShipOwnership no save2 sem compactar e atualiza PrimaryShip",
+    async () => {
+      const mapping = await loadMappingCached();
+      const bytes = new Uint8Array(readFileSync(savePath));
+      const parsed = parseHg(bytes, mapping);
+      const before = getPlayerState(parsed.json)!;
+      expect(before.PrimaryShip).toBe(10);
+      expect(listShips(parsed.json)[10]?.name).toBe("Horizon Vector NX");
+
+      const result = reorderShipOwnership(parsed.json, 10, 9);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const ships = listShips(result.json);
+      expect(ships).toHaveLength(12);
+      expect(ships[9]?.name).toBe("Horizon Vector NX");
+      expect(ships[9]?.empty).toBe(false);
+      expect(ships[10]?.empty).toBe(true);
+      expect(ships[10]?.name).toBe("Slot 11 vazio");
+      expect(listFilledShips(result.json)).toHaveLength(10);
+
+      const after = getPlayerState(result.json)!;
+      expect(after.PrimaryShip).toBe(9);
+      expect(asLength(after.ShipOwnership)).toBe(12);
+      expect(asLength(after.ShipUsesLegacyColours)).toBe(12);
     },
     60_000,
   );
 });
+
+function asLength(value: unknown): number {
+  return Array.isArray(value) ? value.length : -1;
+}

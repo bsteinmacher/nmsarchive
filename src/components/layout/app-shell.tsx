@@ -15,7 +15,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             Arquivo pessoal · o save é só a ponte
           </span>
         </header>
-        <div className="flex flex-1 flex-col p-6">{children}</div>
+        <main className="flex flex-1 flex-col p-6">{children}</main>
       </SidebarInset>
     </>
   );

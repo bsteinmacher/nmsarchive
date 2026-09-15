@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   Archive,
   Dog,
-  Home,
+  LayoutDashboard,
   Landmark,
   Package,
   Rocket,
@@ -55,18 +55,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              isActive={active("/")}
-              render={<Link href="/" />}
-            >
-              <Home />
-              <span className="font-heading font-medium">NMS Archive</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+        <div className="flex h-12 items-center gap-2 overflow-hidden px-2 group-data-[collapsible=icon]:justify-center">
+          <Package className="size-4 shrink-0" aria-hidden="true" />
+          <span className="font-heading font-medium group-data-[collapsible=icon]:hidden">
+            NMS Archive
+          </span>
+        </div>
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
@@ -90,6 +84,15 @@ export function AppSidebar() {
           <SidebarGroupLabel>Save aberto</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={active("/")}
+                  render={<Link href="/" />}
+                >
+                  <LayoutDashboard />
+                  <span>Dashboard</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               {CATEGORIES.map((category) => {
                 const meta = CATEGORY_META[category];
                 const Icon = CATEGORY_ICONS[category];
@@ -129,9 +132,8 @@ export function AppSidebar() {
       <SidebarFooter>
         <ThemeToggle />
         <p className="px-2 pb-2 text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Fase 1 · o arquivo é o produto; o save é a ponte
+          Fase 1b · o save é a ponte
         </p>
-        <Package className="mx-auto mb-2 hidden size-4 text-muted-foreground group-data-[collapsible=icon]:block" />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

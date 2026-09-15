@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -25,13 +26,33 @@ import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { useSaveSession } from "@/stores/save-session";
 import { ShipDetailDialog } from "./ship-detail-dialog";
 
+function dash(value: string) {
+  return value || "—";
+}
+
 export function ShipPanel() {
   const status = useSaveSession((s) => s.status);
   const hydrated = useSaveSession((s) => s.hydrated);
   const ships = useSaveSession((s) => s.ships);
   const summary = useSaveSession((s) => s.summary);
   const exportShip = useSaveSession((s) => s.exportShip);
+  const reorderShips = useSaveSession((s) => s.reorderShips);
   const [selected, setSelected] = useState<ExtractedShip | null>(null);
+  const [dragging, setDragging] = useState<number | null>(null);
+  const [over, setOver] = useState<number | null>(null);
+  const [liveMessage, setLiveMessage] = useState("");
+
+  async function moveSlot(from: number, to: number) {
+    if (from === to || to < 0 || to >= ships.length) return;
+    try {
+      await reorderShips(from, to);
+      setLiveMessage(
+        `Slot ${from + 1} trocado com o slot ${to + 1}.`,
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao reordenar");
+    }
+  }
 
   if (!hydrated || status === "hydrating") {
     return (
@@ -52,7 +73,8 @@ export function ShipPanel() {
         <CardHeader>
           <CardTitle>Nenhum save aberto</CardTitle>
           <CardDescription>
-            Carregue um <code>save.hg</code> no dashboard para listar naves.
+            Carregue um save.hg no dashboard para ver os 12 slots de nave,
+            inclusive os vazios.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -64,75 +86,147 @@ export function ShipPanel() {
     );
   }
 
+  const filled = ships.filter((s) => !s.empty).length;
+
   return (
     <>
       <Card>
         <CardHeader>
           <CardTitle>
-            ShipOwnership ({ships.length} preenchidas / {summary.shipSlots}{" "}
-            slots)
+            Naves no save ({filled} preenchidas / {summary.shipSlots} slots)
           </CardTitle>
           <CardDescription>
-            Slots vazios (<code>Resource.Filename == &quot;&quot;</code>) ficam
-            de fora. Importar usa o primeiro vazio, sem expandir o array.
+            Arraste pela alça para trocar de lugar — slots vazios entram na
+            troca e o array não muda de tamanho.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <p role="status" aria-live="polite" className="sr-only">
+            {liveMessage}
+          </p>
           {ships.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              Nenhuma nave preenchida neste save.
+              Este save não tem ShipOwnership. A categoria fica indisponível até
+              o jogo criar os slots.
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <span className="sr-only">Reordenar</span>
+                  </TableHead>
+                  <TableHead>Slot</TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Classe</TableHead>
+                  <TableHead>Ship Type</TableHead>
                   <TableHead>Seed</TableHead>
-                  <TableHead>Filename</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {ships.map((ship) => (
-                  <TableRow key={`${ship.index}-${ship.seed}`}>
-                    <TableCell className="font-medium">{ship.name}</TableCell>
-                    <TableCell>{ship.className}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {ship.seed}
-                    </TableCell>
-                    <TableCell className="max-w-[220px] truncate font-mono text-xs">
-                      {ship.filename.split("/").pop()}
-                    </TableCell>
-                    <TableCell className="space-x-1 text-right">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelected(ship)}
-                      >
-                        Detalhes
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          try {
-                            downloadNmsItemFile(exportShip(ship.index));
-                            toast.success("Exportado .nmsitem");
-                          } catch (err) {
-                            toast.error(
-                              err instanceof Error
-                                ? err.message
-                                : "Falha no export",
+                {ships.map((ship) => {
+                  const slot = ship.index + 1;
+                  const isOver = over === ship.index && dragging !== ship.index;
+                  return (
+                    <TableRow
+                      key={ship.index}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setOver(ship.index);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const from = Number(
+                          e.dataTransfer.getData("text/plain"),
+                        );
+                        setDragging(null);
+                        setOver(null);
+                        if (Number.isInteger(from)) void moveSlot(from, ship.index);
+                      }}
+                      onDragLeave={() => {
+                        setOver((current) =>
+                          current === ship.index ? null : current,
+                        );
+                      }}
+                      className={cn(
+                        ship.empty && "text-muted-foreground",
+                        isOver && "bg-muted",
+                        dragging === ship.index && "opacity-60",
+                      )}
+                    >
+                      <TableCell>
+                        <button
+                          type="button"
+                          draggable
+                          tabIndex={-1}
+                          aria-label={`Reordenar slot ${slot}`}
+                          aria-grabbed={dragging === ship.index}
+                          className={cn(
+                            buttonVariants({ size: "icon-sm", variant: "ghost" }),
+                            "cursor-grab active:cursor-grabbing",
+                          )}
+                          onDragStart={(e) => {
+                            e.dataTransfer.setData(
+                              "text/plain",
+                              String(ship.index),
                             );
-                          }
-                        }}
-                      >
-                        Exportar
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                            e.dataTransfer.effectAllowed = "move";
+                            setDragging(ship.index);
+                          }}
+                          onDragEnd={() => {
+                            setDragging(null);
+                            setOver(null);
+                          }}
+                        >
+                          <GripVertical aria-hidden="true" />
+                        </button>
+                      </TableCell>
+                      <TableCell className="tabular-nums">{slot}</TableCell>
+                      <TableCell className={cn(!ship.empty && "font-medium")}>
+                        {ship.name}
+                      </TableCell>
+                      <TableCell>{dash(ship.className)}</TableCell>
+                      <TableCell>{dash(ship.shipType)}</TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {dash(ship.seed)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {ship.empty ? (
+                          <span className="text-muted-foreground">—</span>
+                        ) : (
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setSelected(ship)}
+                            >
+                              Ver detalhes
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                try {
+                                  downloadNmsItemFile(exportShip(ship.index));
+                                  toast.success("Exportado .nmsitem");
+                                } catch (err) {
+                                  toast.error(
+                                    err instanceof Error
+                                      ? err.message
+                                      : "Falha no export",
+                                  );
+                                }
+                              }}
+                            >
+                              Exportar
+                            </Button>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
