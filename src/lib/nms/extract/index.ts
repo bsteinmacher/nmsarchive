@@ -19,6 +19,13 @@ export {
   replaceShip,
   reorderShipOwnership,
 } from "./ships";
+export {
+  FREIGHTER_BASE_LABEL,
+  FREIGHTER_BASE_TYPE,
+  isFreighterBaseSlot,
+  listBases,
+  listFreighterBases,
+} from "./bases";
 export type {
   ExtractedItem,
   ExtractedShip,

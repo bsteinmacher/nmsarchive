@@ -1,6 +1,6 @@
 "use client";
 
-import { matchingItems } from "@/lib/archive-match";
+import { archiveUiCategory, matchingItems } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import { cn } from "cn";
 import type { ArchivedItemSummary } from "@/types/archive";
@@ -24,10 +24,11 @@ export function ItemGrid({
           saveReady && isCategory(item.category)
             ? matchingItems(sessionItems[item.category], item.seed, item.category)
             : [];
+        const uiCategory = archiveUiCategory(item);
         const typeLabel =
           item.shipType ||
-          (isCategory(item.category)
-            ? CATEGORY_META[item.category].label
+          (isCategory(uiCategory)
+            ? CATEGORY_META[uiCategory].label
             : item.category);
         return (
           <li key={item.id}>

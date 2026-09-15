@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import {
   getAdapter,
+  isFreighterBaseSlot,
   type AdapterColumn,
   type ExtractedSlot,
 } from "@/lib/nms/extract";
@@ -54,6 +55,7 @@ function SlotTable({
   columns,
   caption,
   description,
+  emptyMessage,
   dragging,
   over,
   onDragOver,
@@ -71,6 +73,7 @@ function SlotTable({
   columns: readonly AdapterColumn[];
   caption: string;
   description: string;
+  emptyMessage?: string;
   dragging: number | null;
   over: number | null;
   onDragOver: (index: number) => void;
@@ -84,9 +87,14 @@ function SlotTable({
 }) {
   if (items.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        {getAdapter(category).missingMessage}
-      </p>
+      <Card>
+        <CardHeader>
+          <CardTitle>{caption}</CardTitle>
+          <CardDescription>
+            {emptyMessage ?? getAdapter(category).missingMessage}
+          </CardDescription>
+        </CardHeader>
+      </Card>
     );
   }
 
@@ -250,6 +258,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const hydrated = useSaveSession((s) => s.hydrated);
   const summary = useSaveSession((s) => s.summary);
   const items = useSaveSession((s) => s.items[category]);
+  const baseItems = useSaveSession((s) => s.items.base);
   const exportItem = useSaveSession((s) => s.exportItem);
   const reorderSlots = useSaveSession((s) => s.reorderSlots);
   const [selected, setSelected] = useState<ExtractedSlot | null>(null);
@@ -259,10 +268,17 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const [liveMessage, setLiveMessage] = useState("");
 
   const adapter = getAdapter(category);
+  const baseAdapter = getAdapter("base");
   const meta = CATEGORY_META[category];
   const reorderable = isReorderableCategory(category);
-  const primary = items.filter((item) => item.group !== "automatic");
+  const primary = items.filter((item) => {
+    if (item.group === "automatic") return false;
+    if (category === "base" && isFreighterBaseSlot(item)) return false;
+    return true;
+  });
   const automatic = items.filter((item) => item.group === "automatic");
+  const interiorBases =
+    category === "freighter" ? baseItems.filter(isFreighterBaseSlot) : [];
   const filled = primary.filter((item) => !item.empty && !item.readonly).length;
 
   async function moveSlot(from: number, to: number) {
@@ -277,7 +293,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
 
   function onExport(item: ExtractedSlot) {
     try {
-      downloadNmsItemFile(exportItem(category, item.index));
+      downloadNmsItemFile(exportItem(item.category, item.index));
       toast.success("Exportado .nmsitem");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha no export");
@@ -326,11 +342,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     : category === "exosuit"
       ? "Só quantidade de slots e posição das tecnologias. Substâncias e produtos ficam no save, fora do arquivo."
       : category === "base"
-        ? "Bases com muitos Objects[] geram um .nmsitem grande. O inventário da cargueira viaja no payload dela, não aqui."
+        ? "Bases planetárias e de nave. A da cargueira fica em Cargueiras."
         : category === "wonder"
           ? "Personal Wonders (escolha do jogador). Records automáticos ficam na lista abaixo, só leitura."
           : category === "freighter"
-            ? "A cargueira atual leva os três inventários no payload. A frota extra aparece nos slots seguintes."
+            ? "A nave e os três inventários ficam nesta tabela. A construção do interior é a base abaixo."
             : meta.description;
 
   return (
@@ -346,6 +362,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
           columns={adapter.columns}
           caption={caption}
           description={description}
+          emptyMessage={
+            category === "base" && items.some(isFreighterBaseSlot)
+              ? "Nenhuma base planetária ou de nave neste save. A da cargueira fica em Cargueiras."
+              : undefined
+          }
           dragging={dragging}
           over={over}
           onDragOver={setOver}
@@ -366,6 +387,31 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
           onArchive={setArchiving}
           onExport={onExport}
         />
+        {category === "freighter" ? (
+          <SlotTable
+            category="base"
+            items={interiorBases}
+            reorderable={false}
+            columns={baseAdapter.columns}
+            caption={
+              interiorBases.length <= 1
+                ? "Base da cargueira"
+                : `Base da cargueira (${interiorBases.length})`
+            }
+            description="A construção do interior. Arquivar a nave não inclui esta construção."
+            emptyMessage="Este save não tem uma base de cargueira. O jogo cria uma quando você constrói no interior."
+            dragging={null}
+            over={null}
+            onDragOver={() => {}}
+            onDrop={() => {}}
+            onDragLeave={() => {}}
+            onDragStart={() => {}}
+            onDragEnd={() => {}}
+            onSelect={setSelected}
+            onArchive={setArchiving}
+            onExport={onExport}
+          />
+        ) : null}
         {automatic.length > 0 ? (
           <SlotTable
             category={category}
@@ -393,7 +439,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
       </div>
       <SaveItemDetailDialog
         item={selected}
-        category={category}
+        category={selected?.category ?? category}
         open={selected != null}
         onOpenChange={(open) => {
           if (!open) setSelected(null);
@@ -405,7 +451,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
       />
       <ArchiveItemDialog
         item={archiving}
-        category={category}
+        category={archiving?.category ?? category}
         open={archiving != null}
         onOpenChange={(open) => {
           if (!open) setArchiving(null);

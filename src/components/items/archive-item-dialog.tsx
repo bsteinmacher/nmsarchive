@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { getAdapter, type ExtractedSlot } from "@/lib/nms/extract";
+import { getAdapter, isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
 import { trpc } from "@/lib/trpc";
 import { parseTagInput } from "@/lib/validations";
 import { useSaveSession } from "@/stores/save-session";
@@ -131,6 +131,12 @@ export function ArchiveItemDialog({
           {item?.warning ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
               {item.warning}
+            </p>
+          ) : null}
+          {item && isFreighterBaseSlot(item) ? (
+            <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+              Arquivar a nave não inclui esta construção. Guarde os dois se
+              quiser o interior noutro save.
             </p>
           ) : null}
           {category === "exosuit" ? (

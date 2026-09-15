@@ -4,11 +4,24 @@ import { insertAtFirstEmpty, replaceAtIndex } from "./array";
 import { nestedEnum } from "./names";
 import type { CategoryAdapter, ExtractedSlot } from "./types";
 
+export const FREIGHTER_BASE_TYPE = "FreighterBase";
+export const FREIGHTER_BASE_LABEL = "Cargueira";
+
 const BASE_TYPE_LABELS: Record<string, string> = {
   HomePlanetBase: "Planeta",
   PlayerShipBase: "Nave",
-  FreighterBase: "Cargueira",
+  [FREIGHTER_BASE_TYPE]: FREIGHTER_BASE_LABEL,
 };
+
+export function basePersistentType(slot: unknown): string {
+  return nestedEnum(asRecord(slot)?.BaseType, "PersistentBaseTypes");
+}
+
+export function isFreighterBaseSlot(item: {
+  extra: Record<string, string>;
+}): boolean {
+  return item.extra.baseType === FREIGHTER_BASE_TYPE;
+}
 
 export function isEmptyBaseSlot(slot: unknown): boolean {
   const rec = asRecord(slot);
@@ -33,10 +46,15 @@ export function listBases(json: unknown): ExtractedSlot[] {
   const bases = player?.PersistentPlayerBases;
   if (!Array.isArray(bases)) return [];
 
+  const interiorTotal = bases.filter(
+    (slot) => basePersistentType(slot) === FREIGHTER_BASE_TYPE,
+  ).length;
+  let interiorN = 0;
+
   return bases.map((slot, index): ExtractedSlot => {
     const rec = asRecord(slot) ?? {};
     const objects = asArray(rec.Objects) ?? [];
-    const typeKey = nestedEnum(rec.BaseType, "PersistentBaseTypes");
+    const typeKey = basePersistentType(slot);
     const itemType = BASE_TYPE_LABELS[typeKey] ?? typeKey;
     const empty = isEmptyBaseSlot(slot);
     const rawName = asString(rec.Name)?.trim();
@@ -51,6 +69,8 @@ export function listBases(json: unknown): ExtractedSlot[] {
       objects.length >= 50
         ? `O .nmsitem desta base é grande (${objects.length} objetos).`
         : undefined;
+    const isInterior = typeKey === FREIGHTER_BASE_TYPE;
+    if (isInterior) interiorN += 1;
     return {
       category: "base",
       index,
@@ -61,12 +81,22 @@ export function listBases(json: unknown): ExtractedSlot[] {
       filename: "",
       empty,
       warning,
-      extra: empty
-        ? {}
-        : { itemType, objects: String(objects.length), baseType: typeKey },
+      slotLabel: isInterior
+        ? interiorTotal === 1
+          ? "Interior"
+          : `Interior ${interiorN}`
+        : undefined,
+      extra: {
+        ...(typeKey ? { baseType: typeKey } : {}),
+        ...(empty ? {} : { itemType, objects: String(objects.length) }),
+      },
       payload: rec,
     };
   });
+}
+
+export function listFreighterBases(json: unknown): ExtractedSlot[] {
+  return listBases(json).filter(isFreighterBaseSlot);
 }
 
 const EMPTY_BASE =

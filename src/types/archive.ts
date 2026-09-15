@@ -24,6 +24,7 @@ export type ArchivedItemDetail = ArchivedItemSummary & {
     className?: string;
     shipType?: string;
     filename?: string;
+    extra?: Record<string, string>;
     payload: unknown;
   };
   sourceSaveId: string | null;

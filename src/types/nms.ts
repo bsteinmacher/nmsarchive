@@ -34,7 +34,7 @@ export const CATEGORY_META: Record<
   freighter: {
     label: "Cargueiras",
     href: "/freighter",
-    description: "Cargueira atual e frota extra.",
+    description: "Cargueira atual, frota extra e a base do interior.",
   },
   frigate: {
     label: "Fragatas",
@@ -60,7 +60,8 @@ export const CATEGORY_META: Record<
   base: {
     label: "Bases",
     href: "/base",
-    description: "Bases planetárias, de nave e de cargueira.",
+    description:
+      "Bases planetárias e de nave. A da cargueira fica em Cargueiras.",
   },
 };
 

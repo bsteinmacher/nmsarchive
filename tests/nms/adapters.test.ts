@@ -9,7 +9,7 @@ import {
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters, insertFreighter } from "@/lib/nms/extract/freighters";
 import { listFrigates } from "@/lib/nms/extract/frigates";
-import { listBases } from "@/lib/nms/extract/bases";
+import { listBases, listFreighterBases } from "@/lib/nms/extract/bases";
 import { insertWonder, listWonders } from "@/lib/nms/extract/wonders";
 import { insertItem } from "@/lib/nms/extract";
 
@@ -304,6 +304,42 @@ describe("freighter / frigate / base / wonder", () => {
     expect(items[0]?.itemType).toBe("Planeta");
     expect(items[0]?.warning).toMatch(/grande/);
     expect(items[0]?.extra.objects).toBe("70");
+  });
+
+  it("separa FreighterBase das outras bases com rótulo Interior", () => {
+    const json = save({
+      PersistentPlayerBases: [
+        {
+          Name: "Casa",
+          GalacticAddress: 1,
+          BaseType: { PersistentBaseTypes: "HomePlanetBase" },
+          Objects: [],
+        },
+        {
+          Name: "",
+          GalacticAddress: 2,
+          BaseType: { PersistentBaseTypes: "FreighterBase" },
+          Objects: [{ ObjectID: "a" }, { ObjectID: "b" }],
+        },
+        {
+          Name: "Outra",
+          GalacticAddress: 3,
+          BaseType: { PersistentBaseTypes: "FreighterBase" },
+          Objects: [{ ObjectID: "c" }],
+        },
+      ],
+    });
+    const all = listBases(json);
+    const interior = listFreighterBases(json);
+    expect(all).toHaveLength(3);
+    expect(interior).toHaveLength(2);
+    expect(interior.map((item) => item.slotLabel)).toEqual([
+      "Interior 1",
+      "Interior 2",
+    ]);
+    expect(interior[0]?.name).toBe("Base Cargueira");
+    expect(interior[0]?.extra.objects).toBe("2");
+    expect(interior[0]?.category).toBe("base");
   });
 
   it("wonders pessoais arquivam record+extra; automáticos são read-only", () => {

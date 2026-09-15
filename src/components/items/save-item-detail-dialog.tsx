@@ -30,7 +30,8 @@ export function SaveItemDetailDialog({
   onArchive?: (item: ExtractedSlot) => void;
 }) {
   const exportItem = useSaveSession((s) => s.exportItem);
-  const adapter = getAdapter(category);
+  const actionCategory = item?.category ?? category;
+  const adapter = getAdapter(actionCategory);
   const slot = item?.slotLabel ?? (item ? String(item.index + 1) : "—");
   const bits = [
     `Slot ${slot}`,
@@ -74,7 +75,9 @@ export function SaveItemDetailDialog({
               type="button"
               onClick={() => {
                 try {
-                  downloadNmsItemFile(exportItem(category, item.index));
+                  downloadNmsItemFile(
+                    exportItem(item.category, item.index),
+                  );
                   toast.success("Exportado .nmsitem");
                 } catch (err) {
                   toast.error(

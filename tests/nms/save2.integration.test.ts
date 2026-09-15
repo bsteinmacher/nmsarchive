@@ -13,7 +13,7 @@ import {
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters } from "@/lib/nms/extract/freighters";
 import { listFrigates } from "@/lib/nms/extract/frigates";
-import { listBases } from "@/lib/nms/extract/bases";
+import { listBases, listFreighterBases } from "@/lib/nms/extract/bases";
 import { listWonders } from "@/lib/nms/extract/wonders";
 import { reorderCategory } from "@/lib/nms/extract";
 import {
@@ -157,6 +157,10 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
 
       expect(listFrigates(parsed.json)).toHaveLength(17);
       expect(listBases(parsed.json)).toHaveLength(68);
+      const interior = listFreighterBases(parsed.json);
+      expect(interior).toHaveLength(1);
+      expect(interior[0]?.slotLabel).toBe("Interior");
+      expect(Number(interior[0]?.extra.objects)).toBeGreaterThan(50);
 
       const wonders = listWonders(parsed.json);
       const personal = wonders.filter((w) => w.group !== "automatic");

@@ -3,7 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { matchingItems } from "@/lib/archive-match";
+import { archiveUiCategory, matchingItems } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import {
@@ -77,9 +77,17 @@ export function ItemDetailDialog({
       ? matchingItems(sessionItems[item.category], item.seed, item.category)
       : [];
   const saveReady = saveStatus === "ready";
-  const categoryLabel =
+  const uiCategory =
     item && isCategory(item.category)
-      ? CATEGORY_META[item.category].label
+      ? archiveUiCategory({
+          category: item.category,
+          shipType: item.shipType,
+          extra: item.metadata.extra,
+        })
+      : item?.category;
+  const categoryLabel =
+    uiCategory && isCategory(uiCategory)
+      ? CATEGORY_META[uiCategory].label
       : "item";
 
   function toNmsItem(): NmsItemFile | null {
