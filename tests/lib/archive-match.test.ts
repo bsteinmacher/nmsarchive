@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { matchingShips } from "@/lib/archive-match";
+import {
+  archiveUiCategory,
+  isArchivedFreighterBase,
+  matchingShips,
+} from "@/lib/archive-match";
 import type { ExtractedShip } from "@/lib/nms/extract/types";
 
 function ship(partial: Partial<ExtractedShip> & Pick<ExtractedShip, "index" | "seed">): ExtractedShip {
@@ -11,6 +15,7 @@ function ship(partial: Partial<ExtractedShip> & Pick<ExtractedShip, "index" | "s
     className: "S",
     filename: "FIGHTER_PROC",
     shipType: "Fighter",
+    itemType: "Fighter",
     empty: false,
     ...partial,
   };
@@ -25,5 +30,32 @@ describe("matchingShips", () => {
     ];
     const hits = matchingShips(ships, "0xabc", "ship");
     expect(hits.map((s) => s.index)).toEqual([1]);
+  });
+});
+
+describe("archiveUiCategory", () => {
+  it("trata FreighterBase como cargueira no arquivo", () => {
+    expect(
+      isArchivedFreighterBase({
+        category: "base",
+        shipType: "Cargueira",
+        extra: { baseType: "FreighterBase" },
+      }),
+    ).toBe(true);
+    expect(
+      archiveUiCategory({
+        category: "base",
+        extra: { baseType: "FreighterBase" },
+      }),
+    ).toBe("freighter");
+    expect(
+      isArchivedFreighterBase({
+        category: "base",
+        shipType: "Planeta",
+      }),
+    ).toBe(false);
+    expect(archiveUiCategory({ category: "base", shipType: "Planeta" })).toBe(
+      "base",
+    );
   });
 });

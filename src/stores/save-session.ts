@@ -4,7 +4,13 @@ import { create } from "zustand";
 import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
 import { encodeHgClient, parseHgClient } from "@/lib/nms/client";
 import { detect } from "@/lib/nms/detect";
-import { listShips, type ExtractedShip } from "@/lib/nms/extract";
+import {
+  getAdapter,
+  listAllCategories,
+  listShips,
+  type ExtractedShip,
+  type ExtractedSlot,
+} from "@/lib/nms/extract";
 import { sha256Hex } from "@/lib/sha256";
 import {
   parseMappingFile,
@@ -15,8 +21,8 @@ import {
   type PlayerSummary,
 } from "@/lib/nms/player";
 import {
-  insertShip,
-  reorderShipOwnership,
+  insertCategoryItem,
+  reorderCategorySlots,
   setPlayerCurrencies,
   type PlayerCurrencies,
 } from "@/lib/nms/write";
@@ -24,6 +30,7 @@ import {
   buildNmsItem,
   type NmsItemFile,
 } from "@/lib/nmsitem";
+import { isCategory, type Category } from "@/types/nms";
 
 const IDB_JSON = "nmsarchive:v1:mapped-json";
 const IDB_ORIGINAL = "nmsarchive:v1:original-hg";
@@ -40,6 +47,21 @@ type SessionMeta = {
 
 type Status = "idle" | "hydrating" | "loading" | "ready" | "error";
 
+type ItemsByCategory = Record<Category, ExtractedSlot[]>;
+
+function emptyItems(): ItemsByCategory {
+  return {
+    ship: [],
+    multitool: [],
+    companion: [],
+    exosuit: [],
+    freighter: [],
+    frigate: [],
+    base: [],
+    wonder: [],
+  };
+}
+
 type SaveSessionState = {
   status: Status;
   hydrated: boolean;
@@ -51,12 +73,16 @@ type SaveSessionState = {
   unknownKeys: string[];
   summary: PlayerSummary | null;
   ships: ExtractedShip[];
+  items: ItemsByCategory;
   hydrate: () => Promise<void>;
   loadFile: (file: File) => Promise<void>;
   clear: () => Promise<void>;
+  importItem: (item: NmsItemFile) => Promise<number>;
   importShip: (item: NmsItemFile) => Promise<number>;
+  exportItem: (category: Category, index: number) => NmsItemFile;
   exportShip: (index: number) => NmsItemFile;
   exportAllShips: () => NmsItemFile[];
+  reorderSlots: (category: Category, from: number, to: number) => Promise<void>;
   reorderShips: (from: number, to: number) => Promise<void>;
   updateCurrencies: (coins: Partial<PlayerCurrencies>) => Promise<void>;
   downloadRewritten: () => Promise<Uint8Array>;
@@ -83,11 +109,13 @@ function applyParsed(
   json: unknown,
   extra: Partial<SaveSessionState>,
 ): Partial<SaveSessionState> {
+  const items = listAllCategories(json);
   return {
     status: "ready",
     error: null,
     summary: summarizePlayer(json),
     ships: listShips(json),
+    items,
     ...extra,
   };
 }
@@ -101,6 +129,11 @@ function assertSaveFile(file: File) {
   }
 }
 
+function persistJson() {
+  if (mappedJson == null) throw new Error("Nenhum save aberto.");
+  return idbSet(IDB_JSON, mappedJson);
+}
+
 export const useSaveSession = create<SaveSessionState>((set, get) => ({
   status: "idle",
   hydrated: false,
@@ -112,6 +145,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   unknownKeys: [],
   summary: null,
   ships: [],
+  items: emptyItems(),
 
   hydrate: async () => {
     if (get().hydrated) return;
@@ -217,37 +251,49 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       unknownKeys: [],
       summary: null,
       ships: [],
+      items: emptyItems(),
     });
   },
 
-  importShip: async (item) => {
+  importItem: async (item) => {
     if (mappedJson == null || !mappingFile) {
       throw new Error("Nenhum save aberto.");
     }
-    if (item.category !== "ship") {
-      throw new Error("Só naves podem ser importadas na Fase 1.");
+    if (!isCategory(item.category)) {
+      throw new Error("Categoria desconhecida neste arquivo.");
     }
-    const result = insertShip(mappedJson, item.payload);
+    const result = insertCategoryItem(
+      mappedJson,
+      item.category,
+      item.payload,
+      item.seed,
+    );
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
-    await idbSet(IDB_JSON, mappedJson);
+    await persistJson();
     set(applyParsed(mappedJson, {}));
     return result.index;
   },
 
-  exportShip: (index) => {
-    const { ships, summary } = get();
-    const ship = ships.find((s) => s.index === index);
-    if (!ship || ship.empty || !summary) throw new Error("Nave não encontrada.");
+  importShip: async (item) => get().importItem(item),
+
+  exportItem: (category, index) => {
+    const { items, summary } = get();
+    const slot = items[category].find((s) => s.index === index);
+    if (!slot || slot.empty || slot.readonly || !summary) {
+      throw new Error("Item não encontrado.");
+    }
     return buildNmsItem({
-      category: "ship",
-      name: ship.name,
-      seed: ship.seed,
-      payload: ship.payload,
+      category,
+      name: slot.name,
+      seed: slot.seed || "0x0",
+      payload: slot.payload,
       gameVersion: summary.gameVersion,
       galaxy: summary.galaxy,
     });
   },
+
+  exportShip: (index) => get().exportItem("ship", index),
 
   exportAllShips: () => {
     const { ships, summary } = get();
@@ -266,22 +312,28 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       );
   },
 
-  reorderShips: async (from, to) => {
+  reorderSlots: async (category, from, to) => {
     if (mappedJson == null) throw new Error("Nenhum save aberto.");
     if (from === to) return;
-    const result = reorderShipOwnership(mappedJson, from, to);
+    const adapter = getAdapter(category);
+    if (!adapter.reorder) {
+      throw new Error("Esta categoria não reordena.");
+    }
+    const result = reorderCategorySlots(mappedJson, category, from, to);
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
-    await idbSet(IDB_JSON, mappedJson);
+    await persistJson();
     set(applyParsed(mappedJson, {}));
   },
+
+  reorderShips: async (from, to) => get().reorderSlots("ship", from, to),
 
   updateCurrencies: async (coins) => {
     if (mappedJson == null) throw new Error("Nenhum save aberto.");
     const result = setPlayerCurrencies(mappedJson, coins);
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
-    await idbSet(IDB_JSON, mappedJson);
+    await persistJson();
     set(applyParsed(mappedJson, {}));
   },
 

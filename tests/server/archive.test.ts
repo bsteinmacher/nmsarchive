@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import {
   archiveItem,
+  countItemsByCategory,
   createSaveMetadata,
   deleteItem,
   getItem,
@@ -98,16 +99,70 @@ describe("archive-service", () => {
     ]);
   });
 
-  it("recusa categoria que não é nave", async () => {
-    await expect(
-      archiveItem(prisma, {
-        category: "multitool",
-        name: "MT",
-        seed: "0x1",
-        description: "ainda não",
-        metadata: { gameVersion: 1, payload: {} },
-        tags: [],
-      }),
-    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  it("aceita as categorias arquiváveis da Fase 3", async () => {
+    const archived = await archiveItem(prisma, {
+      category: "multitool",
+      name: "Atlas Sceptre",
+      seed: "0x1",
+      description: "staff atlas",
+      metadata: { gameVersion: 1, shipType: "Atlas Staff", payload: {} },
+      tags: [],
+    });
+    expect(archived.category).toBe("multitool");
+    expect(archived.shipType).toBe("Atlas Staff");
+  });
+
+  it("lista FreighterBase em cargueiras, não em bases", async () => {
+    const interior = await archiveItem(prisma, {
+      category: "base",
+      name: "Base Cargueira",
+      seed: "0x79ff",
+      description: "interior da frota",
+      metadata: {
+        gameVersion: 1,
+        shipType: "Cargueira",
+        extra: { baseType: "FreighterBase", objects: "616" },
+        payload: { BaseType: { PersistentBaseTypes: "FreighterBase" } },
+      },
+      tags: [],
+    });
+    const planet = await archiveItem(prisma, {
+      category: "base",
+      name: "Casa",
+      seed: "0x11",
+      description: "base planetária",
+      metadata: {
+        gameVersion: 1,
+        shipType: "Planeta",
+        extra: { baseType: "HomePlanetBase" },
+        payload: {},
+      },
+      tags: [],
+    });
+    const freighter = await archiveItem(prisma, {
+      category: "freighter",
+      name: "Omen",
+      seed: "0xab",
+      description: "cargueira atual",
+      metadata: { gameVersion: 1, shipType: "Pirate", payload: { kind: "current" } },
+      tags: [],
+    });
+
+    const listedFreighters = await listItems(prisma, "freighter");
+    expect(listedFreighters.some((row) => row.id === interior.id)).toBe(true);
+    expect(listedFreighters.some((row) => row.id === freighter.id)).toBe(true);
+    expect(listedFreighters.some((row) => row.id === planet.id)).toBe(false);
+
+    const listedBases = await listItems(prisma, "base");
+    expect(listedBases.some((row) => row.id === interior.id)).toBe(false);
+    expect(listedBases.some((row) => row.id === planet.id)).toBe(true);
+
+    const counts = await countItemsByCategory(prisma);
+    expect(counts.freighter ?? 0).toBeGreaterThanOrEqual(2);
+    expect(listedBases).toHaveLength(counts.base ?? 0);
+
+    await deleteItem(prisma, interior.id);
+    await deleteItem(prisma, planet.id);
+    await deleteItem(prisma, freighter.id);
   });
 });

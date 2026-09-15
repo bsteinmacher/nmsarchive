@@ -38,6 +38,7 @@ export const archivedMetadataSchema = z.object({
   className: z.string().optional(),
   shipType: z.string().optional(),
   filename: z.string().optional(),
+  extra: z.record(z.string(), z.string()).optional(),
   payload: z.unknown(),
 });
 

@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { isArchivedFreighterBase } from "@/lib/archive-match";
 import { asNumber, asRecord, asString } from "@/lib/nms/value";
 import {
   archivedMetadataSchema,
@@ -71,6 +72,18 @@ function toSummary(row: {
     tags: row.tags.map((t) => t.tag),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+  };
+}
+
+function metadataAsArchiveHint(category: string, metadata: unknown) {
+  const rec = asRecord(metadata) ?? {};
+  const extra = asRecord(rec.extra);
+  return {
+    category,
+    shipType: asString(rec.shipType),
+    extra: extra
+      ? { baseType: asString(extra.baseType) ?? undefined }
+      : undefined,
   };
 }
 
@@ -153,12 +166,6 @@ export async function createSaveMetadata(
 }
 
 export async function archiveItem(prisma: PrismaClient, input: ArchiveItemInput) {
-  if (input.category !== "ship") {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Nesta fase só naves podem ser arquivadas.",
-    });
-  }
   if (input.sourceSaveId) {
     const save = await prisma.save.findUnique({
       where: { id: input.sourceSaveId },
@@ -203,12 +210,30 @@ export async function listItems(
   prisma: PrismaClient,
   category?: string,
 ): Promise<ArchivedItemSummary[]> {
+  const where =
+    category === "freighter"
+      ? { category: { in: ["freighter", "base"] } }
+      : category
+        ? { category }
+        : undefined;
   const rows = await prisma.archivedItem.findMany({
-    where: category ? { category } : undefined,
+    where,
     include: itemInclude,
     orderBy: { createdAt: "desc" },
   });
-  return rows.map(toSummary);
+  return rows
+    .filter((row) => {
+      if (!category) return true;
+      const interior = isArchivedFreighterBase(
+        metadataAsArchiveHint(row.category, row.metadata),
+      );
+      if (category === "freighter") {
+        return row.category === "freighter" || interior;
+      }
+      if (category === "base") return !interior;
+      return true;
+    })
+    .map(toSummary);
 }
 
 export async function countItemsByCategory(
@@ -221,6 +246,19 @@ export async function countItemsByCategory(
   const counts: Record<string, number> = {};
   for (const row of grouped) {
     counts[row.category] = row._count._all;
+  }
+  const bases = await prisma.archivedItem.findMany({
+    where: { category: "base" },
+    select: { category: true, metadata: true },
+  });
+  const interiors = bases.filter((row) =>
+    isArchivedFreighterBase(metadataAsArchiveHint(row.category, row.metadata)),
+  ).length;
+  if (interiors > 0) {
+    counts.freighter = (counts.freighter ?? 0) + interiors;
+    const nextBase = (counts.base ?? 0) - interiors;
+    if (nextBase > 0) counts.base = nextBase;
+    else delete counts.base;
   }
   return counts;
 }

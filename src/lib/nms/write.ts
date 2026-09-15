@@ -1,17 +1,20 @@
-import { isEmptyShipSlot } from "./extract/ships";
+import {
+  insertItem,
+  reorderCategory,
+  reorderShipOwnership,
+  insertShip,
+  type InsertResult,
+} from "./extract";
 import { getPlayerState } from "./player";
-import { remapSlotIndex, reorderSlots } from "./reorder";
-import { asArray, asNumber } from "./value";
-import { writeHg } from "./parse";
 import type { MappingFile } from "./mapping";
+import { writeHg } from "./parse";
+import type { Category } from "@/types/nms";
 
 export type WriteResult =
   | { ok: true; json: unknown }
   | { ok: false; error: string };
 
-export type InsertResult =
-  | { ok: true; json: unknown; index: number }
-  | { ok: false; error: string };
+export type { InsertResult };
 
 /** Teto das Units no jogo (uint32): ~o dobro de 2.147.483.647. */
 export const UNITS_MIN = 0;
@@ -27,63 +30,24 @@ export function unitsOutsideRange(units: number): boolean {
   return units < UNITS_MIN || units > UNITS_MAX;
 }
 
-export function insertShip(mappedJson: unknown, payload: unknown): InsertResult {
-  const json = structuredClone(mappedJson);
-  const player = getPlayerState(json);
-  if (!player) {
-    return { ok: false, error: "PlayerStateData ausente neste save." };
-  }
-  if (!Array.isArray(player.ShipOwnership)) {
-    return { ok: false, error: "ShipOwnership ausente neste save." };
-  }
-  const index = player.ShipOwnership.findIndex(isEmptyShipSlot);
-  if (index < 0) {
-    return {
-      ok: false,
-      error:
-        "Não há slot vazio de nave. O jogo limita o array; o MVP não expande ShipOwnership.",
-    };
-  }
-  player.ShipOwnership[index] = structuredClone(payload);
-  return { ok: true, index, json };
+export { insertShip, reorderShipOwnership };
+
+export function insertCategoryItem(
+  mappedJson: unknown,
+  category: Category,
+  payload: unknown,
+  seed?: string,
+): InsertResult {
+  return insertItem(mappedJson, category, payload, seed);
 }
 
-const SHIP_INDEX_KEYS = ["PrimaryShip", "CorvetteEditAssociatedShipIndex"] as const;
-
-export function reorderShipOwnership(
+export function reorderCategorySlots(
   mappedJson: unknown,
+  category: Category,
   from: number,
   to: number,
 ): WriteResult {
-  const json = structuredClone(mappedJson);
-  const player = getPlayerState(json);
-  if (!player) {
-    return { ok: false, error: "PlayerStateData ausente neste save." };
-  }
-  const ships = asArray(player.ShipOwnership);
-  if (!ships) {
-    return { ok: false, error: "ShipOwnership ausente neste save." };
-  }
-  try {
-    player.ShipOwnership = reorderSlots(ships, from, to);
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Não foi possível reordenar.",
-    };
-  }
-  const length = ships.length;
-  const legacy = asArray(player.ShipUsesLegacyColours);
-  if (legacy && legacy.length === length) {
-    player.ShipUsesLegacyColours = reorderSlots(legacy, from, to);
-  }
-  for (const key of SHIP_INDEX_KEYS) {
-    const current = asNumber(player[key]);
-    if (current == null) continue;
-    if (current < 0 || current >= length) continue;
-    player[key] = remapSlotIndex(current, from, to);
-  }
-  return { ok: true, json };
+  return reorderCategory(mappedJson, category, from, to);
 }
 
 export function setPlayerCurrencies(

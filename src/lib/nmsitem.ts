@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { CATEGORIES, type Category } from "@/types/nms";
-import { shipSeedFromPayload } from "@/lib/nms/extract/ships";
+import { getAdapter, seedFromPayload } from "@/lib/nms/extract";
 import { summarizePlayer } from "@/lib/nms/player";
 
 export const nmsItemSchema = z.object({
@@ -65,13 +65,18 @@ export function serializeNmsItem(item: NmsItemFile): string {
   return JSON.stringify(item, null, 2);
 }
 
-export function shipSeedMismatch(item: NmsItemFile): string | null {
-  if (item.category !== "ship") return null;
-  const payloadSeed = shipSeedFromPayload(item.payload);
+export function payloadSeedMismatch(item: NmsItemFile): string | null {
+  const payloadSeed = seedFromPayload(item.category, item.payload);
   if (payloadSeed.toLowerCase() !== item.seed.toLowerCase()) {
-    return `seed do envelope (${item.seed}) ≠ Resource.Seed (${payloadSeed})`;
+    const adapter = getAdapter(item.category);
+    return `seed do envelope (${item.seed}) ≠ payload (${payloadSeed}) [${adapter.label}]`;
   }
   return null;
+}
+
+/** @deprecated use payloadSeedMismatch */
+export function shipSeedMismatch(item: NmsItemFile): string | null {
+  return payloadSeedMismatch(item);
 }
 
 export function gameVersionMismatch(

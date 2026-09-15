@@ -3,7 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { matchingShips } from "@/lib/archive-match";
+import { archiveUiCategory, matchingItems } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import {
@@ -16,6 +16,7 @@ import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { trpc } from "@/lib/trpc";
 import { JsonTree } from "@/components/items/json-tree";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { CATEGORY_META, isCategory } from "@/types/nms";
 import {
   Dialog,
   DialogContent,
@@ -46,9 +47,9 @@ export function ItemDetailDialog({
   const update = trpc.items.update.useMutation();
   const remove = trpc.items.delete.useMutation();
   const item = query.data;
-  const ships = useSaveSession((s) => s.ships);
+  const sessionItems = useSaveSession((s) => s.items);
   const saveStatus = useSaveSession((s) => s.status);
-  const importShip = useSaveSession((s) => s.importShip);
+  const importItem = useSaveSession((s) => s.importItem);
   const descriptionId = useId();
   const tagsId = useId();
   const errorId = useId();
@@ -71,19 +72,32 @@ export function ItemDetailDialog({
     setDraftId(null);
   }
 
-  const matches = item
-    ? matchingShips(ships, item.seed, item.category)
-    : [];
+  const matches =
+    item && isCategory(item.category)
+      ? matchingItems(sessionItems[item.category], item.seed, item.category)
+      : [];
   const saveReady = saveStatus === "ready";
+  const uiCategory =
+    item && isCategory(item.category)
+      ? archiveUiCategory({
+          category: item.category,
+          shipType: item.shipType,
+          extra: item.metadata.extra,
+        })
+      : item?.category;
+  const categoryLabel =
+    uiCategory && isCategory(uiCategory)
+      ? CATEGORY_META[uiCategory].label
+      : "item";
 
   function toNmsItem(): NmsItemFile | null {
     if (!item) return null;
-    if (item.category !== "ship") {
-      toast.error("Nesta fase só naves podem ser aplicadas no save.");
+    if (!isCategory(item.category)) {
+      toast.error("Categoria desconhecida neste arquivo.");
       return null;
     }
     return buildNmsItem({
-      category: "ship",
+      category: item.category,
       name: item.name,
       seed: item.seed,
       payload: item.payload,
@@ -96,8 +110,8 @@ export function ItemDetailDialog({
 
   async function applyItem(file: NmsItemFile) {
     try {
-      const index = await importShip(file);
-      toast.success(`Aplicada no slot ${index + 1} do save aberto.`);
+      const index = await importItem(file);
+      toast.success(`Aplicado no slot ${index + 1} do save aberto.`);
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao aplicar");
@@ -111,7 +125,7 @@ export function ItemDetailDialog({
     const file = toNmsItem();
     if (!file) return;
     if (!saveReady) {
-      toast.error("Abra um save para aplicar esta nave num slot vazio.");
+      toast.error("Abra um save para aplicar este item num slot.");
       return;
     }
     const json = getMappedJson();
@@ -175,7 +189,7 @@ export function ItemDetailDialog({
             <DialogTitle>{item?.name ?? "Item arquivado"}</DialogTitle>
             <DialogDescription>
               {item
-                ? `${item.shipType || item.category} · ${item.seed}`
+                ? `${item.shipType || categoryLabel} · ${item.seed}`
                 : "Carregando do arquivo pessoal."}
             </DialogDescription>
           </DialogHeader>
@@ -203,8 +217,8 @@ export function ItemDetailDialog({
               {saveReady ? (
                 <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
                   {matches.length > 0
-                    ? `Mesmo seed no save aberto: slot ${matches.map((s) => s.index + 1).join(", ")}.`
-                    : "Não há nave com este seed no save aberto. Aplicar usa o primeiro slot vazio."}
+                    ? `Mesmo seed no save aberto: slot ${matches.map((s) => s.slotLabel ?? s.index + 1).join(", ")}.`
+                    : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
                 </p>
               ) : (
                 <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
@@ -212,7 +226,7 @@ export function ItemDetailDialog({
                   <Link href="/save" className={cn(buttonVariants({ variant: "link" }), "h-auto p-0")}>
                     Abrir um save
                   </Link>{" "}
-                  para aplicar esta nave.
+                  para aplicar este item.
                 </p>
               )}
 

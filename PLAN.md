@@ -746,7 +746,7 @@ A Fase 1 entregou um editor de naves. Isto alinhou o save session com o que o ar
 
 ### Fase 2 — Banco e arquivo pessoal (o produto)
 
-**Status: feita** (checklist 2.1–2.4). Não começar a Fase 3.
+**Status: feita** (checklist 2.1–2.4).
 
 **Objetivo:** o que você guarda sobrevive ao fechar o browser. A home passa a ser o arquivo.
 
@@ -767,6 +767,8 @@ Sim, o arquivo tem lista de categorias — é a navegação principal. As catego
 ---
 
 ### Fase 3 — Todas as categorias
+
+**Status: feita** (checklist 3.1–3.8). Não começar a Fase 4.
 
 Cada categoria é um **adapter** com a mesma interface:
 
@@ -791,12 +793,16 @@ Ordem sugerida (da mais estável para a mais volátil):
 7. Wonders — **Personal Wonders** (`WonderCustomRecords[i]` + `WonderCustomRecordsExtraData[i]`). Records automáticos = listagem secundária / read-only.
 8. Extra se o probe mostrar: Corvettes, Squadron.
 
+Probe `save2.hg`: Corvettes não têm array próprio (ficam em `ShipOwnership` com tipo Corvette). `SquadronPilots` existe (4), mas **não** entra em `CATEGORIES` nesta fase.
+
 **Não fazer:** adapter `inventory` de substâncias/produtos do exosuit.
 
 UI do *save:* `app/(categories)/[category]/page.tsx` + colunas por adapter.  
 UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias arquiváveis.
 
 **Aceite:** cada categoria arquivável lista no save, arquiva, aplica num slot, exporta `.nmsitem`. Naves/MT/pets reordenam. Traje round-trip só de slots+tech. Inventário de itens inexistente na nav.
+
+**Prompt Cursor:** já executado nesta fase.
 
 **Complexidade:** L (5–8 dias, bases/wonders puxam).
 
@@ -953,7 +959,14 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 [x] 2.2 backup sqlite hook
 [x] 2.3 home = arquivo + categorias do archive
 [x] 2.4 mover dashboard para /save
-[ ] 3.x adapters (multitool + companion c/ reorder → traje layout → … → wonder)
+[x] 3.1 adapter multitool + vazios + reorder (`ActiveMultioolIndex`)
+[x] 3.2 adapter companion + vazios + reorder (`Pets` + `UnlockedPetSlots` + `PetBattleTeam`)
+[x] 3.3 traje = layout (slots + tech + supercharged; sem substâncias)
+[x] 3.4 cargueira atual + frota (`FreighterFleet`)
+[x] 3.5 fragatas (`FleetFrigates`)
+[x] 3.6 bases (`PersistentPlayerBases`; aviso de .nmsitem grande)
+[x] 3.7 wonders pessoais (`WonderCustomRecords` + extra); automáticos read-only
+[x] 3.8 arquivo `/archive/[category]` + `items.archive` para todas as categorias
 [ ] 4.x tags/screenshots/filtros
 [ ] 5.x docs + compose + mapping updater + galaxies.ts completo
 ```

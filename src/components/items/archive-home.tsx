@@ -41,7 +41,6 @@ export function ArchiveHome({ category }: { category?: Category }) {
   const logs = trpc.logs.list.useQuery({ limit: 8 });
   const items = list.data?.items ?? [];
   const totalAll = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
-  const phase3 = category != null && category !== "ship";
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -93,18 +92,6 @@ export function ArchiveHome({ category }: { category?: Category }) {
         <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
       ) : list.error ? (
         <p className="text-sm text-destructive">{list.error.message}</p>
-      ) : phase3 ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {CATEGORY_META[category].label} entram na Fase 3
-            </CardTitle>
-            <CardDescription>
-              Por enquanto só naves vão para o arquivo. As outras categorias já
-              aparecem na navegação para não misturar com o save aberto.
-            </CardDescription>
-          </CardHeader>
-        </Card>
       ) : items.length === 0 ? (
         <Card>
           <CardHeader>
@@ -114,10 +101,15 @@ export function ArchiveHome({ category }: { category?: Category }) {
                 aria-hidden="true"
               />
               <div>
-                <CardTitle>Nada arquivado ainda</CardTitle>
+                <CardTitle>
+                  {category
+                    ? `Nada em ${CATEGORY_META[category].label.toLowerCase()}`
+                    : "Nada arquivado ainda"}
+                </CardTitle>
                 <CardDescription>
-                  Abra um save e, na nave, use Arquivar com uma descrição. As
-                  três (ou trezentas) ficam nesta home depois de um restart.
+                  {category
+                    ? `Abra um save e, em ${CATEGORY_META[category].label}, use Arquivar com uma descrição.`
+                    : "Abra um save e use Arquivar com uma descrição. O que você guardar continua aqui depois de fechar o browser."}
                 </CardDescription>
               </div>
             </div>
