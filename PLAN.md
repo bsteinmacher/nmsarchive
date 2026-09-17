@@ -1,6 +1,6 @@
 # NMS Archive — Plano de Desenvolvimento
 
-Arquivo pessoal de descobertas de **No Man's Sky**: naves, multi-ferramentas, cargueiras, fragatas, companions, wonders, bases (e o layout do traje). O save aberto é a **ponte** — copiar para o arquivo e devolver ao jogo — não o produto.
+Arquivo pessoal de descobertas de **No Man's Sky**: naves, multi-ferramentas, cargueiras, fragatas, companions, wonders, bases planetárias, Deep Space, Space Station (e o layout do traje). O save aberto é a **ponte** — copiar para o arquivo e devolver ao jogo — não o produto.
 
 A UI da Fase 1 ainda parece um save editor; isso é provisório (não há banco de arquivo ainda). A partir da Fase 2 o centro é o archive. O parser/editor de `.hg` continua necessário e pode até ganhar atalhos (moedas, reordenar slots), mas não deve roubar a navegação.
 
@@ -12,12 +12,12 @@ Este documento é a fonte da verdade para implementação no Cursor. Siga as fas
 
 ## Sumário
 
-1. [Decisão de arquitetura](#1-decisão-de-arquitetura)
-2. [Pesquisa técnica (saves `.hg`)](#2-pesquisa-técnica-saves-hg)
+1. [Decisão de arquitetura](#1-decisão-de-arquitetura) — inclui [como o arquivo é persistido](#17-como-o-arquivo-é-persistido) e [Colossal Archive](#18-colossal-archive-depois-deste-projeto)
+2. [Pesquisa técnica (saves `.hg`)](#2-pesquisa-técnica-saves-hg) — inclui [bases COSMOS](#276-bases-cosmos-deep-space-e-space-station)
 3. [Schema Prisma](#3-schema-prisma)
 4. [Estrutura de pastas](#4-estrutura-de-pastas)
 5. [Formato `.nmsitem`](#5-formato-nmsitem)
-6. [Fases de desenvolvimento](#6-fases-de-desenvolvimento)
+6. [Fases de desenvolvimento](#6-fases-de-desenvolvimento) — próxima: [Fase 4b](#fase-4b--bases-cosmos-deep-space--space-station)
 7. [Riscos e mitigações](#7-riscos-e-mitigações)
 8. [Roadmap e complexidade](#8-roadmap-e-complexidade)
 9. [Referências](#9-referências)
@@ -95,7 +95,8 @@ A sidebar da Fase 1 lista categorias do *save* no topo e o arquivo embaixo. Isso
 NMS Archive
 ├── Arquivo pessoal          ← home `/`
 │     Naves / Multi-tools / Cargueiras / Fragatas /
-│     Companions / Wonders / Traje (layout) / Bases
+│     Companions / Wonders / Traje (layout) /
+│     Bases / Deep Space / Space Station
 │     (filtro por categoria; a lista de categorias VIVE aqui)
 ├── Save aberto              ← sessão, não o destino
 │     Dashboard (abrir .hg, moedas, galáxia, baixar)
@@ -121,6 +122,41 @@ Coleção [jakubkrehel/skills](https://github.com/jakubkrehel/skills) instalada 
 | `break`, `variant` | Iterar um componente isolado |
 
 Invocar pelo nome (`/better-ui`, `/interface-review`) ou aplicar quando a tarefa for claramente visual. Não atrasar aceite funcional por polish.
+
+### 1.7 Como o arquivo é persistido
+
+Não é um JSON no disco por categoria, nem um JSON gigante com tudo. Há **três camadas**, cada uma com um item como unidade:
+
+| Camada | O que é | Unidade |
+|---|---|---|
+| **SQLite** (`data/nmsarchive.db`, tabela `ArchivedItem`) | O arquivo pessoal que sobrevive ao fechar o browser | **1 linha por item** |
+| **`.nmsitem`** | Export/import portátil (JSON UTF-8) | **1 arquivo por item**. “Exportar todos” = `.zip` de vários `.nmsitem` |
+| **Screenshot** | WebP em `data/screenshots/<uuid>.webp` | 1 arquivo de imagem por item (opcional); o banco só guarda o path |
+
+A linha `ArchivedItem` carrega:
+
+- Colunas escalares: `category`, `name`, `seed`, `description`, `galaxy`, `coordinates`, …
+- `metadata` (**JSON na coluna**): `gameVersion`, `className`, `shipType`, `filename`, `extra` (ex.: `baseType`, contagem de `Objects`) e o **`payload` cru** do slot do save (já desofuscado).
+- Tags: tabela de junção `ItemTag` → `Tag` (não um array JSON).
+- `sourceSaveId`: metadados do save de origem (hash, nome, versão) — **nunca o `.hg`**.
+
+O save aberto **não** entra nisso. Ele vive no IndexedDB do browser (JSON mapeado + bytes originais do `.hg`). Fechar o app não apaga o SQLite; apaga só a sessão se o usuário limpar o save.
+
+Implicação para COSMOS e para o [Colossal Archive](#18-colossal-archive-depois-deste-projeto): o contrato estável é **um item = um envelope + um payload**. Deep Space e Space Station são o mesmo objeto `PersistentPlayerBases[i]`; o que muda é o `category` da UI / do envelope e o `extra.baseType`. Não criar um JSON “de bases” nem um dump do save.
+
+### 1.8 Colossal Archive (depois deste projeto)
+
+Hub público para jogadores enviarem descobertas (seed / model / print) para outros usarem. **Fora do escopo de implementação agora.** Este arquivo pessoal é o laboratório do formato.
+
+O que o NMS Archive atual **já** precisa acertar para o hub não nascer torto:
+
+1. **Unidade de partilha = `.nmsitem` (um item).** O hub ingere o mesmo envelope. Nunca um save `.hg`, nunca um dump SQLite.
+2. **Identidade partilhável** já existe: `category` + `seed` + `payload` + screenshot opcional + `galaxy` / glifos. Não inventar um segundo schema.
+3. **Facetas de base** vêm de `payload.BaseType.PersistentBaseTypes` (e/ou `metadata.extra.baseType`). Deep Space e Space Station precisam de slugs próprios no menu (`deepspace`, `spacestation`) para o hub indexar sem abrir o JSON.
+4. **Save nunca sobe.** A regra §1.2 continua no hub: só o item. Screenshot é o “print”; seed/model estão no payload.
+5. **Não** colocar auth multi-tenant, upload público, moderação ou Postgres neste repo até a Fase 6. Envelope `.nmsitem` v1 permanece; campos de hub (`author`, `shareId`) só quando o hub existir — não reservar colunas vazias agora.
+
+Quando este projeto pessoal estiver estável (Fase 5 + 4b), a Fase 6 descreve o hub. Até lá, qualquer decisão de categoria/payload deve perguntar: “isto ainda cabe num `.nmsitem` de um item?”.
 
 ---
 
@@ -248,7 +284,7 @@ Raiz típica (saves recentes):
 
 ```json
 {
-  "Version": 6783,
+  "Version": 6785,
   "Platform": "Win|Final",
   "ActiveContext": "Main",
   "CommonStateData": {
@@ -283,7 +319,7 @@ Raiz típica (saves recentes):
 | `FreighterFleet[]` | Outras cargueiras (Resource + 3 inventários cada) |
 | `FleetFrigates[]` | Fragatas da frota |
 | `Pets[]` | Companions |
-| `PersistentPlayerBases[]` | Bases (`BaseType.PersistentBaseTypes`) |
+| `PersistentPlayerBases[]` | Todas as bases do jogador, **um array só**. O tipo está em `BaseType.PersistentBaseTypes`. COSMOS não criou arrays novos: Deep Space = `PlayerSpaceBase`, Space Station = `PlayerSpaceStationBase`. Ver §2.7.6 |
 | `WonderCustomRecords[]` + `WonderCustomRecordsExtraData[]` | **Personal Wonders** — as 12 que o jogador escolhe (nome + tipo). Não existe chave `PersonalWonders` no JSON |
 | `WonderPlanetRecords[]`, `WonderCreatureRecords[]`, `WonderFloraRecords[]`, `WonderMineralRecords[]`, `WonderTreasureRecords[]`, `WonderWeirdBasePartRecords[]` | Records automáticos do jogo (melhores stats descobertos), não os escolhidos |
 | `VehicleOwnership[]` | Exocraft |
@@ -352,7 +388,7 @@ Pasta **gitignored**. Não commitar. Fixture de desenvolvimento: `save2.hg` (LZ4
 | Dado | Valor |
 |---|---|
 | Magic | `0xFEEDA1E5` |
-| `Version` | `6783` |
+| `Version` | `6785` (COSMOS; era `6783` no probe pré-COSMOS) |
 | `Platform` | `Win\|Final` |
 | `GameMode` | `5` (Permadeath) |
 | Mapping | MBINCompiler `7.1.0.1`, 1471 entradas, **0 unknown keys** |
@@ -367,7 +403,7 @@ Contagens (só estrutura; sem nomes/seeds pessoais neste doc):
 - `FreighterFleet`: 8
 - `FleetFrigates`: 17 — chaves `ResourceSeed`, `FrigateClass`, `InventoryClass`, `TraitIDs`, `Stats`, `CustomName`, …
 - Pets: 30
-- Bases: 68 (`HomePlanetBase` 65, `PlayerShipBase` 2, `FreighterBase` 1)
+- Bases: **71** no mesmo `PersistentPlayerBases[]` — `HomePlanetBase` 65, `PlayerShipBase` 2, `FreighterBase` 1, **`PlayerSpaceBase` 2 (Deep Space)**, **`PlayerSpaceStationBase` 1 (Space Station)**. Não há array separado nem chave nova de jogador para COSMOS. Ver §2.7.6.
 - **Personal Wonders** (escolha do jogador): `WonderCustomRecords` (12) + `WonderCustomRecordsExtraData` (12, em paralelo). Cada extra tem `CustomName` e `ActualType.WonderType` (`Creature`, `Flora`, …). No save de ref.: 10 Creature + 2 Flora, todos nomeados. Não há chave `PersonalWonders` no mapping.
 - Records automáticos (não escolhidos): `WonderCreatureRecords` (15), `WonderFloraRecords` (8), `WonderMineralRecords` (8), `WonderPlanetRecords` (11), `WonderTreasureRecords` (13), `WonderWeirdBasePartRecords` (11) — cada item é `{ GenerationID, WonderStatValue, SeenInFrontend }`
 - Corvette: campos `CorvetteDraftShipSeed`, `CorvetteEditAssociatedShipIndex`, `CorvetteStorageInventory` (não há array separado de corvettes neste save)
@@ -428,6 +464,52 @@ Não filtrar vazios na tabela (a Fase 1 fez isso — corrigir na 1b). Export/arq
 Reordenar (drag-and-drop na lista): trocar elementos do array, length constante. Slots vazios participam (arrastar a Horizon Vector NX para a 2ª posição, o que estava lá vai para o lugar antigo). **Só arrastar** — sem atalho de setas no teclado (confundiu na 1b). Ao mover, atualizar ponteiros do jogo se existirem. Probe no `save2.hg`: `PrimaryShip`, `CorvetteEditAssociatedShipIndex`; array paralelo `ShipUsesLegacyColours` (length 12) reordena junto. `CurrentShip` é Resource, não índice. Não compactar. Primitive: `reorderSlots(arr, from, to)`.
 
 Primeiro em naves (1b); o mesmo gesto em multi-tools e companions na Fase 3.
+
+### 2.7.6 Bases COSMOS: Deep Space e Space Station
+
+Patch **Cosmos 7.0** (set/2026): bases orbitais livres e estação espacial reivindicada. Confirmado no `save2.hg` atual (`Version` 6785, mapping MBINCompiler `7.1.0.1`, **0 unknown keys**).
+
+Não existem `DeepSpaceBases[]` / `SpaceStations[]`. Continuam em `PersistentPlayerBases[]`. O discriminante é o enum já mapeado:
+
+```json
+"BaseType": { "PersistentBaseTypes": "PlayerSpaceBase" }
+```
+
+Enum `GcPersistentBaseTypes` (MBINCompiler `development`, COSMOS) — só os valores de **jogador** importam para o arquivo:
+
+| `PersistentBaseTypes` | O que é | Menu | Limite |
+|---|---|---|---|
+| `HomePlanetBase` | Base planetária | **Bases** | Orçamento geral de bases do jogo (não há cap no JSON) |
+| `PlayerShipBase` | Base de nave / corvette | **Bases** (tipo “Nave”) | idem |
+| `FreighterBase` | Interior da cargueira | **Cargueiras** (já separado na Fase 3) | 1 típica; o save de ref. tem 1 |
+| `PlayerSpaceBase` | Deep Space / orbital (Deep-Space Base Computer) | **Deep Space** (novo) | **Sem cap separado no JSON.** Entra no mesmo array; a hipótese de trabalho é que conta como base “normal”. Não inventar limite. |
+| `PlayerSpaceStationBase` | Space Station reivindicada | **Space Station** (novo) | **Até 20 por save** (relato de jogo; não há campo de cap no JSON — o array só cresce). Enforce no `insert`. |
+
+Outros valores do enum (`Friends*`, `External*`, `Civilian*`, `GeneratedPlanetBase`, `UITempShipBase`, `ShipBaseScratch`) **não** ganham menu. Se aparecerem no save, caem em **Bases** com o `typeKey` cru como rótulo.
+
+Fixture COSMOS (`.others/save2.hg`, sem nomes neste doc):
+
+- 2× `PlayerSpaceBase` (índices 68 e 70 do array; dezenas de `Objects`)
+- 1× `PlayerSpaceStationBase` (índice 69; ~200 `Objects` — `.nmsitem` grande, mesmo aviso das bases planetárias)
+- Totais: 71 bases vs. 68 no probe pré-COSMOS. Os 3 novos foram **append** no fim do array, não slots pré-alocados.
+
+Não há chave nova em `PlayerStateData` tipo `OwnedSpaceStations` / `DeepSpaceBaseCount`. Chaves com “Space”/“Station” no player (`SpacePoiDiscoveries`, `AtlasStationAdressData`, …) **não** são estas bases.
+
+#### Como implementar (Fase 4b) — copiar o padrão `FreighterBase`
+
+Já existe o split: `listBases` lista tudo; a UI de **Cargueiras** mostra só `FreighterBase`; **Bases** esconde o interior. Deep Space e Space Station são o mesmo gesto.
+
+1. Slugs novos em `CATEGORIES`: `"deepspace"`, `"spacestation"` (depois de `"base"`). Labels: **Deep Space** e **Space Station**. Rotas `/deepspace`, `/spacestation`, `/archive/deepspace`, `/archive/spacestation` saem de graça com o `[category]` atual.
+2. `extract/bases.ts`: constantes `PlayerSpaceBase` / `PlayerSpaceStationBase`; `listDeepSpaceBases` / `listSpaceStationBases` filtrando o array; **Bases** deixa de listar esses tipos (e continua sem `FreighterBase`).
+3. `index` do slot = índice em `PersistentPlayerBases` (preciso para replace). `slotLabel` = 1-based **dentro do tipo** (como “Interior” nas cargueiras). Não fabricar 20 linhas vazias de estação.
+4. `insert`: primeiro vazio **daquele** `PersistentBaseTypes`; senão **append**. Space Station: recusar se já houver 20 preenchidas. Deep Space: append sem cap inventado. Não reutilizar slot vazio de planeta para meter uma estação.
+5. Arquivar: `category` do envelope = `deepspace` | `spacestation` (melhor para o hub). `payload` = o objeto inteiro da base. `metadata.extra.baseType` = o enum. Itens velhos arquivados como `base` + `baseType` COSMOS devem **aparecer** nos menus novos (`archive-service` / `archiveUiCategory`, igual ao interior da cargueira).
+6. Aplicar: se o payload for `PlayerSpaceBase` / `PlayerSpaceStationBase`, usar o adapter certo mesmo que o `.nmsitem` antigo diga `category: "base"`.
+7. Testes: sintéticos de filtro/insert/cap 20; integração `save2.hg` — 2 deep space, 1 station, `listBases` sem esses tipos, `Version` 6785. Sem nomes pessoais no assert.
+
+**Não fazer nesta fase:** arrays novos no save, categoria `inventory`, separar `PlayerShipBase` (corvette continua em Bases), Friends/External/Civilian menus, regenerar `mf_save`.
+
+---
 
 ### 2.8 Biblioteca recomendada: nenhuma pronta — parser próprio
 
@@ -562,7 +644,9 @@ export const CATEGORIES = [
   "companion",
   "wonder",
   "exosuit", // layout: slots + posições de tech — não o conteúdo
-  "base",
+  "base", // planeta + nave/corvette; sem interior de cargueira, Deep Space nem Station
+  "deepspace", // COSMOS: PersistentBaseTypes = PlayerSpaceBase
+  "spacestation", // COSMOS: PersistentBaseTypes = PlayerSpaceStationBase; cap 20 no insert
 ] as const;
 
 /** Naves, MTs e pets: lista com vazios + drag-and-drop. */
@@ -570,6 +654,8 @@ export const REORDERABLE_CATEGORIES = ["ship", "multitool", "companion"] as cons
 ```
 
 Não existe `"inventory"`. Recursos/substâncias não vão para o arquivo.
+
+`deepspace` e `spacestation` são categorias de **UI e de envelope**. O JSON do save continua num único `PersistentPlayerBases[]`. Prisma `category` é `String` — sem migration. Itens já arquivados como `"base"` com `extra.baseType` COSMOS devem ser listados nos menus novos (mesmo truque do `FreighterBase` em Cargueiras).
 
 `action` em `OperationLog`: `export`, `import`, `archive`, `delete`, `backup`, `restore`, `mapping_update`, `currency_edit`, `reorder`.
 
@@ -673,10 +759,13 @@ Arquivo JSON UTF-8, extensão `.nmsitem` (também aceitar `.json` no import). Um
 ```
 
 - `nmsitem`: versão do *schema do arquivo*, não do jogo. Quebrar só se o envelope mudar.
-- `payload`: objeto cru da categoria **já desofuscado** (o mesmo que iria em `ShipOwnership[i]`).
+- `payload`: objeto cru da categoria **já desofuscado** (o mesmo que iria em `ShipOwnership[i]` ou `PersistentPlayerBases[i]`).
+- Bases COSMOS: `category` é `"deepspace"` ou `"spacestation"`; o payload é o objeto da base (inclui `BaseType`, `Objects[]`, endereço). `extra.baseType` no SQLite duplica o enum para filtro sem abrir o payload.
 - Validação de seed: `/^0x[0-9a-fA-F]+$/` e, para naves, `payload.Resource.Seed[1]` deve bater com `seed` (ou ser documentado o mismatch).
 - `galaxy`: `RealityIndex` **0–255** (igual ao save). A UI soma +1 só para mostrar.
 - Ao importar para um save de `gameVersion` diferente: warning modal, não bloqueio silencioso. Ver §7.
+
+Este envelope é o que o [Colossal Archive](#18-colossal-archive-depois-deste-projeto) vai ingerir. Não criar um formato paralelo “de hub” neste projeto.
 
 Não tentar compatibilidade binária com os `.json` de export do GoatFungus/NomNom no MVP. Na Fase 3, um adaptador “importar JSON de outro editor” pode mapear campos conhecidos.
 
@@ -789,7 +878,7 @@ Ordem sugerida (da mais estável para a mais volátil):
 3. Traje — **só layout** (§2.7.4). Sem categoria inventário.
 4. Cargueira — Resource + 3 inventários (o inventário *da cargueira* viaja no payload dela, não como item solto).
 5. Fragatas — array de frota; seed + traits.
-6. Bases (`PersistentPlayerBases`) — payload pesado (`Objects[]`); `.nmsitem` grande; avisar na UI.
+6. Bases (`PersistentPlayerBases`) — payload pesado (`Objects[]`); `.nmsitem` grande; avisar na UI. COSMOS (Deep Space / Space Station) = **Fase 4b**, não nesta.
 7. Wonders — **Personal Wonders** (`WonderCustomRecords[i]` + `WonderCustomRecordsExtraData[i]`). Records automáticos = listagem secundária / read-only.
 8. Extra se o probe mostrar: Corvettes, Squadron.
 
@@ -810,7 +899,7 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ### Fase 4 — Screenshots, tags, filtros
 
-**Status: feita** (checklist 4.1–4.5). Não começar a Fase 5.
+**Status: feita** (checklist 4.1–4.5). Não começar a Fase 5. **Próxima implementação: Fase 4b.**
 
 1. Upload de screenshot (webp, max 1 MB) → `data/screenshots/<id>.webp`. Path no disco; magic-bytes no servidor (só WebP; JPEG/PNG viram WebP no browser).
 2. Tags com autocomplete (`Tag.slug`).
@@ -821,6 +910,30 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 **Aceite:** filtrar `S-class` + tag `exotic` retorna o conjunto certo; screenshot aparece no dialog.
 
 **Complexidade:** M (2–3 dias).
+
+---
+
+### Fase 4b — Bases COSMOS (Deep Space + Space Station)
+
+**Status: planejada.** Só isto antes da Fase 5. Detalhe técnico: §2.7.6. Persistência: §1.7 (não muda o schema Prisma).
+
+**Objetivo:** duas opções novas na sidebar (Arquivo e Save aberto), alimentadas pelo `save2.hg` COSMOS.
+
+1. `CATEGORIES` += `deepspace`, `spacestation`. `CATEGORY_META` + ícones (ex.: `Orbit`, `Satellite`). Sidebar lista as duas **depois de Bases**.
+2. Extract: filtrar `PersistentPlayerBases` por `PlayerSpaceBase` / `PlayerSpaceStationBase`. `/base` não mostra esses tipos (nem `FreighterBase`).
+3. Save aberto: listar, arquivar, exportar `.nmsitem`, aplicar (append ou vazio do tipo; Station recusa a 21ª).
+4. Arquivo: `/archive/deepspace` e `/archive/spacestation`; counts/filtros; itens antigos `category: "base"` + `baseType` COSMOS aparecem aqui.
+5. Copy: Deep Space — sem limite confirmado no JSON, mesmo array das bases. Space Station — até 20 por save. Aviso de `.nmsitem` grande se `Objects` for grande (o da fixture tem ~200).
+6. Testes: `save2.hg` (2 + 1), sintético do cap 20, `archive-service` como o teste do `FreighterBase`. Atualizar asserts de `Version` 6785 e da contagem de bases no teste de integração.
+7. Skills de UI nas telas novas; não no parser.
+
+**Aceite:** abrir o `save2.hg` atual mostra 2 Deep Space e 1 Space Station nos menus novos, zero desses tipos em Bases; arquivar uma de cada sobrevive restart; aplicar Station num save que já tem 20 falha com mensagem clara; `.nmsitem` tem `category` `deepspace` / `spacestation` e o payload com `PersistentBaseTypes`.
+
+**Prompt Cursor:**
+
+> Implemente a Fase 4b do PLAN.md (§2.7.6): duas categorias novas `deepspace` e `spacestation` no menu do Arquivo e do Save aberto. Discriminante: `PersistentPlayerBases[].BaseType.PersistentBaseTypes` = `PlayerSpaceBase` / `PlayerSpaceStationBase`. Fixture `.others/save2.hg` (2 + 1). Cap 20 só em Space Station no insert. Não persista o save no servidor. Não comece a Fase 5 nem o Colossal Archive. Skills de UI (§1.6) nas telas; não no parser.
+
+**Complexidade:** S–M (1–2 dias).
 
 ---
 
@@ -840,11 +953,28 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ---
 
+### Fase 6 — Colossal Archive (depois; não implementar agora)
+
+Hub para jogadores enviarem descobertas (seed / model / print) para outros aplicarem no próprio save. Ver §1.8.
+
+Esboço quando o arquivo pessoal estiver pronto:
+
+1. Mesmo `.nmsitem` v1 como upload. Rejeitar `.hg`. Screenshot vira o print obrigatório (ou fortemente incentivado) no anúncio.
+2. Catálogo público facetado pelas mesmas `CATEGORIES` (incluindo `deepspace` / `spacestation`).
+3. Auth, moderação, rate limit, Postgres. Instância **separada** deste app self-hosted — o NMS Archive pessoal não vira SaaS por acidente.
+4. Aplicar no save aberto do visitante: mesmo `insert` local; o hub só entrega o arquivo.
+
+**Não fazer agora:** schema extra, URLs `/share`, contas, upload para terceiros.
+
+**Complexidade:** XL (projeto seguinte).
+
+---
+
 ## 7. Riscos e mitigações
 
 ### 7.1 Hello Games muda o JSON no próximo patch
 
-**Risco principal do projeto.** Sintomas: chaves novas ofuscadas (aparecem em `unknownKeys`), arrays movidos, campos de nave/corvette.
+**Risco principal do projeto.** Sintomas: chaves novas ofuscadas (aparecem em `unknownKeys`), arrays movidos, campos de nave/corvette, novos `PersistentBaseTypes` (COSMOS: `PlayerSpaceBase`, `PlayerSpaceStationBase` — o mapping antigo ainda leu o save 6785 com 0 unknown keys porque o **valor** do enum é plaintext).
 
 Mitigações:
 
@@ -921,6 +1051,10 @@ Não é um SaaS multi-tenant no desenho atual. Mesmo assim:
 - Upload de screenshot: magic-bytes + conversão server-side, não servir `.svg` arbitrário.
 - Path traversal em `screenshotPath` / backups: só basename UUID.
 
+### 7.10 Cap de Space Station
+
+O “20 por save” **não está no JSON**. Se o jogo mudar o teto, o insert do arquivo fica errado. Mitigação: constante nomeada (`SPACE_STATION_BASE_LIMIT = 20`) + copy na UI; fácil de ajustar. Deep Space sem constante de cap até aparecer evidência.
+
 ---
 
 ## 8. Roadmap e complexidade
@@ -934,10 +1068,12 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 | 1b | Ship Type, slots vazios, reorder naves, moedas, galáxia 1–256 | S–M | 1–2 | Fase 1 |
 | 2 | SQLite arquivo pessoal + home = archive | M | 2–3 | Fase 1b |
 | 3 | Demais categorias (sem inventário; traje = layout; reorder MT/pets) | L | 5–8 | Fase 2, probe |
-| 4 | Screenshots, tags, filtros, compare | M | 2–3 | Fase 2–3 |
-| 5 | Docker polido, docs, lista de galáxias, XXTEA se preciso | S–M | 1–2 | Fase 2 |
+| 4 | Screenshots, tags, filtros, compare | M | 2–3 | Fase 2–3 — **feita** |
+| 4b | Deep Space + Space Station (COSMOS, dois menus) | S–M | 1–2 | Fase 4, `save2.hg` 6785 — **próxima** |
+| 5 | Docker polido, docs, lista de galáxias, XXTEA se preciso | S–M | 1–2 | Fase 4b |
+| 6 | Colossal Archive (hub público) | XL | projeto seguinte | Fase 5 + envelope `.nmsitem` estável |
 
-**Caminho crítico:** round-trip da nave no jogo (1.7), depois o arquivo (Fase 2). Sem archive persistente o app continua parecendo um editor.
+**Caminho crítico agora:** Fase 4b (os dois menus COSMOS no `save2.hg`), depois Fase 5. O hub (§1.8 / Fase 6) espera.
 
 **Ordem de implementação (checklist linear):**
 
@@ -974,7 +1110,13 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 [x] 4.3 filtros no arquivo (classe, tipo, tags, galáxia 1–256, texto)
 [x] 4.4 grade com thumb / tabela sem thumb
 [x] 4.5 compare save vs. arquivado (diff raso + JSON colapsável)
+[ ] 4b.1 CATEGORIES + sidebar Deep Space / Space Station
+[ ] 4b.2 extract PlayerSpaceBase / PlayerSpaceStationBase; Bases sem esses tipos
+[ ] 4b.3 insert append + cap 20 na Station; .nmsitem das duas categorias
+[ ] 4b.4 archive-service lista/counts (incl. itens velhos category=base)
+[ ] 4b.5 testes save2.hg (2+1) + sintético do cap
 [ ] 5.x docs + compose + mapping updater + galaxies.ts completo
+[ ] 6.x Colossal Archive (projeto seguinte; §1.8)
 ```
 
 ---
@@ -993,6 +1135,8 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 - Estrutura JSON de naves/inventário: [pljeroen/nmstoolkit](https://github.com/pljeroen/nmstoolkit), issues GoatFungus (#1030 naves, #533/#1308 pets)
 - Lista de galáxias NMS (256 nomes, 1-based na wiki): preencher `src/lib/nms/galaxies.ts` na Fase 5 / quando couber
 - Skills de UI (Cursor, usuário): [jakubkrehel/skills](https://github.com/jakubkrehel/skills) — ver §1.6
+- Cosmos 7.0 (Deep Space / Space Station): [nomanssky.com/cosmos-update](https://www.nomanssky.com/cosmos-update/)
+- Enum `GcPersistentBaseTypes`: [MBINCompiler `GcPersistentBaseTypes.cs`](https://github.com/monkeyman192/MBINCompiler/blob/development/libMBIN/Source/NMS/GameComponents/GcPersistentBaseTypes.cs)
 
 ---
 
@@ -1138,8 +1282,6 @@ model AppSetting {
 
 ## Apêndice C — Próximo prompt
 
-A Fase 0 e a 1 já estão no repo. Cole no Cursor:
+A Fase 4 está no repo. Cole no Cursor:
 
-> Implemente a Fase 1b do PLAN.md: na lista de naves, Ship Type no lugar de Filename e slots vazios visíveis; drag-and-drop para reordenar ShipOwnership; no dashboard, ícone para editar Units/Nanites/Quicksilver; galáxia na UI como 1–256 (índice 0–255 no JSON). Fixture `.others/save2.hg`. Não persista o save no servidor. Não comece a Fase 2. Skills de UI já estão no usuário (`~/.agents/skills/`, §1.6): use better-ui / better-layout / better-writing / better-accessibility nesta fase; interface-review no fim. Não use essas skills no parser.
-
-Depois da 1b (e do round-trip in-game da nave), aí sim a Fase 2 — home = arquivo pessoal.
+> Implemente a Fase 4b do PLAN.md (§2.7.6): duas categorias novas `deepspace` e `spacestation` no menu do Arquivo e do Save aberto. Discriminante: `PersistentPlayerBases[].BaseType.PersistentBaseTypes` = `PlayerSpaceBase` / `PlayerSpaceStationBase`. Fixture `.others/save2.hg` (2 Deep Space + 1 Space Station, Version 6785). Cap 20 só em Space Station no insert. Não persista o save no servidor. Não comece a Fase 5 nem o Colossal Archive. Skills de UI já estão no usuário (`~/.agents/skills/`, §1.6): use better-ui / better-layout / better-writing / better-accessibility nesta fase; interface-review no fim. Não use essas skills no parser.
