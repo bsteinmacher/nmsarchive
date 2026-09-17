@@ -17,7 +17,7 @@ Este documento é a fonte da verdade para implementação no Cursor. Siga as fas
 3. [Schema Prisma](#3-schema-prisma)
 4. [Estrutura de pastas](#4-estrutura-de-pastas)
 5. [Formato `.nmsitem`](#5-formato-nmsitem)
-6. [Fases de desenvolvimento](#6-fases-de-desenvolvimento) — próxima: [Fase 5](#fase-5--deploy-e-documentação)
+6. [Fases de desenvolvimento](#6-fases-de-desenvolvimento) — próxima: [Fase 6](#fase-6--colossal-archive-depois-não-implementar-agora) (fora deste repo)
 7. [Riscos e mitigações](#7-riscos-e-mitigações)
 8. [Roadmap e complexidade](#8-roadmap-e-complexidade)
 9. [Referências](#9-referências)
@@ -181,7 +181,7 @@ save.hg
          → JSON legível
 ```
 
-O arquivo irmão `mf_save*.hg` (metadados / checksum) usa **XXTEA** + SHA-256, não AES. O jogo frequentemente **carrega o save mesmo com `mf_save` ausente ou inválido**. No MVP, gravamos só `save.hg`. Na Fase 5, opcionalmente regeneramos `mf_save`.
+O arquivo irmão `mf_save*.hg` (metadados / checksum) usa **XXTEA** + SHA-256, não AES. O jogo frequentemente **carrega o save mesmo com `mf_save` ausente ou inválido**. Gravamos só `save.hg`. A Fase 5 **não** regenera `mf_save`: não há teste in-game (1.7) mostrando que o jogo atual rejeita save sem metadata.
 
 Referência de formatos (libNOM.io):
 
@@ -276,7 +276,7 @@ Stack: `libNOM.io` (I/O multiplataforma, LZ4 via `K4os.Compression.LZ4`) + `libN
 | GOG | `%AppData%\HelloGames\NMS\DefaultUser\` |
 | Microsoft Store | WGS sob `Packages\HelloGames.NoMansSky_*` — **fora do MVP** |
 
-O app é upload manual. Não precisamos varrer o disco no browser (sem File System Access API). Na Fase 5, um modo Docker/Electron pode sugerir o path.
+O app é upload manual. Não precisamos varrer o disco no browser (sem File System Access API). O README da Fase 5 documenta os paths Steam/GOG.
 
 ### 2.7 JSON interno (chaves legíveis)
 
@@ -422,7 +422,7 @@ Contagens (só estrutura; sem nomes/seeds pessoais neste doc):
 
 Não somar +1 na hora de gravar. Helper único: `formatGalaxy(index)` → `"1 · Euclid"`; `parseGalaxyDisplay(n)` só se a UI oferecer 1–256.
 
-Nomes: existem 256 galáxias; a lista completa (wiki / fandom) entra depois em `src/lib/nms/galaxies.ts` (arquivo **versionado**, não em `data/` gitignored). Até a lista estar cheia, índice conhecido usa o nome; o resto mostra `Galáxia {index+1}`.
+Nomes: existem 256 galáxias; a lista completa está em `src/lib/nms/galaxies.ts` (arquivo **versionado**, não em `data/` gitignored). Índice 0–255 usa o nome; fora da faixa a UI mostra `Galáxia {index+1}`.
 
 ### 2.7.3 Ship Type (não Filename na tabela)
 
@@ -899,7 +899,7 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ### Fase 4 — Screenshots, tags, filtros
 
-**Status: feita** (checklist 4.1–4.5). Fase 4b feita — ver bloco abaixo. Não começar a Fase 5.
+**Status: feita** (checklist 4.1–4.5). Fase 4b e Fase 5 feitas — ver blocos abaixo.
 
 1. Upload de screenshot (webp, max 1 MB) → `data/screenshots/<id>.webp`. Path no disco; magic-bytes no servidor (só WebP; JPEG/PNG viram WebP no browser).
 2. Tags com autocomplete (`Tag.slug`).
@@ -915,7 +915,7 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ### Fase 4b — Bases COSMOS (Deep Space + Space Station)
 
-**Status: feita** (checklist 4b.1–4b.5). Só isto antes da Fase 5. Detalhe técnico: §2.7.6. Persistência: §1.7 (não muda o schema Prisma).
+**Status: feita** (checklist 4b.1–4b.5). Fase 5 feita — ver bloco abaixo. Detalhe técnico: §2.7.6. Persistência: §1.7 (não muda o schema Prisma).
 
 **Objetivo:** duas opções novas na sidebar (Arquivo e Save aberto), alimentadas pelo `save2.hg` COSMOS.
 
@@ -939,10 +939,12 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ### Fase 5 — Deploy e documentação
 
+**Status: feita** (checklist 5.1–5.7). Não começar a Fase 6.
+
 1. `Dockerfile` multi-stage + `docker-compose.yml` (porta 3000, volume `data`).
 2. Healthcheck `/api/health`.
 3. README: captura de save, backup, aviso de risco, “não use em Ironman/expedição sem cópia”.
-4. Regenerar `mf_save.hg` (XXTEA) se testes mostrarem que o jogo da versão atual rejeita save sem metadata — senão documentar que é opcional.
+4. Regenerar `mf_save.hg` (XXTEA) se testes mostrarem que o jogo da versão atual rejeita save sem metadata — senão documentar que é opcional. **Documentado como opcional; não implementado** (1.7 ainda pendente).
 5. Script `scripts/update-mapping.ts`.
 6. Changelog + política de versão do `.nmsitem`.
 7. Vercel: **não recomendado** com SQLite em filesystem efêmero. Se um dia for, migrar para Postgres (`provider = "postgresql"` — o schema já está portável).
@@ -1041,7 +1043,7 @@ Mitigação: parser original; review de PRs contra copypaste de NomNom/libNOM. N
 
 ### 7.8 `mf_save.hg` / checksum
 
-Mitigação: testar save reescrito *sem* `mf_save` no jogo atual. Se falhar, portar XXTEA (algoritmo público; o crate `nms-save` documenta rounds diferentes por formato 2001/2002/2003/2004). Não bloquear o MVP nisso.
+Mitigação: testar save reescrito *sem* `mf_save` no jogo atual (item 1.7). Sem evidência de rejeição, a Fase 5 **não** porta XXTEA: o download é só `save.hg`; o README pede para deixar o `mf_save` original na pasta. Se o 1.7 falhar por metadata, aí sim portar XXTEA (algoritmo público; o crate `nms-save` documenta rounds diferentes por formato 2001/2002/2003/2004).
 
 ### 7.9 Segurança da instância self-hosted
 
@@ -1070,10 +1072,10 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 | 3 | Demais categorias (sem inventário; traje = layout; reorder MT/pets) | L | 5–8 | Fase 2, probe |
 | 4 | Screenshots, tags, filtros, compare | M | 2–3 | Fase 2–3 — **feita** |
 | 4b | Deep Space + Space Station (COSMOS, dois menus) | S–M | 1–2 | Fase 4, `save2.hg` 6785 — **feita** |
-| 5 | Docker polido, docs, lista de galáxias, XXTEA se preciso | S–M | 1–2 | Fase 4b |
+| 5 | Docker polido, docs, lista de galáxias, XXTEA se preciso | S–M | 1–2 | Fase 4b — **feita** (`mf_save` não regenerado) |
 | 6 | Colossal Archive (hub público) | XL | projeto seguinte | Fase 5 + envelope `.nmsitem` estável |
 
-**Caminho crítico agora:** Fase 5. O hub (§1.8 / Fase 6) espera.
+**Caminho crítico agora:** Fase 6 só depois deste arquivo pessoal estar estável + 1.7 in-game. Não implementar o hub neste repo.
 
 **Ordem de implementação (checklist linear):**
 
@@ -1115,7 +1117,13 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 [x] 4b.3 insert append + cap 20 na Station; .nmsitem das duas categorias
 [x] 4b.4 archive-service lista/counts (incl. itens velhos category=base)
 [x] 4b.5 testes save2.hg (2+1) + sintético do cap
-[ ] 5.x docs + compose + mapping updater + galaxies.ts completo
+[x] 5.1 Dockerfile multi-stage + compose (127.0.0.1:3000, volume data)
+[x] 5.2 healthcheck /api/health
+[x] 5.3 README captura/backup/risco (Ironman/expedição)
+[x] 5.4 mf_save: não regenerar (sem evidência in-game de rejeição)
+[x] 5.5 scripts/update-mapping.ts
+[x] 5.6 CHANGELOG + política .nmsitem v1
+[x] 5.7 galaxies.ts 256 nomes; Vercel não recomendado
 [ ] 6.x Colossal Archive (projeto seguinte; §1.8)
 ```
 
@@ -1133,7 +1141,7 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 - Parser Rust (bom modelo mental): [nms-save](https://docs.rs/nms-save) / [oxur/nms-copilot](https://github.com/oxur/nms-copilot)
 - Formato 2000 (legacy): [MetaIdea/nms-savetool](https://github.com/MetaIdea/nms-savetool)
 - Estrutura JSON de naves/inventário: [pljeroen/nmstoolkit](https://github.com/pljeroen/nmstoolkit), issues GoatFungus (#1030 naves, #533/#1308 pets)
-- Lista de galáxias NMS (256 nomes, 1-based na wiki): preencher `src/lib/nms/galaxies.ts` na Fase 5 / quando couber
+- Lista de galáxias NMS (256 nomes, 1-based na wiki): `src/lib/nms/galaxies.ts`
 - Skills de UI (Cursor, usuário): [jakubkrehel/skills](https://github.com/jakubkrehel/skills) — ver §1.6
 - Cosmos 7.0 (Deep Space / Space Station): [nomanssky.com/cosmos-update](https://www.nomanssky.com/cosmos-update/)
 - Enum `GcPersistentBaseTypes`: [MBINCompiler `GcPersistentBaseTypes.cs`](https://github.com/monkeyman192/MBINCompiler/blob/development/libMBIN/Source/NMS/GameComponents/GcPersistentBaseTypes.cs)
@@ -1282,6 +1290,4 @@ model AppSetting {
 
 ## Apêndice C — Próximo prompt
 
-A Fase 4b está no repo. Cole no Cursor:
-
-> Implemente a Fase 5 do PLAN.md: Docker polido, healthcheck, README de captura/backup, mapping updater, galaxies.ts completo se couber. Regenerar mf_save só se testes mostrarem que o jogo atual rejeita save sem metadata. Não comece a Fase 6 / Colossal Archive.
+A Fase 5 está no repo. **Não** cole um prompt da Fase 6 neste projeto até o arquivo pessoal estar estável e o 1.7 in-game feito. O hub é um repo separado (§1.8).

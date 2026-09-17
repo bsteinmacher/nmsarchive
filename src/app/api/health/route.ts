@@ -1,17 +1,10 @@
 import { prisma } from "@/server/db";
+import { checkHealth } from "@/lib/health";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET() {
-  try {
-    await prisma.$queryRaw`SELECT 1`;
-    return Response.json({ ok: true, service: "nmsarchive" });
-  } catch (error) {
-    return Response.json(
-      {
-        ok: false,
-        service: "nmsarchive",
-        error: error instanceof Error ? error.message : "database unavailable",
-      },
-      { status: 503 },
-    );
-  }
+  const result = await checkHealth(() => prisma.$queryRaw`SELECT 1`);
+  return Response.json(result.body, { status: result.status });
 }

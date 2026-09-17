@@ -1,0 +1,17 @@
+NMS Archive
+https://github.com/bsteinmacher/nmsarchive
+
+Este parser de save `.hg` foi escrito do zero. Não inclui código do
+NMSSaveEditor (closed source) nem de NomNom / libNOM.io / libNOM.map (GPL-3.0).
+
+mapping.json
+  Baixado em runtime/build a partir das releases do MBINCompiler
+  (monkeyman192). Não vendorar o compilador neste repositório.
+  https://github.com/monkeyman192/MBINCompiler/releases/latest
+
+Formato LZ4 dos saves (magic 0xFEEDA1E5)
+  Documentado em gists públicos (Chase-san / Robert Maupin):
+  https://gist.github.com/Chase-san/16076aaa90429ea6170550926b70f48b
+
+Nomes das 256 galáxias
+  Lista comunitária (wiki / fandom), versionada em src/lib/nms/galaxies.ts.

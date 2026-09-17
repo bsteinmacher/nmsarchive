@@ -3,8 +3,11 @@ import { CATEGORIES, type Category } from "@/types/nms";
 import { getAdapter, seedFromPayload } from "@/lib/nms/extract";
 import { summarizePlayer } from "@/lib/nms/player";
 
+/** Versão do envelope `.nmsitem`. Só sobe quando o schema do arquivo quebrar. */
+export const NMSITEM_SCHEMA_VERSION = 1 as const;
+
 export const nmsItemSchema = z.object({
-  nmsitem: z.literal(1),
+  nmsitem: z.literal(NMSITEM_SCHEMA_VERSION),
   exportedAt: z.string(),
   gameVersion: z.number(),
   category: z.enum(CATEGORIES),
@@ -33,7 +36,7 @@ export type BuildNmsItemInput = {
 
 export function buildNmsItem(input: BuildNmsItemInput): NmsItemFile {
   return nmsItemSchema.parse({
-    nmsitem: 1,
+    nmsitem: NMSITEM_SCHEMA_VERSION,
     exportedAt: new Date().toISOString(),
     gameVersion: input.gameVersion,
     category: input.category,

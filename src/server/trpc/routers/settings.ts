@@ -20,6 +20,7 @@ import {
   MAPPING_CACHE_PATH,
   resolveDatabasePath,
 } from "@/server/paths";
+import { withWritableSqlite } from "@/server/sqlite-errors";
 import { createTRPCRouter, publicProcedure } from "@/server/trpc/trpc";
 
 const MAX_RESTORE_BYTES = 80 * 1024 * 1024;
@@ -52,20 +53,22 @@ export const settingsRouter = createTRPCRouter({
     };
   }),
 
-  backup: publicProcedure.mutation(async () => {
-    const result = await backupDatabase({ prisma });
-    if (result.skipped) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "Ainda não há banco para copiar.",
+  backup: publicProcedure.mutation(async () =>
+    withWritableSqlite(async () => {
+      const result = await backupDatabase({ prisma });
+      if (result.skipped) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Ainda não há banco para copiar.",
+        });
+      }
+      await logOperation(prisma, {
+        action: "backup",
+        detail: { fileName: result.fileName, automatic: false },
       });
-    }
-    await logOperation(prisma, {
-      action: "backup",
-      detail: { fileName: result.fileName, automatic: false },
-    });
-    return { fileName: result.fileName, pruned: result.pruned };
-  }),
+      return { fileName: result.fileName, pruned: result.pruned };
+    }),
+  ),
 
   restore: publicProcedure
     .input(restoreBackupInputSchema)
