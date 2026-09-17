@@ -10,10 +10,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getAdapter, type ExtractedSlot } from "@/lib/nms/extract";
+import { getAdapter, isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
+import { trpc } from "@/lib/trpc";
 import { useSaveSession } from "@/stores/save-session";
 import type { Category } from "@/types/nms";
+import { ItemCompare } from "./item-compare";
 import { JsonTree } from "./json-tree";
 
 export function SaveItemDetailDialog({
@@ -36,13 +38,37 @@ export function SaveItemDetailDialog({
   const bits = [
     `Slot ${slot}`,
     item?.className ? `Classe ${item.className}` : null,
+    item?.extra.element || null,
+    item?.extra.biome ? `Bioma ${item.extra.biome}` : null,
+    item?.extra.level ? `Nível ${item.extra.level}` : null,
     item?.itemType || null,
     item?.seed || null,
   ].filter(Boolean);
+  const archived = trpc.items.list.useQuery(
+    {
+      category:
+        item && isFreighterBaseSlot(item) ? "freighter" : item?.category,
+      seed: item?.seed && item.seed !== "0x0" ? item.seed : undefined,
+    },
+    {
+      enabled:
+        open &&
+        item != null &&
+        !item.empty &&
+        !item.readonly &&
+        Boolean(item.seed) &&
+        item.seed !== "0x0",
+    },
+  );
+  const archivedHit = archived.data?.items[0];
+  const archivedDetail = trpc.items.get.useQuery(
+    { id: archivedHit?.id ?? "" },
+    { enabled: open && archivedHit != null },
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-hidden sm:max-w-3xl">
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{item?.name ?? adapter.label}</DialogTitle>
           <DialogDescription>{bits.join(" · ")}</DialogDescription>
@@ -56,6 +82,23 @@ export function SaveItemDetailDialog({
           <p className="font-mono text-xs break-all text-muted-foreground">
             Filename: {item.filename}
           </p>
+        ) : null}
+        {item && archivedDetail.data ? (
+          <ItemCompare
+            archived={{
+              seed: archivedDetail.data.seed,
+              className: archivedDetail.data.className,
+              itemType: archivedDetail.data.shipType,
+              payload: archivedDetail.data.payload,
+            }}
+            save={{
+              seed: item.seed,
+              className: item.className,
+              itemType: item.itemType,
+              payload: item.payload,
+            }}
+            saveLabel={`slot ${slot}`}
+          />
         ) : null}
         {item ? <JsonTree value={item.payload} /> : null}
         <DialogFooter>

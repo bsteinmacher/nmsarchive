@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useId, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive } from "lucide-react";
 import { cn } from "cn";
+import { ArchiveFilters } from "@/components/items/archive-filters";
 import { ItemDetailDialog } from "@/components/items/item-detail-dialog";
 import { ItemGrid } from "@/components/items/item-grid";
+import { ItemTable } from "@/components/items/item-table";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -14,7 +17,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { parseGalaxyDisplay } from "@/lib/nms/galaxies";
 import { formatOperationLabel } from "@/lib/operation-labels";
+import {
+  archiveSearchHref,
+  parseArchiveSearch,
+  type ArchiveUrlState,
+} from "@/lib/archive-url";
 import { trpc } from "@/lib/trpc";
 import {
   archiveHref,
@@ -32,15 +41,58 @@ function formatWhen(date: Date) {
   });
 }
 
-export function ArchiveHome({ category }: { category?: Category }) {
+function ArchiveHomeInner({ category }: { category?: Category }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const filterId = useId();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const list = trpc.items.list.useQuery(
-    category ? { category } : {},
+  const state = useMemo(
+    () => parseArchiveSearch(searchParams),
+    [searchParams],
   );
+
+  const listInput = useMemo(() => {
+    let galaxy: number | undefined;
+    if (state.galaxyDisplay != null) {
+      try {
+        galaxy = parseGalaxyDisplay(state.galaxyDisplay);
+      } catch {
+        galaxy = undefined;
+      }
+    }
+    return {
+      category,
+      className: state.className,
+      itemType: state.itemType,
+      tags: state.tags.length ? state.tags : undefined,
+      galaxy,
+      q: state.q?.trim() || undefined,
+    };
+  }, [category, state]);
+
+  const list = trpc.items.list.useQuery(listInput);
+  const options = trpc.items.filterOptions.useQuery({ category });
   const counts = trpc.items.counts.useQuery();
   const logs = trpc.logs.list.useQuery({ limit: 8 });
   const items = list.data?.items ?? [];
   const totalAll = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
+  const categoryTotal =
+    category == null ? totalAll : (counts.data?.[category] ?? 0);
+  const filtersOn = Boolean(
+    state.className ||
+      state.itemType ||
+      state.tags.length ||
+      state.galaxyDisplay != null ||
+      state.q,
+  );
+
+  function setState(next: ArchiveUrlState) {
+    router.replace(archiveSearchHref(pathname, next), { scroll: false });
+  }
+
+  const qs = searchParams.toString();
+  const withQuery = (href: string) => (qs ? `${href}?${qs}` : href);
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
@@ -56,7 +108,7 @@ export function ArchiveHome({ category }: { category?: Category }) {
 
       <nav aria-label="Filtrar por categoria" className="flex flex-wrap gap-2">
         <Link
-          href="/"
+          href={withQuery("/")}
           className={cn(
             buttonVariants({
               variant: category == null ? "default" : "outline",
@@ -73,7 +125,7 @@ export function ArchiveHome({ category }: { category?: Category }) {
           return (
             <Link
               key={slug}
-              href={archiveHref(slug)}
+              href={withQuery(archiveHref(slug))}
               className={cn(
                 buttonVariants({
                   variant: active ? "default" : "outline",
@@ -88,10 +140,39 @@ export function ArchiveHome({ category }: { category?: Category }) {
         })}
       </nav>
 
+      <ArchiveFilters
+        idPrefix={filterId}
+        state={state}
+        options={
+          options.data ?? { classes: [], types: [], galaxies: [], tags: [] }
+        }
+        onChange={setState}
+        resultCount={list.data?.total}
+      />
+
       {list.isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
       ) : list.error ? (
         <p className="text-sm text-destructive">{list.error.message}</p>
+      ) : items.length === 0 && filtersOn && categoryTotal > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Nenhum item com esses filtros</CardTitle>
+            <CardDescription>
+              Nada bate com a combinação atual. Limpe os filtros para ver o
+              arquivo de novo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <button
+              type="button"
+              className={cn(buttonVariants())}
+              onClick={() => setState({ tags: [], view: state.view })}
+            >
+              Limpar filtros
+            </button>
+          </CardContent>
+        </Card>
       ) : items.length === 0 ? (
         <Card>
           <CardHeader>
@@ -120,6 +201,8 @@ export function ArchiveHome({ category }: { category?: Category }) {
             </Link>
           </CardContent>
         </Card>
+      ) : state.view === "table" ? (
+        <ItemTable items={items} onSelect={setSelectedId} />
       ) : (
         <ItemGrid items={items} onSelect={setSelectedId} />
       )}
@@ -188,5 +271,17 @@ export function ArchiveHome({ category }: { category?: Category }) {
         }}
       />
     </div>
+  );
+}
+
+export function ArchiveHome({ category }: { category?: Category }) {
+  return (
+    <Suspense
+      fallback={
+        <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
+      }
+    >
+      <ArchiveHomeInner category={category} />
+    </Suspense>
   );
 }

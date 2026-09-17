@@ -6,8 +6,15 @@ import { GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { ArchiveItemDialog } from "@/components/items/archive-item-dialog";
+import { ListViewToggle } from "@/components/items/list-view-toggle";
 import { SaveItemDetailDialog } from "@/components/items/save-item-detail-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
+import {
+  SaveSlotActions,
+  SaveSlotGrid,
+  columnValue,
+  dash,
+} from "@/components/items/save-slot-grid";
+import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -23,6 +30,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { archivedScreenshotUrl } from "@/lib/archive-match";
+import type { ArchiveView } from "@/lib/archive-url";
 import {
   getAdapter,
   isFreighterBaseSlot,
@@ -30,23 +39,13 @@ import {
   type ExtractedSlot,
 } from "@/lib/nms/extract";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
+import { trpc } from "@/lib/trpc";
 import { useSaveSession } from "@/stores/save-session";
 import {
   CATEGORY_META,
   isReorderableCategory,
   type Category,
 } from "@/types/nms";
-
-function dash(value: string) {
-  return value || "—";
-}
-
-function columnValue(item: ExtractedSlot, col: AdapterColumn): string {
-  if (col.id === "className") return item.className;
-  if (col.id === "itemType") return item.itemType;
-  if (col.id === "seed") return item.seed;
-  return item.extra[col.id] ?? "";
-}
 
 function SlotTable({
   category,
@@ -66,6 +65,7 @@ function SlotTable({
   onSelect,
   onArchive,
   onExport,
+  screenshotUrl: _screenshotUrl,
 }: {
   category: Category;
   items: ExtractedSlot[];
@@ -84,6 +84,7 @@ function SlotTable({
   onSelect: (item: ExtractedSlot) => void;
   onArchive: (item: ExtractedSlot) => void;
   onExport: (item: ExtractedSlot) => void;
+  screenshotUrl?: (item: ExtractedSlot) => string | null;
 }) {
   if (items.length === 0) {
     return (
@@ -125,7 +126,6 @@ function SlotTable({
             {items.map((item) => {
               const slot = item.slotLabel ?? String(item.index + 1);
               const isOver = over === item.index && dragging !== item.index;
-              const canAct = !item.empty && !item.readonly;
               return (
                 <TableRow
                   key={`${item.group ?? "primary"}-${item.index}`}
@@ -207,41 +207,12 @@ function SlotTable({
                     </TableCell>
                   ))}
                   <TableCell className="text-right">
-                    {canAct ? (
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onSelect(item)}
-                        >
-                          Ver detalhes
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onArchive(item)}
-                        >
-                          Arquivar
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onExport(item)}
-                        >
-                          Exportar
-                        </Button>
-                      </div>
-                    ) : item.readonly ? (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onSelect(item)}
-                      >
-                        Ver detalhes
-                      </Button>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
+                    <SaveSlotActions
+                      item={item}
+                      onSelect={onSelect}
+                      onArchive={onArchive}
+                      onExport={onExport}
+                    />
                   </TableCell>
                 </TableRow>
               );
@@ -266,6 +237,12 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const [dragging, setDragging] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const [liveMessage, setLiveMessage] = useState("");
+  const [view, setView] = useState<ArchiveView>("table");
+  const archived = trpc.items.list.useQuery(
+    { category },
+    { enabled: status === "ready" },
+  );
+  const archivedItems = archived.data?.items ?? [];
 
   const adapter = getAdapter(category);
   const baseAdapter = getAdapter("base");
@@ -346,8 +323,41 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
         : category === "wonder"
           ? "Personal Wonders (escolha do jogador). Records automáticos ficam na lista abaixo, só leitura."
           : category === "freighter"
-            ? "A nave e os três inventários ficam nesta tabela. A construção do interior é a base abaixo."
+            ? "A nave e os três inventários ficam nesta lista. A construção do interior é a base abaixo."
             : meta.description;
+
+  const screenshotUrl = (item: ExtractedSlot) =>
+    archivedScreenshotUrl(archivedItems, item);
+
+  const reorderHandlers = {
+    dragging,
+    over,
+    onDragOver: setOver,
+    onDrop: (from: number, to: number) => {
+      setDragging(null);
+      setOver(null);
+      void moveSlot(from, to);
+    },
+    onDragLeave: (index: number) => {
+      setOver((current) => (current === index ? null : current));
+    },
+    onDragStart: setDragging,
+    onDragEnd: () => {
+      setDragging(null);
+      setOver(null);
+    },
+  };
+  const idleHandlers = {
+    dragging: null,
+    over: null,
+    onDragOver: () => {},
+    onDrop: () => {},
+    onDragLeave: () => {},
+    onDragStart: () => {},
+    onDragEnd: () => {},
+  };
+
+  const SlotList = view === "grid" ? SaveSlotGrid : SlotTable;
 
   return (
     <>
@@ -355,7 +365,10 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
         {liveMessage}
       </p>
       <div className="flex flex-col gap-6">
-        <SlotTable
+        <div className="flex justify-end">
+          <ListViewToggle value={view} onChange={setView} />
+        </div>
+        <SlotList
           category={category}
           items={primary}
           reorderable={reorderable}
@@ -367,28 +380,14 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
               ? "Nenhuma base planetária ou de nave neste save. A da cargueira fica em Cargueiras."
               : undefined
           }
-          dragging={dragging}
-          over={over}
-          onDragOver={setOver}
-          onDrop={(from, to) => {
-            setDragging(null);
-            setOver(null);
-            void moveSlot(from, to);
-          }}
-          onDragLeave={(index) => {
-            setOver((current) => (current === index ? null : current));
-          }}
-          onDragStart={setDragging}
-          onDragEnd={() => {
-            setDragging(null);
-            setOver(null);
-          }}
+          screenshotUrl={screenshotUrl}
+          {...reorderHandlers}
           onSelect={setSelected}
           onArchive={setArchiving}
           onExport={onExport}
         />
         {category === "freighter" ? (
-          <SlotTable
+          <SlotList
             category="base"
             items={interiorBases}
             reorderable={false}
@@ -400,20 +399,15 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             }
             description="A construção do interior. Arquivar a nave não inclui esta construção."
             emptyMessage="Este save não tem uma base de cargueira. O jogo cria uma quando você constrói no interior."
-            dragging={null}
-            over={null}
-            onDragOver={() => {}}
-            onDrop={() => {}}
-            onDragLeave={() => {}}
-            onDragStart={() => {}}
-            onDragEnd={() => {}}
+            screenshotUrl={screenshotUrl}
+            {...idleHandlers}
             onSelect={setSelected}
             onArchive={setArchiving}
             onExport={onExport}
           />
         ) : null}
         {automatic.length > 0 ? (
-          <SlotTable
+          <SlotList
             category={category}
             items={automatic}
             reorderable={false}
@@ -424,13 +418,8 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             ]}
             caption={`Records automáticos (${automatic.length})`}
             description="Descobertas que o jogo guarda sozinho. Só leitura — não vão para o arquivo nem para .nmsitem."
-            dragging={null}
-            over={null}
-            onDragOver={() => {}}
-            onDrop={() => {}}
-            onDragLeave={() => {}}
-            onDragStart={() => {}}
-            onDragEnd={() => {}}
+            screenshotUrl={screenshotUrl}
+            {...idleHandlers}
             onSelect={setSelected}
             onArchive={() => {}}
             onExport={() => {}}

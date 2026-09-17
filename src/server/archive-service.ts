@@ -1,5 +1,10 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import {
+  hasActiveArchiveFilters,
+  matchesArchiveFilters,
+  type ArchiveFilterInput,
+} from "@/lib/archive-filters";
 import { isArchivedFreighterBase } from "@/lib/archive-match";
 import { asNumber, asRecord, asString } from "@/lib/nms/value";
 import {
@@ -8,12 +13,14 @@ import {
   type ArchivedMetadata,
 } from "@/lib/validations";
 import { logOperation } from "@/server/operations";
+import { deleteScreenshot } from "@/server/screenshots";
 import type {
   ArchivedItemDetail,
   ArchivedItemSummary,
+  ArchiveFilterOptions,
 } from "@/types/archive";
 
-export type { ArchivedItemDetail, ArchivedItemSummary };
+export type { ArchivedItemDetail, ArchivedItemSummary, ArchiveFilterOptions };
 
 export type ArchiveItemInput = {
   category: string;
@@ -26,6 +33,10 @@ export type ArchiveItemInput = {
   galaxy?: number;
   sourceSaveId?: string;
   tags: string[];
+};
+
+export type ListItemsFilter = ArchiveFilterInput & {
+  category?: string;
 };
 
 function metadataSummary(metadata: unknown): {
@@ -51,6 +62,7 @@ function toSummary(row: {
   description: string;
   galaxy: number | null;
   coordinates: string | null;
+  screenshotPath: string | null;
   metadata: unknown;
   createdAt: Date;
   updatedAt: Date;
@@ -65,6 +77,7 @@ function toSummary(row: {
     description: row.description,
     galaxy: row.galaxy,
     coordinates: row.coordinates,
+    screenshotPath: row.screenshotPath,
     gameVersion: extra.gameVersion,
     className: extra.className,
     shipType: extra.shipType,
@@ -206,10 +219,26 @@ export async function archiveItem(prisma: PrismaClient, input: ArchiveItemInput)
   return toSummary(reloaded);
 }
 
+function inArchiveCategory(
+  row: { category: string; metadata: unknown },
+  category?: string,
+): boolean {
+  if (!category) return true;
+  const interior = isArchivedFreighterBase(
+    metadataAsArchiveHint(row.category, row.metadata),
+  );
+  if (category === "freighter") {
+    return row.category === "freighter" || interior;
+  }
+  if (category === "base") return !interior;
+  return row.category === category;
+}
+
 export async function listItems(
   prisma: PrismaClient,
-  category?: string,
+  filter: ListItemsFilter = {},
 ): Promise<ArchivedItemSummary[]> {
+  const category = filter.category;
   const where =
     category === "freighter"
       ? { category: { in: ["freighter", "base"] } }
@@ -221,19 +250,71 @@ export async function listItems(
     include: itemInclude,
     orderBy: { createdAt: "desc" },
   });
+  const extras: ArchiveFilterInput = {
+    className: filter.className,
+    itemType: filter.itemType,
+    tags: filter.tags,
+    galaxy: filter.galaxy,
+    q: filter.q,
+    seed: filter.seed,
+  };
   return rows
-    .filter((row) => {
-      if (!category) return true;
-      const interior = isArchivedFreighterBase(
-        metadataAsArchiveHint(row.category, row.metadata),
+    .filter((row) => inArchiveCategory(row, category))
+    .map(toSummary)
+    .filter((item) =>
+      hasActiveArchiveFilters(extras)
+        ? matchesArchiveFilters(item, extras)
+        : true,
+    );
+}
+
+export async function listTags(
+  prisma: PrismaClient,
+  query?: string,
+): Promise<{ slug: string; label: string }[]> {
+  const rows = await prisma.tag.findMany({
+    orderBy: { slug: "asc" },
+    take: 200,
+  });
+  const needle = query?.trim().toLowerCase() ?? "";
+  const slugNeedle = needle ? slugifyTag(needle) : "";
+  return rows
+    .filter((tag) => {
+      if (!needle) return true;
+      return (
+        tag.slug.includes(slugNeedle) ||
+        tag.label.toLowerCase().includes(needle)
       );
-      if (category === "freighter") {
-        return row.category === "freighter" || interior;
-      }
-      if (category === "base") return !interior;
-      return true;
     })
-    .map(toSummary);
+    .slice(0, 40)
+    .map((tag) => ({ slug: tag.slug, label: tag.label }));
+}
+
+export async function listFilterOptions(
+  prisma: PrismaClient,
+  category?: string,
+): Promise<ArchiveFilterOptions> {
+  const items = await listItems(prisma, { category });
+  const classes = new Set<string>();
+  const types = new Set<string>();
+  const galaxies = new Set<number>();
+  const tags = new Map<string, string>();
+  for (const item of items) {
+    if (item.className) classes.add(item.className);
+    if (item.shipType) types.add(item.shipType);
+    if (item.galaxy != null) galaxies.add(item.galaxy);
+    for (const tag of item.tags) {
+      if (!tags.has(tag.slug)) tags.set(tag.slug, tag.label);
+    }
+  }
+  return {
+    classes: [...classes].sort(),
+    types: [...types].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    galaxies: [...galaxies].sort((a, b) => a - b),
+    tags: [...tags.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([slug, label]) => ({ slug, label })),
+  };
 }
 
 export async function countItemsByCategory(
@@ -291,7 +372,14 @@ export async function getItem(
 
 export async function updateItem(
   prisma: PrismaClient,
-  input: { id: string; description?: string; tags?: string[] },
+  input: {
+    id: string;
+    description?: string;
+    tags?: string[];
+    screenshotPath?: string | null;
+    className?: string | null;
+    extra?: Record<string, string>;
+  },
 ): Promise<ArchivedItemSummary> {
   const existing = await prisma.archivedItem.findUnique({
     where: { id: input.id },
@@ -311,6 +399,41 @@ export async function updateItem(
   if (input.tags) {
     await syncTags(prisma, input.id, input.tags);
   }
+  if (input.screenshotPath !== undefined) {
+    const previous = existing.screenshotPath;
+    await prisma.archivedItem.update({
+      where: { id: input.id },
+      data: { screenshotPath: input.screenshotPath },
+    });
+    if (previous && previous !== input.screenshotPath) {
+      await deleteScreenshot(previous);
+    }
+  }
+  if (input.className !== undefined || input.extra) {
+    const rec = asRecord(existing.metadata) ?? {};
+    const currentExtra = asRecord(rec.extra);
+    const extra = input.extra
+      ? input.extra
+      : currentExtra
+        ? Object.fromEntries(
+            Object.entries(currentExtra).flatMap(([key, value]) =>
+              typeof value === "string" ? [[key, value]] : [],
+            ),
+          )
+        : undefined;
+    const metadata = {
+      ...rec,
+      className:
+        input.className === undefined
+          ? rec.className
+          : input.className || undefined,
+      extra,
+    };
+    await prisma.archivedItem.update({
+      where: { id: input.id },
+      data: { metadata: metadata as Prisma.InputJsonValue },
+    });
+  }
   await logOperation(prisma, {
     action: "update",
     category: existing.category,
@@ -321,6 +444,8 @@ export async function updateItem(
       seed: existing.seed,
       description: input.description != null,
       tags: input.tags != null,
+      screenshot: input.screenshotPath !== undefined,
+      rank: input.className !== undefined || input.extra != null,
     },
   });
   const reloaded = await prisma.archivedItem.findUniqueOrThrow({
@@ -348,6 +473,7 @@ export async function deleteItem(prisma: PrismaClient, id: string) {
     detail: { name: existing.name, seed: existing.seed },
   });
   await prisma.archivedItem.delete({ where: { id } });
+  await deleteScreenshot(existing.screenshotPath);
   return { id };
 }
 

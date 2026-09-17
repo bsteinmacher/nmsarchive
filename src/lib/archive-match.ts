@@ -1,8 +1,11 @@
 import {
   FREIGHTER_BASE_LABEL,
   FREIGHTER_BASE_TYPE,
+  isFreighterBaseSlot,
 } from "@/lib/nms/extract/bases";
 import type { ExtractedSlot } from "@/lib/nms/extract/types";
+import { screenshotPublicUrl } from "@/lib/screenshots";
+import type { ArchivedItemSummary } from "@/types/archive";
 
 export function isArchivedFreighterBase(item: {
   category: string;
@@ -47,6 +50,36 @@ export function matchingItems(
       item.category === category &&
       item.seed.toLowerCase() === normalized,
   );
+}
+
+export function saveSlotUiCategory(item: ExtractedSlot): string {
+  return isFreighterBaseSlot(item) ? "freighter" : item.category;
+}
+
+export function matchingArchivedItems(
+  items: ArchivedItemSummary[],
+  slot: ExtractedSlot,
+): ArchivedItemSummary[] {
+  const normalized = slot.seed.toLowerCase();
+  if (slot.empty || slot.readonly || !normalized || normalized === "0x0") {
+    return [];
+  }
+  const uiCategory = saveSlotUiCategory(slot);
+  return items.filter(
+    (item) =>
+      item.seed.toLowerCase() === normalized &&
+      archiveUiCategory(item) === uiCategory,
+  );
+}
+
+export function archivedScreenshotUrl(
+  items: ArchivedItemSummary[],
+  slot: ExtractedSlot,
+): string | null {
+  const hit = matchingArchivedItems(items, slot).find(
+    (item) => item.screenshotPath,
+  );
+  return screenshotPublicUrl(hit?.screenshotPath);
 }
 
 /** @deprecated use matchingItems */

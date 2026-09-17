@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   archiveUiCategory,
+  archivedScreenshotUrl,
   isArchivedFreighterBase,
+  matchingArchivedItems,
   matchingShips,
 } from "@/lib/archive-match";
 import type { ExtractedShip } from "@/lib/nms/extract/types";
+import type { ArchivedItemSummary } from "@/types/archive";
 
 function ship(partial: Partial<ExtractedShip> & Pick<ExtractedShip, "index" | "seed">): ExtractedShip {
   return {
@@ -57,5 +60,50 @@ describe("archiveUiCategory", () => {
     expect(archiveUiCategory({ category: "base", shipType: "Planeta" })).toBe(
       "base",
     );
+  });
+});
+
+describe("matchingArchivedItems", () => {
+  const now = new Date("2026-01-01");
+  function archived(
+    partial: Partial<ArchivedItemSummary> & Pick<ArchivedItemSummary, "id" | "seed">,
+  ): ArchivedItemSummary {
+    return {
+      category: "ship",
+      name: "X",
+      description: "",
+      galaxy: null,
+      coordinates: null,
+      gameVersion: null,
+      className: "S",
+      shipType: "Fighter",
+      filename: "",
+      tags: [],
+      screenshotPath: null,
+      createdAt: now,
+      updatedAt: now,
+      ...partial,
+    };
+  }
+
+  it("reusa a screenshot do arquivo com o mesmo seed", () => {
+    const slot = ship({ index: 1, seed: "0xabc" });
+    const items = [
+      archived({
+        id: "a",
+        seed: "0xABC",
+        screenshotPath: "11111111-1111-1111-1111-111111111111.webp",
+      }),
+      archived({ id: "b", seed: "0xdef" }),
+    ];
+    expect(matchingArchivedItems(items, slot).map((i) => i.id)).toEqual(["a"]);
+    expect(archivedScreenshotUrl(items, slot)).toBe(
+      "/api/screenshots/11111111-1111-1111-1111-111111111111",
+    );
+  });
+
+  it("deixa sem imagem quando o seed não está no arquivo", () => {
+    const slot = ship({ index: 1, seed: "0xabc" });
+    expect(archivedScreenshotUrl([], slot)).toBeNull();
   });
 });

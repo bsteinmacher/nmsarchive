@@ -81,12 +81,12 @@ describe("multitools adapter", () => {
 });
 
 describe("companions adapter", () => {
-  it("lista CustomName, espécie, biome e vazios", () => {
+  it("lista CustomName, espécie, biome, elemento e vazios", () => {
     const items = listCompanions(save({ Pets: [filledPet, emptyPet] }));
     expect(items[0]).toMatchObject({
       name: "Nimbus",
       itemType: "HOVER_PET",
-      extra: { biome: "Lush" },
+      extra: { biome: "Lush", element: "Tropical" },
       empty: false,
     });
     expect(items[1]?.empty).toBe(true);

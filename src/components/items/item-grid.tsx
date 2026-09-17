@@ -2,6 +2,7 @@
 
 import { archiveUiCategory, matchingItems } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
+import { screenshotPublicUrl } from "@/lib/screenshots";
 import { cn } from "cn";
 import type { ArchivedItemSummary } from "@/types/archive";
 import { CATEGORY_META, isCategory } from "@/types/nms";
@@ -25,6 +26,7 @@ export function ItemGrid({
             ? matchingItems(sessionItems[item.category], item.seed, item.category)
             : [];
         const uiCategory = archiveUiCategory(item);
+        const thumb = screenshotPublicUrl(item.screenshotPath);
         const typeLabel =
           item.shipType ||
           (isCategory(uiCategory)
@@ -41,6 +43,19 @@ export function ItemGrid({
                 "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
               )}
             >
+              {thumb ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={thumb}
+                  alt=""
+                  className="aspect-video w-full rounded-lg object-cover outline outline-1 outline-[oklch(0_0_0_/_0.1)] dark:outline-[oklch(1_0_0_/_0.1)]"
+                />
+              ) : (
+                <div
+                  className="aspect-video w-full rounded-lg bg-muted/40"
+                  aria-hidden="true"
+                />
+              )}
               <div className="flex flex-wrap items-center gap-2">
                 <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
                   {typeLabel}

@@ -5,6 +5,7 @@ export { MAPPING_CACHE_PATH };
 
 export const DATA_DIR = path.join(process.cwd(), "data");
 export const BACKUPS_DIR = path.join(DATA_DIR, "backups");
+export const SCREENSHOTS_DIR = path.join(DATA_DIR, "screenshots");
 
 /** Resolve DATABASE_URL `file:` relativo ao diretório do schema Prisma. */
 export function resolveDatabasePath(

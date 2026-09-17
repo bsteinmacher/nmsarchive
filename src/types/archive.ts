@@ -13,6 +13,7 @@ export type ArchivedItemSummary = {
   shipType: string;
   filename: string;
   tags: ArchivedItemTag[];
+  screenshotPath: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -28,4 +29,11 @@ export type ArchivedItemDetail = ArchivedItemSummary & {
     payload: unknown;
   };
   sourceSaveId: string | null;
+};
+
+export type ArchiveFilterOptions = {
+  classes: string[];
+  types: string[];
+  galaxies: number[];
+  tags: ArchivedItemTag[];
 };

@@ -6,6 +6,7 @@ import {
   deleteItem,
   getItem,
   listItems,
+  listTags,
   updateItem,
 } from "@/server/archive-service";
 import { createTestPrisma } from "../helpers/prisma";
@@ -68,7 +69,7 @@ describe("archive-service", () => {
       "s-class",
     ]);
 
-    const listed = await listItems(prisma, "ship");
+    const listed = await listItems(prisma, { category: "ship" });
     expect(listed).toHaveLength(1);
     expect(listed[0]?.id).toBe(archived.id);
 
@@ -112,6 +113,37 @@ describe("archive-service", () => {
     expect(archived.shipType).toBe("Atlas Staff");
   });
 
+  it("guarda Atk/Agi/HP do companion no metadata, sem mexer no payload", async () => {
+    const archived = await archiveItem(prisma, {
+      category: "companion",
+      name: "Sodelle",
+      seed: "0x3c",
+      description: "pet da arena",
+      metadata: {
+        gameVersion: 1,
+        extra: { biome: "Radioactive", element: "Radioativo" },
+        payload: { CreatureSeed: [true, "0x3c"] },
+      },
+      tags: [],
+    });
+    const updated = await updateItem(prisma, {
+      id: archived.id,
+      className: "S/S/S",
+      extra: {
+        biome: "Radioactive",
+        element: "Radioativo",
+        rank: "S/S/S",
+        atk: "S",
+        agi: "S",
+        hp: "S",
+      },
+    });
+    expect(updated.className).toBe("S/S/S");
+    const detail = await getItem(prisma, archived.id);
+    expect(detail.metadata.extra).toMatchObject({ rank: "S/S/S", atk: "S" });
+    expect(detail.payload).toEqual({ CreatureSeed: [true, "0x3c"] });
+  });
+
   it("lista FreighterBase em cargueiras, não em bases", async () => {
     const interior = await archiveItem(prisma, {
       category: "base",
@@ -148,12 +180,12 @@ describe("archive-service", () => {
       tags: [],
     });
 
-    const listedFreighters = await listItems(prisma, "freighter");
+    const listedFreighters = await listItems(prisma, { category: "freighter" });
     expect(listedFreighters.some((row) => row.id === interior.id)).toBe(true);
     expect(listedFreighters.some((row) => row.id === freighter.id)).toBe(true);
     expect(listedFreighters.some((row) => row.id === planet.id)).toBe(false);
 
-    const listedBases = await listItems(prisma, "base");
+    const listedBases = await listItems(prisma, { category: "base" });
     expect(listedBases.some((row) => row.id === interior.id)).toBe(false);
     expect(listedBases.some((row) => row.id === planet.id)).toBe(true);
 
@@ -164,5 +196,115 @@ describe("archive-service", () => {
     await deleteItem(prisma, interior.id);
     await deleteItem(prisma, planet.id);
     await deleteItem(prisma, freighter.id);
+  });
+
+  it("filtra S-class + tag exotic e ignora o resto", async () => {
+    const hit = await archiveItem(prisma, {
+      category: "ship",
+      name: "Golden Vector",
+      seed: "0xaaa",
+      description: "exotic de teste",
+      metadata: {
+        gameVersion: 1,
+        className: "S",
+        shipType: "Exotic",
+        payload: {},
+      },
+      galaxy: 0,
+      tags: ["exotic", "keeper"],
+    });
+    const missClass = await archiveItem(prisma, {
+      category: "ship",
+      name: "Hauler",
+      seed: "0xbbb",
+      description: "também exotic",
+      metadata: {
+        gameVersion: 1,
+        className: "A",
+        shipType: "Hauler",
+        payload: {},
+      },
+      tags: ["exotic"],
+    });
+    const missTag = await archiveItem(prisma, {
+      category: "ship",
+      name: "Fighter S",
+      seed: "0xccc",
+      description: "S sem a tag",
+      metadata: {
+        gameVersion: 1,
+        className: "S",
+        shipType: "Fighter",
+        payload: {},
+      },
+      tags: ["fighter"],
+    });
+
+    const filtered = await listItems(prisma, {
+      category: "ship",
+      className: "S",
+      tags: ["exotic"],
+    });
+    expect(filtered.map((row) => row.id)).toEqual([hit.id]);
+
+    const byText = await listItems(prisma, { q: "golden" });
+    expect(byText.map((row) => row.id)).toEqual([hit.id]);
+
+    const byGalaxy = await listItems(prisma, { galaxy: 0 });
+    expect(byGalaxy.some((row) => row.id === hit.id)).toBe(true);
+    expect(byGalaxy.some((row) => row.id === missClass.id)).toBe(false);
+
+    const tags = await listTags(prisma, "exo");
+    expect(tags.some((t) => t.slug === "exotic")).toBe(true);
+
+    await deleteItem(prisma, hit.id);
+    await deleteItem(prisma, missClass.id);
+    await deleteItem(prisma, missTag.id);
+  });
+
+  it("guarda screenshotPath no resumo", async () => {
+    const path = "22222222-2222-4222-8222-222222222222.webp";
+    const archived = await archiveItem(prisma, {
+      category: "ship",
+      name: "Com foto",
+      seed: "0xddd",
+      description: "tem screenshot",
+      metadata: { gameVersion: 1, className: "S", shipType: "Fighter", payload: {} },
+      tags: [],
+      screenshotPath: path,
+    });
+    expect(archived.screenshotPath).toBe(path);
+    const listed = await listItems(prisma, { category: "ship" });
+    expect(listed.find((row) => row.id === archived.id)?.screenshotPath).toBe(
+      path,
+    );
+    await deleteItem(prisma, archived.id);
+  });
+
+  it("não lista FreighterBase em bases mesmo com filtro de tag", async () => {
+    const interior = await archiveItem(prisma, {
+      category: "base",
+      name: "Interior tagged",
+      seed: "0xee",
+      description: "exotic interior",
+      metadata: {
+        gameVersion: 1,
+        shipType: "Cargueira",
+        extra: { baseType: "FreighterBase" },
+        payload: {},
+      },
+      tags: ["exotic"],
+    });
+    const filteredBase = await listItems(prisma, {
+      category: "base",
+      tags: ["exotic"],
+    });
+    expect(filteredBase.some((row) => row.id === interior.id)).toBe(false);
+    const filteredFreighter = await listItems(prisma, {
+      category: "freighter",
+      tags: ["exotic"],
+    });
+    expect(filteredFreighter.some((row) => row.id === interior.id)).toBe(true);
+    await deleteItem(prisma, interior.id);
   });
 });
