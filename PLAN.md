@@ -17,7 +17,7 @@ Este documento é a fonte da verdade para implementação no Cursor. Siga as fas
 3. [Schema Prisma](#3-schema-prisma)
 4. [Estrutura de pastas](#4-estrutura-de-pastas)
 5. [Formato `.nmsitem`](#5-formato-nmsitem)
-6. [Fases de desenvolvimento](#6-fases-de-desenvolvimento) — próxima: [Fase 4b](#fase-4b--bases-cosmos-deep-space--space-station)
+6. [Fases de desenvolvimento](#6-fases-de-desenvolvimento) — próxima: [Fase 5](#fase-5--deploy-e-documentação)
 7. [Riscos e mitigações](#7-riscos-e-mitigações)
 8. [Roadmap e complexidade](#8-roadmap-e-complexidade)
 9. [Referências](#9-referências)
@@ -899,7 +899,7 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ### Fase 4 — Screenshots, tags, filtros
 
-**Status: feita** (checklist 4.1–4.5). Não começar a Fase 5. **Próxima implementação: Fase 4b.**
+**Status: feita** (checklist 4.1–4.5). Fase 4b feita — ver bloco abaixo. Não começar a Fase 5.
 
 1. Upload de screenshot (webp, max 1 MB) → `data/screenshots/<id>.webp`. Path no disco; magic-bytes no servidor (só WebP; JPEG/PNG viram WebP no browser).
 2. Tags com autocomplete (`Tag.slug`).
@@ -915,7 +915,7 @@ UI do *arquivo:* `/archive` + `/archive/[category]` (Fase 2), mesmas categorias 
 
 ### Fase 4b — Bases COSMOS (Deep Space + Space Station)
 
-**Status: planejada.** Só isto antes da Fase 5. Detalhe técnico: §2.7.6. Persistência: §1.7 (não muda o schema Prisma).
+**Status: feita** (checklist 4b.1–4b.5). Só isto antes da Fase 5. Detalhe técnico: §2.7.6. Persistência: §1.7 (não muda o schema Prisma).
 
 **Objetivo:** duas opções novas na sidebar (Arquivo e Save aberto), alimentadas pelo `save2.hg` COSMOS.
 
@@ -1069,11 +1069,11 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 | 2 | SQLite arquivo pessoal + home = archive | M | 2–3 | Fase 1b |
 | 3 | Demais categorias (sem inventário; traje = layout; reorder MT/pets) | L | 5–8 | Fase 2, probe |
 | 4 | Screenshots, tags, filtros, compare | M | 2–3 | Fase 2–3 — **feita** |
-| 4b | Deep Space + Space Station (COSMOS, dois menus) | S–M | 1–2 | Fase 4, `save2.hg` 6785 — **próxima** |
+| 4b | Deep Space + Space Station (COSMOS, dois menus) | S–M | 1–2 | Fase 4, `save2.hg` 6785 — **feita** |
 | 5 | Docker polido, docs, lista de galáxias, XXTEA se preciso | S–M | 1–2 | Fase 4b |
 | 6 | Colossal Archive (hub público) | XL | projeto seguinte | Fase 5 + envelope `.nmsitem` estável |
 
-**Caminho crítico agora:** Fase 4b (os dois menus COSMOS no `save2.hg`), depois Fase 5. O hub (§1.8 / Fase 6) espera.
+**Caminho crítico agora:** Fase 5. O hub (§1.8 / Fase 6) espera.
 
 **Ordem de implementação (checklist linear):**
 
@@ -1110,11 +1110,11 @@ Estimativas para **um** dev usando Cursor, com um `save.hg` real à mão. Não i
 [x] 4.3 filtros no arquivo (classe, tipo, tags, galáxia 1–256, texto)
 [x] 4.4 grade com thumb / tabela sem thumb
 [x] 4.5 compare save vs. arquivado (diff raso + JSON colapsável)
-[ ] 4b.1 CATEGORIES + sidebar Deep Space / Space Station
-[ ] 4b.2 extract PlayerSpaceBase / PlayerSpaceStationBase; Bases sem esses tipos
-[ ] 4b.3 insert append + cap 20 na Station; .nmsitem das duas categorias
-[ ] 4b.4 archive-service lista/counts (incl. itens velhos category=base)
-[ ] 4b.5 testes save2.hg (2+1) + sintético do cap
+[x] 4b.1 CATEGORIES + sidebar Deep Space / Space Station
+[x] 4b.2 extract PlayerSpaceBase / PlayerSpaceStationBase; Bases sem esses tipos
+[x] 4b.3 insert append + cap 20 na Station; .nmsitem das duas categorias
+[x] 4b.4 archive-service lista/counts (incl. itens velhos category=base)
+[x] 4b.5 testes save2.hg (2+1) + sintético do cap
 [ ] 5.x docs + compose + mapping updater + galaxies.ts completo
 [ ] 6.x Colossal Archive (projeto seguinte; §1.8)
 ```
@@ -1282,6 +1282,6 @@ model AppSetting {
 
 ## Apêndice C — Próximo prompt
 
-A Fase 4 está no repo. Cole no Cursor:
+A Fase 4b está no repo. Cole no Cursor:
 
-> Implemente a Fase 4b do PLAN.md (§2.7.6): duas categorias novas `deepspace` e `spacestation` no menu do Arquivo e do Save aberto. Discriminante: `PersistentPlayerBases[].BaseType.PersistentBaseTypes` = `PlayerSpaceBase` / `PlayerSpaceStationBase`. Fixture `.others/save2.hg` (2 Deep Space + 1 Space Station, Version 6785). Cap 20 só em Space Station no insert. Não persista o save no servidor. Não comece a Fase 5 nem o Colossal Archive. Skills de UI já estão no usuário (`~/.agents/skills/`, §1.6): use better-ui / better-layout / better-writing / better-accessibility nesta fase; interface-review no fim. Não use essas skills no parser.
+> Implemente a Fase 5 do PLAN.md: Docker polido, healthcheck, README de captura/backup, mapping updater, galaxies.ts completo se couber. Regenerar mf_save só se testes mostrarem que o jogo atual rejeita save sem metadata. Não comece a Fase 6 / Colossal Archive.

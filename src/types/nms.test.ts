@@ -22,6 +22,8 @@ describe("categories", () => {
   it("narrows known slugs and rejects unknown ones", () => {
     expect(isCategory("ship")).toBe(true);
     expect(isCategory("wonder")).toBe(true);
+    expect(isCategory("deepspace")).toBe(true);
+    expect(isCategory("spacestation")).toBe(true);
     expect(isCategory("WeaponOwnership")).toBe(false);
     expect(isCategory("inventory")).toBe(false);
     expect(isCategory("")).toBe(false);
@@ -42,5 +44,7 @@ describe("categories", () => {
   it("builds archive hrefs", () => {
     expect(archiveHref()).toBe("/");
     expect(archiveHref("ship")).toBe("/archive/ship");
+    expect(archiveHref("deepspace")).toBe("/archive/deepspace");
+    expect(archiveHref("spacestation")).toBe("/archive/spacestation");
   });
 });

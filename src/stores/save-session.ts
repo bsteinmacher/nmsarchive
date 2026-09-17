@@ -58,6 +58,8 @@ function emptyItems(): ItemsByCategory {
     freighter: [],
     frigate: [],
     base: [],
+    deepspace: [],
+    spacestation: [],
     wonder: [],
   };
 }

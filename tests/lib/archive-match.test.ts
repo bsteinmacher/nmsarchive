@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   archiveUiCategory,
   archivedScreenshotUrl,
+  isArchivedDeepSpace,
   isArchivedFreighterBase,
+  isArchivedSpaceStation,
   matchingArchivedItems,
   matchingShips,
 } from "@/lib/archive-match";
@@ -59,6 +61,37 @@ describe("archiveUiCategory", () => {
     ).toBe(false);
     expect(archiveUiCategory({ category: "base", shipType: "Planeta" })).toBe(
       "base",
+    );
+  });
+
+  it("trata PlayerSpaceBase / PlayerSpaceStationBase nos menus COSMOS", () => {
+    expect(
+      isArchivedDeepSpace({
+        category: "base",
+        extra: { baseType: "PlayerSpaceBase" },
+      }),
+    ).toBe(true);
+    expect(
+      archiveUiCategory({
+        category: "base",
+        extra: { baseType: "PlayerSpaceBase" },
+      }),
+    ).toBe("deepspace");
+    expect(
+      isArchivedSpaceStation({
+        category: "base",
+        shipType: "PlayerSpaceStationBase",
+      }),
+    ).toBe(true);
+    expect(
+      archiveUiCategory({
+        category: "base",
+        extra: { baseType: "PlayerSpaceStationBase" },
+      }),
+    ).toBe("spacestation");
+    expect(archiveUiCategory({ category: "deepspace" })).toBe("deepspace");
+    expect(archiveUiCategory({ category: "spacestation" })).toBe(
+      "spacestation",
     );
   });
 });

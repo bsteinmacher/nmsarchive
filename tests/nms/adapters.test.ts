@@ -9,7 +9,15 @@ import {
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters, insertFreighter } from "@/lib/nms/extract/freighters";
 import { listFrigates } from "@/lib/nms/extract/frigates";
-import { listBases, listFreighterBases } from "@/lib/nms/extract/bases";
+import {
+  DEEP_SPACE_BASE_TYPE,
+  SPACE_STATION_BASE_LIMIT,
+  SPACE_STATION_BASE_TYPE,
+  listBases,
+  listDeepSpaceBases,
+  listFreighterBases,
+  listSpaceStationBases,
+} from "@/lib/nms/extract/bases";
 import { insertWonder, listWonders } from "@/lib/nms/extract/wonders";
 import { insertItem } from "@/lib/nms/extract";
 
@@ -340,6 +348,126 @@ describe("freighter / frigate / base / wonder", () => {
     expect(interior[0]?.name).toBe("Base Cargueira");
     expect(interior[0]?.extra.objects).toBe("2");
     expect(interior[0]?.category).toBe("base");
+  });
+
+  it("separa Deep Space e Space Station das bases planetárias", () => {
+    const json = save({
+      PersistentPlayerBases: [
+        {
+          Name: "Casa",
+          GalacticAddress: 1,
+          BaseType: { PersistentBaseTypes: "HomePlanetBase" },
+          Objects: [],
+        },
+        {
+          Name: "",
+          GalacticAddress: 0,
+          BaseType: { PersistentBaseTypes: "HomePlanetBase" },
+          Objects: [],
+        },
+        {
+          Name: "Orbital",
+          GalacticAddress: 10,
+          BaseType: { PersistentBaseTypes: DEEP_SPACE_BASE_TYPE },
+          Objects: [{ ObjectID: "a" }],
+        },
+        {
+          Name: "Estação",
+          GalacticAddress: 20,
+          BaseType: { PersistentBaseTypes: SPACE_STATION_BASE_TYPE },
+          Objects: Array.from({ length: 60 }, () => ({ ObjectID: "x" })),
+        },
+        {
+          Name: "Outra orbital",
+          GalacticAddress: 11,
+          BaseType: { PersistentBaseTypes: DEEP_SPACE_BASE_TYPE },
+          Objects: [{ ObjectID: "b" }],
+        },
+      ],
+    });
+    const planet = listBases(json);
+    const deep = listDeepSpaceBases(json);
+    const stations = listSpaceStationBases(json);
+    expect(planet.map((item) => item.extra.baseType)).toEqual([
+      "HomePlanetBase",
+      "HomePlanetBase",
+    ]);
+    expect(deep).toHaveLength(2);
+    expect(deep.map((item) => item.index)).toEqual([2, 4]);
+    expect(deep.map((item) => item.slotLabel)).toEqual(["1", "2"]);
+    expect(deep[0]?.category).toBe("deepspace");
+    expect(stations).toHaveLength(1);
+    expect(stations[0]?.index).toBe(3);
+    expect(stations[0]?.slotLabel).toBe("1");
+    expect(stations[0]?.category).toBe("spacestation");
+    expect(stations[0]?.warning).toMatch(/grande/);
+  });
+
+  it("Deep Space dá append e não reutiliza slot vazio de planeta", () => {
+    const json = save({
+      PersistentPlayerBases: [
+        {
+          Name: "",
+          GalacticAddress: 0,
+          BaseType: { PersistentBaseTypes: "HomePlanetBase" },
+          Objects: [],
+        },
+      ],
+    });
+    const payload = {
+      Name: "Orbital",
+      GalacticAddress: 77,
+      BaseType: { PersistentBaseTypes: DEEP_SPACE_BASE_TYPE },
+      Objects: [{ ObjectID: "a" }],
+    };
+    const asBase = insertItem(json, "base", payload);
+    expect(asBase.ok).toBe(true);
+    if (!asBase.ok) return;
+    expect(asBase.index).toBe(1);
+    expect(listDeepSpaceBases(asBase.json)).toHaveLength(1);
+    expect(listBases(asBase.json)[0]?.empty).toBe(true);
+    expect(listBases(asBase.json)).toHaveLength(1);
+  });
+
+  it("Space Station recusa a 21ª preenchida", () => {
+    const stations = Array.from({ length: SPACE_STATION_BASE_LIMIT }, (_, i) => ({
+      Name: `S${i}`,
+      GalacticAddress: i + 1,
+      BaseType: { PersistentBaseTypes: SPACE_STATION_BASE_TYPE },
+      Objects: [{ ObjectID: "x" }],
+    }));
+    const json = save({ PersistentPlayerBases: stations });
+    const result = insertItem(json, "spacestation", {
+      Name: "nova",
+      GalacticAddress: 99,
+      BaseType: { PersistentBaseTypes: SPACE_STATION_BASE_TYPE },
+      Objects: [{ ObjectID: "y" }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/20/);
+  });
+
+  it("Space Station reutiliza vazio do próprio tipo e respeita o cap", () => {
+    const json = save({
+      PersistentPlayerBases: [
+        {
+          Name: "",
+          GalacticAddress: 0,
+          BaseType: { PersistentBaseTypes: SPACE_STATION_BASE_TYPE },
+          Objects: [],
+        },
+      ],
+    });
+    const result = insertItem(json, "spacestation", {
+      Name: "primeira",
+      GalacticAddress: 5,
+      BaseType: { PersistentBaseTypes: SPACE_STATION_BASE_TYPE },
+      Objects: [{ ObjectID: "a" }],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.index).toBe(0);
+    expect(listSpaceStationBases(result.json)[0]?.empty).toBe(false);
   });
 
   it("wonders pessoais arquivam record+extra; automáticos são read-only", () => {

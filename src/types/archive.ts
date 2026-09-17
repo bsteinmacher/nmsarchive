@@ -12,6 +12,7 @@ export type ArchivedItemSummary = {
   className: string;
   shipType: string;
   filename: string;
+  extra?: { baseType?: string };
   tags: ArchivedItemTag[];
   screenshotPath: string | null;
   createdAt: Date;

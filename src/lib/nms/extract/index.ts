@@ -1,5 +1,10 @@
 import type { Category } from "@/types/nms";
-import { basesAdapter } from "./bases";
+import {
+  basesAdapter,
+  deepSpaceAdapter,
+  resolveInsertCategory,
+  spaceStationAdapter,
+} from "./bases";
 import { companionsAdapter } from "./companions";
 import { exosuitAdapter } from "./exosuit";
 import { freightersAdapter } from "./freighters";
@@ -20,11 +25,22 @@ export {
   reorderShipOwnership,
 } from "./ships";
 export {
+  DEEP_SPACE_BASE_TYPE,
+  DEEP_SPACE_LABEL,
   FREIGHTER_BASE_LABEL,
   FREIGHTER_BASE_TYPE,
+  SPACE_STATION_BASE_LIMIT,
+  SPACE_STATION_BASE_TYPE,
+  SPACE_STATION_LABEL,
+  isDeepSpaceBaseSlot,
   isFreighterBaseSlot,
+  isHiddenFromBasesMenu,
+  isSpaceStationBaseSlot,
   listBases,
+  listDeepSpaceBases,
   listFreighterBases,
+  listSpaceStationBases,
+  resolveInsertCategory,
 } from "./bases";
 export type {
   ExtractedItem,
@@ -44,6 +60,8 @@ const ADAPTERS = {
   freighter: freightersAdapter,
   frigate: frigatesAdapter,
   base: basesAdapter,
+  deepspace: deepSpaceAdapter,
+  spacestation: spaceStationAdapter,
   wonder: wondersAdapter,
 } as const satisfies Record<Category, CategoryAdapter>;
 
@@ -69,6 +87,8 @@ export function listAllCategories(
     freighter: ADAPTERS.freighter.list(json),
     frigate: ADAPTERS.frigate.list(json),
     base: ADAPTERS.base.list(json),
+    deepspace: ADAPTERS.deepspace.list(json),
+    spacestation: ADAPTERS.spacestation.list(json),
     wonder: ADAPTERS.wonder.list(json),
   };
 }
@@ -79,7 +99,7 @@ export function insertItem(
   payload: unknown,
   seed?: string,
 ): InsertResult {
-  const adapter = getAdapter(category);
+  const adapter = getAdapter(resolveInsertCategory(category, payload));
   const first = adapter.insert(json, payload);
   if (first.ok) return first;
   if (!seed || !adapter.replace) return first;

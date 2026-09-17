@@ -45,4 +45,27 @@ describe(".nmsitem", () => {
   it("rejeita JSON sem envelope", () => {
     expect(() => parseNmsItem('{"name":"x"}')).toThrow(/schema/);
   });
+
+  it("aceita category deepspace e spacestation no envelope", () => {
+    const deep = buildNmsItem({
+      category: "deepspace",
+      name: "Orbital",
+      seed: "0x10",
+      gameVersion: 6785,
+      payload: { BaseType: { PersistentBaseTypes: "PlayerSpaceBase" } },
+    });
+    expect(parseNmsItem(serializeNmsItem(deep)).category).toBe("deepspace");
+    const station = buildNmsItem({
+      category: "spacestation",
+      name: "Estação",
+      seed: "0x20",
+      gameVersion: 6785,
+      payload: {
+        BaseType: { PersistentBaseTypes: "PlayerSpaceStationBase" },
+      },
+    });
+    expect(parseNmsItem(serializeNmsItem(station)).category).toBe(
+      "spacestation",
+    );
+  });
 });

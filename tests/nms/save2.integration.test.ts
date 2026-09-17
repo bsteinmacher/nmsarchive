@@ -13,7 +13,12 @@ import {
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters } from "@/lib/nms/extract/freighters";
 import { listFrigates } from "@/lib/nms/extract/frigates";
-import { listBases, listFreighterBases } from "@/lib/nms/extract/bases";
+import {
+  listBases,
+  listDeepSpaceBases,
+  listFreighterBases,
+  listSpaceStationBases,
+} from "@/lib/nms/extract/bases";
 import { listWonders } from "@/lib/nms/extract/wonders";
 import { reorderCategory } from "@/lib/nms/extract";
 import {
@@ -27,6 +32,7 @@ import { decodeHg, decodeHgDetailed, encodeHg } from "@/lib/nms/lz4-blocks";
 import { loadMappingCached } from "@/lib/nms/mapping-node";
 import { parseHg, writeHg } from "@/lib/nms/parse";
 import { getPlayerState } from "@/lib/nms/player";
+import { asNumber } from "@/lib/nms/value";
 import { reorderShipOwnership } from "@/lib/nms/write";
 
 const savePath = path.join(process.cwd(), ".others", "save2.hg");
@@ -53,18 +59,17 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       const mapping = await loadMappingCached();
       const parsed = parseHg(bytes, mapping);
 
-      expect(parsed.summary.gameVersion).toBe(6783);
+      expect(parsed.summary.gameVersion).toBe(6785);
       expect(parsed.summary.platform).toBe("Win|Final");
       expect(parsed.summary.gameMode).toBe(5);
       expect(parsed.unknownKeys).toEqual([]);
       expect(parsed.ships).toHaveLength(12);
-      expect(parsed.ships.filter((s) => !s.empty)).toHaveLength(10);
-      expect(parsed.summary.shipCount).toBe(10);
+      expect(parsed.ships.filter((s) => !s.empty)).toHaveLength(8);
+      expect(parsed.summary.shipCount).toBe(8);
       expect(parsed.summary.shipSlots).toBe(12);
       expect(parsed.ships[9]?.empty).toBe(true);
       expect(parsed.ships[9]?.name).toBe("Slot 10 vazio");
       expect(parsed.ships[11]?.empty).toBe(true);
-      expect(parsed.ships[10]?.shipType).toBe("Fighter");
       expect(parsed.summary.galaxy).toBe(255);
       expect(parsed.summary.galaxyLabel).toBe("256 · Odyalutai");
 
@@ -90,7 +95,7 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
         createHash("sha256").update(stripped).digest("hex"),
       );
       expect(listShips(parsed.json)).toHaveLength(12);
-      expect(listFilledShips(parsed.json)).toHaveLength(10);
+      expect(listFilledShips(parsed.json)).toHaveLength(8);
     },
     60_000,
   );
@@ -102,23 +107,31 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       const bytes = new Uint8Array(readFileSync(savePath));
       const parsed = parseHg(bytes, mapping);
       const before = getPlayerState(parsed.json)!;
-      expect(before.PrimaryShip).toBe(10);
-      expect(listShips(parsed.json)[10]?.name).toBe("Horizon Vector NX");
+      const shipsBefore = listShips(parsed.json);
+      const from = asNumber(before.PrimaryShip);
+      expect(from).toBeTypeOf("number");
+      if (from == null) return;
+      const to = shipsBefore.findIndex(
+        (ship, index) => ship.empty && index !== from,
+      );
+      expect(to).toBeGreaterThanOrEqual(0);
+      const moved = shipsBefore[from];
+      expect(moved?.empty).toBe(false);
 
-      const result = reorderShipOwnership(parsed.json, 10, 9);
+      const result = reorderShipOwnership(parsed.json, from, to);
       expect(result.ok).toBe(true);
       if (!result.ok) return;
 
       const ships = listShips(result.json);
       expect(ships).toHaveLength(12);
-      expect(ships[9]?.name).toBe("Horizon Vector NX");
-      expect(ships[9]?.empty).toBe(false);
-      expect(ships[10]?.empty).toBe(true);
-      expect(ships[10]?.name).toBe("Slot 11 vazio");
-      expect(listFilledShips(result.json)).toHaveLength(10);
+      expect(ships[to]?.seed).toBe(moved?.seed);
+      expect(ships[to]?.empty).toBe(false);
+      expect(ships[from]?.empty).toBe(true);
+      expect(ships[from]?.name).toBe(`Slot ${from + 1} vazio`);
+      expect(listFilledShips(result.json)).toHaveLength(8);
 
       const after = getPlayerState(result.json)!;
-      expect(after.PrimaryShip).toBe(9);
+      expect(after.PrimaryShip).toBe(to);
       expect(asLength(after.ShipOwnership)).toBe(12);
       expect(asLength(after.ShipUsesLegacyColours)).toBe(12);
     },
@@ -134,8 +147,7 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
 
       const tools = listMultitools(parsed.json);
       expect(tools).toHaveLength(6);
-      expect(tools.filter((t) => !t.empty)).toHaveLength(4);
-      expect(tools[4]?.empty).toBe(true);
+      expect(tools.filter((t) => !t.empty)).toHaveLength(6);
       expect(tools.some((t) => t.itemType === "Atlas Staff")).toBe(true);
 
       const pets = listCompanions(parsed.json);
@@ -168,11 +180,29 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(freighters.filter((f) => f.empty)).toHaveLength(8);
 
       expect(listFrigates(parsed.json)).toHaveLength(17);
-      expect(listBases(parsed.json)).toHaveLength(68);
+      const bases = listBases(parsed.json);
+      expect(bases).toHaveLength(68);
+      expect(
+        bases.every(
+          (item) =>
+            item.extra.baseType !== "PlayerSpaceBase" &&
+            item.extra.baseType !== "PlayerSpaceStationBase",
+        ),
+      ).toBe(true);
       const interior = listFreighterBases(parsed.json);
       expect(interior).toHaveLength(1);
       expect(interior[0]?.slotLabel).toBe("Interior");
       expect(Number(interior[0]?.extra.objects)).toBeGreaterThan(50);
+
+      const deep = listDeepSpaceBases(parsed.json);
+      expect(deep).toHaveLength(2);
+      expect(deep.map((item) => item.index)).toEqual([68, 70]);
+      expect(deep.every((item) => item.category === "deepspace")).toBe(true);
+      const stations = listSpaceStationBases(parsed.json);
+      expect(stations).toHaveLength(1);
+      expect(stations[0]?.index).toBe(69);
+      expect(stations[0]?.category).toBe("spacestation");
+      expect(Number(stations[0]?.extra.objects)).toBeGreaterThan(50);
 
       const wonders = listWonders(parsed.json);
       const personal = wonders.filter((w) => w.group !== "automatic");
@@ -182,15 +212,19 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(auto.length).toBe(15 + 8 + 8 + 11 + 13 + 11);
       expect(auto.every((w) => w.readonly)).toBe(true);
 
+      const beforePlayer = getPlayerState(parsed.json)!;
+      const activeBefore = asNumber(beforePlayer.ActiveMultioolIndex);
       const reordered = reorderCategory(parsed.json, "multitool", 2, 4);
       expect(reordered.ok).toBe(true);
       if (!reordered.ok) return;
-      const after = listMultitools(reordered.json);
-      expect(after).toHaveLength(6);
-      expect(after[4]?.empty).toBe(false);
-      expect(after[2]?.empty).toBe(true);
+      const afterTools = listMultitools(reordered.json);
+      expect(afterTools).toHaveLength(6);
+      expect(afterTools[4]?.seed).toBe(tools[2]?.seed);
+      expect(afterTools[2]?.seed).toBe(tools[4]?.seed);
       const player = getPlayerState(reordered.json)!;
-      expect(player.ActiveMultioolIndex).toBe(4);
+      const expectedActive =
+        activeBefore === 2 ? 4 : activeBefore === 4 ? 2 : activeBefore;
+      expect(player.ActiveMultioolIndex).toBe(expectedActive);
     },
     60_000,
   );

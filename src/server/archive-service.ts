@@ -5,7 +5,7 @@ import {
   matchesArchiveFilters,
   type ArchiveFilterInput,
 } from "@/lib/archive-filters";
-import { isArchivedFreighterBase } from "@/lib/archive-match";
+import { archiveUiCategory } from "@/lib/archive-match";
 import { asNumber, asRecord, asString } from "@/lib/nms/value";
 import {
   archivedMetadataSchema,
@@ -44,13 +44,17 @@ function metadataSummary(metadata: unknown): {
   className: string;
   shipType: string;
   filename: string;
+  extra?: { baseType?: string };
 } {
   const rec = asRecord(metadata) ?? {};
+  const extraRec = asRecord(rec.extra);
+  const baseType = asString(extraRec?.baseType);
   return {
     gameVersion: asNumber(rec.gameVersion),
     className: asString(rec.className) ?? "",
     shipType: asString(rec.shipType) ?? "",
     filename: asString(rec.filename) ?? "",
+    extra: baseType ? { baseType } : undefined,
   };
 }
 
@@ -82,6 +86,7 @@ function toSummary(row: {
     className: extra.className,
     shipType: extra.shipType,
     filename: extra.filename,
+    extra: extra.extra,
     tags: row.tags.map((t) => t.tag),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -224,13 +229,19 @@ function inArchiveCategory(
   category?: string,
 ): boolean {
   if (!category) return true;
-  const interior = isArchivedFreighterBase(
+  const ui = archiveUiCategory(
     metadataAsArchiveHint(row.category, row.metadata),
   );
   if (category === "freighter") {
-    return row.category === "freighter" || interior;
+    return row.category === "freighter" || ui === "freighter";
   }
-  if (category === "base") return !interior;
+  if (category === "deepspace") {
+    return row.category === "deepspace" || ui === "deepspace";
+  }
+  if (category === "spacestation") {
+    return row.category === "spacestation" || ui === "spacestation";
+  }
+  if (category === "base") return ui === "base" && row.category === "base";
   return row.category === category;
 }
 
@@ -239,12 +250,15 @@ export async function listItems(
   filter: ListItemsFilter = {},
 ): Promise<ArchivedItemSummary[]> {
   const category = filter.category;
-  const where =
-    category === "freighter"
-      ? { category: { in: ["freighter", "base"] } }
-      : category
-        ? { category }
-        : undefined;
+  const splitFromBase =
+    category === "freighter" ||
+    category === "deepspace" ||
+    category === "spacestation";
+  const where = splitFromBase
+    ? { category: { in: [category, "base"] } }
+    : category
+      ? { category }
+      : undefined;
   const rows = await prisma.archivedItem.findMany({
     where,
     include: itemInclude,
@@ -332,12 +346,23 @@ export async function countItemsByCategory(
     where: { category: "base" },
     select: { category: true, metadata: true },
   });
-  const interiors = bases.filter((row) =>
-    isArchivedFreighterBase(metadataAsArchiveHint(row.category, row.metadata)),
-  ).length;
-  if (interiors > 0) {
-    counts.freighter = (counts.freighter ?? 0) + interiors;
-    const nextBase = (counts.base ?? 0) - interiors;
+  const remapped = bases.reduce(
+    (countsAcc, row) => {
+      const ui = archiveUiCategory(
+        metadataAsArchiveHint(row.category, row.metadata),
+      );
+      if (ui === "base") return countsAcc;
+      countsAcc[ui] = (countsAcc[ui] ?? 0) + 1;
+      return countsAcc;
+    },
+    {} as Record<string, number>,
+  );
+  const remappedTotal = Object.values(remapped).reduce((a, b) => a + b, 0);
+  if (remappedTotal > 0) {
+    for (const [ui, n] of Object.entries(remapped)) {
+      counts[ui] = (counts[ui] ?? 0) + n;
+    }
+    const nextBase = (counts.base ?? 0) - remappedTotal;
     if (nextBase > 0) counts.base = nextBase;
     else delete counts.base;
   }

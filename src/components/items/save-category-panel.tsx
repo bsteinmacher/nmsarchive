@@ -35,6 +35,7 @@ import type { ArchiveView } from "@/lib/archive-url";
 import {
   getAdapter,
   isFreighterBaseSlot,
+  isHiddenFromBasesMenu,
   type AdapterColumn,
   type ExtractedSlot,
 } from "@/lib/nms/extract";
@@ -250,7 +251,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const reorderable = isReorderableCategory(category);
   const primary = items.filter((item) => {
     if (item.group === "automatic") return false;
-    if (category === "base" && isFreighterBaseSlot(item)) return false;
+    if (category === "base" && isHiddenFromBasesMenu(item)) return false;
     return true;
   });
   const automatic = items.filter((item) => item.group === "automatic");
@@ -319,8 +320,12 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     : category === "exosuit"
       ? "Só quantidade de slots e posição das tecnologias. Substâncias e produtos ficam no save, fora do arquivo."
       : category === "base"
-        ? "Bases planetárias e de nave. A da cargueira fica em Cargueiras."
-        : category === "wonder"
+        ? "Bases planetárias e de nave. Interior da cargueira, Deep Space e Space Station ficam nos menus próprios."
+        : category === "deepspace"
+          ? "Bases orbitais livres. Entram no mesmo array das bases planetárias; não há limite separado no JSON."
+          : category === "spacestation"
+            ? "Estação espacial reivindicada. O jogo aceita até 20 por save; a 21ª é recusada ao aplicar."
+            : category === "wonder"
           ? "Personal Wonders (escolha do jogador). Records automáticos ficam na lista abaixo, só leitura."
           : category === "freighter"
             ? "A nave e os três inventários ficam nesta lista. A construção do interior é a base abaixo."
@@ -376,9 +381,13 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
           caption={caption}
           description={description}
           emptyMessage={
-            category === "base" && items.some(isFreighterBaseSlot)
-              ? "Nenhuma base planetária ou de nave neste save. A da cargueira fica em Cargueiras."
-              : undefined
+            category === "base"
+              ? "Nenhuma base planetária ou de nave neste save. Interior da cargueira fica em Cargueiras; orbitais em Deep Space; estações em Space Station."
+              : category === "deepspace"
+                ? "Nenhuma base Deep Space neste save. O jogo adiciona uma quando você constrói com o Deep-Space Base Computer."
+                : category === "spacestation"
+                  ? "Nenhuma Space Station reivindicada neste save. O jogo aceita até 20 por save."
+                  : undefined
           }
           screenshotUrl={screenshotUrl}
           {...reorderHandlers}
