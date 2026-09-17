@@ -1,46 +1,51 @@
-FROM node:22-alpine AS deps
+FROM node:22-alpine AS base
 WORKDIR /app
 RUN apk add --no-cache libc6-compat openssl
+
+FROM base AS deps
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-COPY .env.example ./.env
+ENV DATABASE_URL="file:../data/nmsarchive.db"
 RUN npm ci
 
-FROM node:22-alpine AS builder
-WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl
+FROM base AS prod-deps
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+ENV DATABASE_URL="file:../data/nmsarchive.db"
+RUN npm ci --omit=dev
+
+FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:../data/nmsarchive.db"
 RUN mkdir -p /app/data
-RUN npx prisma generate
 RUN npm run build
 
-FROM node:22-alpine AS runner
-WORKDIR /app
-RUN apk add --no-cache libc6-compat openssl
+FROM base AS runner
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV DATABASE_URL="file:../data/nmsarchive.db"
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nextjs
-
+# uid 1000 (`node`) casa com o usuário típico do host. Não usar 1001:
+# chown no bind mount ./data quebrava o `npm run dev` (SQLite 1544 readonly).
+COPY --from=prod-deps --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/prisma ./prisma
+COPY --chown=node:node docker-entrypoint.sh /app/docker-entrypoint.sh
 
-RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data /app/prisma
+RUN chmod +x /app/docker-entrypoint.sh \
+  && mkdir -p /app/data/backups /app/data/screenshots \
+  && chown -R node:node /app/data /app/prisma
 
-USER nextjs
+USER node
 EXPOSE 3000
 
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy && node server.js"]
+HEALTHCHECK --interval=15s --timeout=5s --start-period=30s --retries=5 \
+  CMD node -e "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

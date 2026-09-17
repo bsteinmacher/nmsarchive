@@ -19,6 +19,7 @@ import {
 import { backupDatabase } from "@/server/backup";
 import { logOperation } from "@/server/operations";
 import { prisma } from "@/server/db";
+import { withWritableSqlite } from "@/server/sqlite-errors";
 import { createTRPCRouter, publicProcedure } from "@/server/trpc/trpc";
 
 async function backupBeforeMutation() {
@@ -35,10 +36,12 @@ async function backupBeforeMutation() {
 export const itemsRouter = createTRPCRouter({
   archive: publicProcedure
     .input(archiveItemInputSchema)
-    .mutation(async ({ input }) => {
-      await backupBeforeMutation();
-      return archiveItem(prisma, input);
-    }),
+    .mutation(async ({ input }) =>
+      withWritableSqlite(async () => {
+        await backupBeforeMutation();
+        return archiveItem(prisma, input);
+      }),
+    ),
 
   list: publicProcedure.input(listItemsInputSchema).query(async ({ input }) => {
     const items = await listItems(prisma, input);
@@ -74,13 +77,15 @@ export const itemsRouter = createTRPCRouter({
           message: "Informe descrição, tags, screenshot ou rank para atualizar.",
         });
       }
-      return updateItem(prisma, input);
+      return withWritableSqlite(() => updateItem(prisma, input));
     }),
 
   delete: publicProcedure
     .input(itemIdInputSchema)
-    .mutation(async ({ input }) => {
-      await backupBeforeMutation();
-      return deleteItem(prisma, input.id);
-    }),
+    .mutation(async ({ input }) =>
+      withWritableSqlite(async () => {
+        await backupBeforeMutation();
+        return deleteItem(prisma, input.id);
+      }),
+    ),
 });

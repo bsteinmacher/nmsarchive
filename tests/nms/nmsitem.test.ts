@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildNmsItem,
+  NMSITEM_SCHEMA_VERSION,
   parseNmsItem,
   serializeNmsItem,
   shipSeedMismatch,
@@ -25,7 +26,8 @@ describe(".nmsitem", () => {
       galaxy: 0,
     });
     const round = parseNmsItem(serializeNmsItem(item));
-    expect(round.nmsitem).toBe(1);
+    expect(round.nmsitem).toBe(NMSITEM_SCHEMA_VERSION);
+    expect(NMSITEM_SCHEMA_VERSION).toBe(1);
     expect(round.seed).toBe("0xabc");
     expect(round.category).toBe("ship");
     expect(shipSeedMismatch(round)).toBeNull();

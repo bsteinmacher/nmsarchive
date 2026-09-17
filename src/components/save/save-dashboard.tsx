@@ -138,8 +138,9 @@ export function SaveDashboard() {
         <CardHeader>
           <CardTitle>Carregar save</CardTitle>
           <CardDescription>
-            Steam/GOG <code>save*.hg</code>. O <code>mf_save</code> é opcional e
-            não é lido no MVP.
+            Steam/GOG <code>save*.hg</code>. O app não lê nem regenera{" "}
+            <code>mf_save</code> — o jogo atual costuma carregar sem esse
+            arquivo. Sempre copie o save original antes de substituir.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

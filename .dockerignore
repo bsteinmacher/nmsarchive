@@ -3,8 +3,11 @@ node_modules
 .git
 .others
 data
+tests
 *.md
 !README.md
 .env*
 !.env.example
 npm-debug.log*
+coverage
+*.tsbuildinfo
