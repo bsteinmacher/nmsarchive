@@ -1,6 +1,6 @@
 "use client";
 
-import { archiveUiCategory, matchingItems } from "@/lib/archive-match";
+import { archiveUiCategory, matchingItems, sessionCategoryForArchived } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import type { ArchivedItemSummary } from "@/types/archive";
 import { CATEGORY_META, isCategory } from "@/types/nms";
@@ -38,15 +38,16 @@ export function ItemTable({
       </TableHeader>
       <TableBody>
         {items.map((item) => {
+          const uiCategory = archiveUiCategory(item);
+          const sessionCategory = sessionCategoryForArchived(item);
           const slots =
-            saveReady && isCategory(item.category)
+            saveReady && sessionCategory
               ? matchingItems(
-                  sessionItems[item.category],
+                  sessionItems[sessionCategory],
                   item.seed,
-                  item.category,
+                  sessionCategory,
                 )
               : [];
-          const uiCategory = archiveUiCategory(item);
           const typeLabel =
             item.shipType ||
             (isCategory(uiCategory)

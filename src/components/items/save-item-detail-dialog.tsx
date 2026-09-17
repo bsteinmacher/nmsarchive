@@ -10,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { getAdapter, isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
+import { getAdapter, type ExtractedSlot } from "@/lib/nms/extract";
+import { saveSlotUiCategory } from "@/lib/archive-match";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { trpc } from "@/lib/trpc";
 import { useSaveSession } from "@/stores/save-session";
@@ -46,8 +47,7 @@ export function SaveItemDetailDialog({
   ].filter(Boolean);
   const archived = trpc.items.list.useQuery(
     {
-      category:
-        item && isFreighterBaseSlot(item) ? "freighter" : item?.category,
+      category: item ? saveSlotUiCategory(item) : undefined,
       seed: item?.seed && item.seed !== "0x0" ? item.seed : undefined,
     },
     {

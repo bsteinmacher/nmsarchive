@@ -7,6 +7,8 @@ export const CATEGORIES = [
   "wonder",
   "exosuit",
   "base",
+  "deepspace",
+  "spacestation",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
@@ -61,7 +63,19 @@ export const CATEGORY_META: Record<
     label: "Bases",
     href: "/base",
     description:
-      "Bases planetárias e de nave. A da cargueira fica em Cargueiras.",
+      "Bases planetárias e de nave. Cargueira, Deep Space e Space Station têm menus próprios.",
+  },
+  deepspace: {
+    label: "Deep Space",
+    href: "/deepspace",
+    description:
+      "Bases orbitais livres (COSMOS). Mesmo array das bases planetárias; não há limite separado no JSON.",
+  },
+  spacestation: {
+    label: "Space Station",
+    href: "/spacestation",
+    description:
+      "Estação espacial reivindicada (COSMOS). Até 20 por save; a 21ª é recusada na hora de aplicar.",
   },
 };
 

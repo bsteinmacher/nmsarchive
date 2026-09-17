@@ -14,6 +14,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CompanionRankField } from "@/components/items/companion-rank-field";
+import { ScreenshotField } from "@/components/items/screenshot-field";
+import { TagInput } from "@/components/items/tag-input";
 import { getAdapter, isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
 import {
   companionRankExtra,
@@ -22,8 +24,6 @@ import {
   type CompanionRank,
 } from "@/lib/nms/extract/companion-battle";
 import { trpc } from "@/lib/trpc";
-import { ScreenshotField } from "@/components/items/screenshot-field";
-import { TagInput } from "@/components/items/tag-input";
 import { useSaveSession } from "@/stores/save-session";
 import { type Category } from "@/types/nms";
 
@@ -164,6 +164,18 @@ export function ArchiveItemDialog({
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
               Só slots, posições de tech e supercharged. Substâncias e produtos
               do traje não entram no arquivo.
+            </p>
+          ) : null}
+          {category === "deepspace" ? (
+            <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+              Deep Space entra no mesmo array das bases planetárias. Não há
+              limite separado no JSON.
+            </p>
+          ) : null}
+          {category === "spacestation" ? (
+            <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+              O jogo aceita até 20 Space Stations por save. Aplicar a 21ª
+              falha com uma mensagem clara.
             </p>
           ) : null}
           <div className="grid gap-2">

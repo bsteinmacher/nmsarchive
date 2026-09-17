@@ -198,6 +198,86 @@ describe("archive-service", () => {
     await deleteItem(prisma, freighter.id);
   });
 
+  it("lista Deep Space e Space Station COSMOS, inclusive itens velhos category=base", async () => {
+    const oldDeep = await archiveItem(prisma, {
+      category: "base",
+      name: "Orbital antiga",
+      seed: "0xaaa1",
+      description: "arquivada como base antes da 4b",
+      metadata: {
+        gameVersion: 6785,
+        shipType: "PlayerSpaceBase",
+        extra: { baseType: "PlayerSpaceBase", objects: "40" },
+        payload: { BaseType: { PersistentBaseTypes: "PlayerSpaceBase" } },
+      },
+      tags: [],
+    });
+    const newDeep = await archiveItem(prisma, {
+      category: "deepspace",
+      name: "Orbital nova",
+      seed: "0xaaa2",
+      description: "envelope deepspace",
+      metadata: {
+        gameVersion: 6785,
+        shipType: "Deep Space",
+        extra: { baseType: "PlayerSpaceBase" },
+        payload: { BaseType: { PersistentBaseTypes: "PlayerSpaceBase" } },
+      },
+      tags: [],
+    });
+    const oldStation = await archiveItem(prisma, {
+      category: "base",
+      name: "Estação antiga",
+      seed: "0xbbb1",
+      description: "arquivada como base",
+      metadata: {
+        gameVersion: 6785,
+        extra: { baseType: "PlayerSpaceStationBase", objects: "200" },
+        payload: {
+          BaseType: { PersistentBaseTypes: "PlayerSpaceStationBase" },
+        },
+      },
+      tags: [],
+    });
+    const planet = await archiveItem(prisma, {
+      category: "base",
+      name: "Casa",
+      seed: "0x11",
+      description: "planetária",
+      metadata: {
+        gameVersion: 1,
+        shipType: "Planeta",
+        extra: { baseType: "HomePlanetBase" },
+        payload: {},
+      },
+      tags: [],
+    });
+
+    const listedDeep = await listItems(prisma, { category: "deepspace" });
+    expect(listedDeep.some((row) => row.id === oldDeep.id)).toBe(true);
+    expect(listedDeep.some((row) => row.id === newDeep.id)).toBe(true);
+    expect(listedDeep.some((row) => row.id === planet.id)).toBe(false);
+
+    const listedStation = await listItems(prisma, { category: "spacestation" });
+    expect(listedStation.some((row) => row.id === oldStation.id)).toBe(true);
+    expect(listedStation.some((row) => row.id === planet.id)).toBe(false);
+
+    const listedBases = await listItems(prisma, { category: "base" });
+    expect(listedBases.some((row) => row.id === planet.id)).toBe(true);
+    expect(listedBases.some((row) => row.id === oldDeep.id)).toBe(false);
+    expect(listedBases.some((row) => row.id === oldStation.id)).toBe(false);
+
+    const counts = await countItemsByCategory(prisma);
+    expect(counts.deepspace ?? 0).toBeGreaterThanOrEqual(2);
+    expect(counts.spacestation ?? 0).toBeGreaterThanOrEqual(1);
+    expect(listedBases).toHaveLength(counts.base ?? 0);
+
+    await deleteItem(prisma, oldDeep.id);
+    await deleteItem(prisma, newDeep.id);
+    await deleteItem(prisma, oldStation.id);
+    await deleteItem(prisma, planet.id);
+  });
+
   it("filtra S-class + tag exotic e ignora o resto", async () => {
     const hit = await archiveItem(prisma, {
       category: "ship",

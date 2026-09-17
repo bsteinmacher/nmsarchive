@@ -8,8 +8,10 @@ import {
   LayoutDashboard,
   Landmark,
   LayoutGrid,
+  Orbit,
   Package,
   Rocket,
+  Satellite,
   Settings,
   Shirt,
   Sparkles,
@@ -44,6 +46,8 @@ const CATEGORY_ICONS: Record<Category, ComponentType<{ className?: string }>> = 
   wonder: Sparkles,
   exosuit: Shirt,
   base: Landmark,
+  deepspace: Orbit,
+  spacestation: Satellite,
 };
 
 export function AppSidebar() {
@@ -150,7 +154,7 @@ export function AppSidebar() {
       <SidebarFooter>
         <ThemeToggle />
         <p className="px-2 pb-2 text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-          Fase 4 · o save é a ponte
+          Fase 4b · o save é a ponte
         </p>
       </SidebarFooter>
       <SidebarRail />

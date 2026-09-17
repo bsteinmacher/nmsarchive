@@ -3,7 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { archiveUiCategory, matchingItems } from "@/lib/archive-match";
+import { archiveEnvelopeCategory, archiveUiCategory, matchingItems, sessionCategoryForArchived } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import {
@@ -90,9 +90,16 @@ export function ItemDetailDialog({
     setDraftId(null);
   }
 
+  const sessionCategory = item
+    ? sessionCategoryForArchived({
+        category: item.category,
+        shipType: item.shipType,
+        extra: item.metadata.extra,
+      })
+    : null;
   const matches =
-    item && isCategory(item.category)
-      ? matchingItems(sessionItems[item.category], item.seed, item.category)
+    item && sessionCategory
+      ? matchingItems(sessionItems[sessionCategory], item.seed, sessionCategory)
       : [];
   const saveReady = saveStatus === "ready";
   const uiCategory =
@@ -110,12 +117,17 @@ export function ItemDetailDialog({
 
   function toNmsItem(): NmsItemFile | null {
     if (!item) return null;
-    if (!isCategory(item.category)) {
+    const envelope = archiveEnvelopeCategory({
+      category: item.category,
+      shipType: item.shipType,
+      extra: item.metadata.extra,
+    });
+    if (!envelope) {
       toast.error("Categoria desconhecida neste arquivo.");
       return null;
     }
     return buildNmsItem({
-      category: item.category,
+      category: envelope,
       name: item.name,
       seed: item.seed,
       payload: item.payload,
@@ -245,7 +257,11 @@ export function ItemDetailDialog({
                 <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
                   {matches.length > 0
                     ? `Mesmo seed no save aberto: slot ${matches.map((s) => s.slotLabel ?? s.index + 1).join(", ")}.`
-                    : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
+                    : uiCategory === "spacestation"
+                      ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim — e recusa se já houver 20 Space Stations."
+                      : uiCategory === "deepspace"
+                        ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim do array de bases."
+                        : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
                 </p>
               ) : (
                 <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
