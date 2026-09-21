@@ -87,6 +87,47 @@ describe("reorderShipOwnership", () => {
     expect(player.CorvetteEditAssociatedShipIndex).toBe(2);
     expect(player.ShipOwnership).toHaveLength(3);
   });
+
+  it("leva o casco PlayerShipBase (UserData) junto da Corvette e não mexe na Freighter", () => {
+    const json = saveWithShips({
+      PersistentPlayerBases: [
+        {
+          Name: "Corvette A",
+          BaseType: { PersistentBaseTypes: "PlayerShipBase" },
+          UserData: 0,
+          Objects: [{ ObjectID: "^A" }],
+        },
+        {
+          Name: "Corvette B",
+          BaseType: { PersistentBaseTypes: "PlayerShipBase" },
+          UserData: 2,
+          Objects: [{ ObjectID: "^B" }],
+        },
+        {
+          Name: "Freighter",
+          BaseType: { PersistentBaseTypes: "FreighterBase" },
+          UserData: 0,
+          Objects: [{ ObjectID: "^F" }],
+        },
+      ],
+    });
+    const result = reorderShipOwnership(json, 0, 2);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const player = (
+      result.json as {
+        BaseContext: { PlayerStateData: Record<string, unknown> };
+      }
+    ).BaseContext.PlayerStateData;
+    const bases = player.PersistentPlayerBases as Array<Record<string, unknown>>;
+    expect(bases[0]?.UserData).toBe(2);
+    expect(bases[1]?.UserData).toBe(0);
+    expect(bases[2]?.UserData).toBe(0);
+    expect((bases[0]?.Objects as unknown[]).length).toBe(1);
+    expect(
+      (bases[0]?.BaseType as { PersistentBaseTypes: string }).PersistentBaseTypes,
+    ).toBe("PlayerShipBase");
+  });
 });
 
 describe("setPlayerCurrencies", () => {

@@ -10,6 +10,7 @@ import {
   normalizeSeed,
 } from "../value";
 import { inventoryClass } from "./array";
+import { basePersistentType } from "./bases";
 import { emptySlotLabel } from "./names";
 import type {
   CategoryAdapter,
@@ -126,6 +127,30 @@ export function replaceShip(
 
 const SHIP_INDEX_KEYS = ["PrimaryShip", "CorvetteEditAssociatedShipIndex"] as const;
 
+/**
+ * O casco da Corvette não fica em ShipOwnership: é um PersistentPlayerBase
+ * PlayerShipBase cujo UserData é o índice 0-based do slot. Sem este remap,
+ * inventário/tech da nave andam e o casco (e os módulos CV_) ficam no slot velho.
+ */
+function remapPlayerShipBaseUserData(
+  player: Record<string, unknown>,
+  from: number,
+  to: number,
+  shipCount: number,
+) {
+  const bases = asArray(player.PersistentPlayerBases);
+  if (!bases) return;
+  for (const slot of bases) {
+    if (basePersistentType(slot) !== "PlayerShipBase") continue;
+    const rec = asRecord(slot);
+    if (!rec) continue;
+    const current = asNumber(rec.UserData);
+    if (current == null) continue;
+    if (current < 0 || current >= shipCount) continue;
+    rec.UserData = remapSlotIndex(current, from, to);
+  }
+}
+
 export function reorderShipOwnership(
   mappedJson: unknown,
   from: number,
@@ -159,6 +184,7 @@ export function reorderShipOwnership(
     if (current < 0 || current >= length) continue;
     player[key] = remapSlotIndex(current, from, to);
   }
+  remapPlayerShipBaseUserData(player, from, to, length);
   return { ok: true, json };
 }
 
