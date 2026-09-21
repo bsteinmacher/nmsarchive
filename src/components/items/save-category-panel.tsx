@@ -297,8 +297,8 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
         <CardHeader>
           <CardTitle>Nenhum save aberto</CardTitle>
           <CardDescription>
-            Carregue um save.hg no dashboard para ver {meta.label.toLowerCase()}{" "}
-            do save aberto.
+            Carregue um save.hg no dashboard para ver {meta.label} do save
+            aberto.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -312,7 +312,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
 
   const caption =
     category === "exosuit"
-      ? "Layout do traje"
+      ? "Exosuit layout"
       : `${adapter.label} no save (${filled} preenchida${filled === 1 ? "" : "s"} / ${primary.length} slots)`;
 
   const description = reorderable
@@ -320,7 +320,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     : category === "exosuit"
       ? "Só quantidade de slots e posição das tecnologias. Substâncias e produtos ficam no save, fora do arquivo."
       : category === "base"
-        ? "Bases planetárias e de nave. Interior da cargueira, Deep Space e Space Station ficam nos menus próprios."
+        ? "Bases planetárias e de Ship. Interior da Freighter, Deep Space e Space Station ficam nos menus próprios."
         : category === "deepspace"
           ? "Bases orbitais livres. Entram no mesmo array das bases planetárias; não há limite separado no JSON."
           : category === "spacestation"
@@ -328,7 +328,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             : category === "wonder"
           ? "Personal Wonders (escolha do jogador). Records automáticos ficam na lista abaixo, só leitura."
           : category === "freighter"
-            ? "A nave e os três inventários ficam nesta lista. A construção do interior é a base abaixo."
+            ? "A Freighter e os três inventários ficam nesta lista. A construção do interior é a base abaixo."
             : meta.description;
 
   const screenshotUrl = (item: ExtractedSlot) =>
@@ -382,7 +382,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
           description={description}
           emptyMessage={
             category === "base"
-              ? "Nenhuma base planetária ou de nave neste save. Interior da cargueira fica em Cargueiras; orbitais em Deep Space; estações em Space Station."
+              ? "Nenhuma base planetária ou de Ship neste save. Interior da Freighter fica em Freighters; orbitais em Deep Space; estações em Space Station."
               : category === "deepspace"
                 ? "Nenhuma base Deep Space neste save. O jogo adiciona uma quando você constrói com o Deep-Space Base Computer."
                 : category === "spacestation"
@@ -403,11 +403,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             columns={baseAdapter.columns}
             caption={
               interiorBases.length <= 1
-                ? "Base da cargueira"
-                : `Base da cargueira (${interiorBases.length})`
+                ? "Freighter base"
+                : `Freighter base (${interiorBases.length})`
             }
-            description="A construção do interior. Arquivar a nave não inclui esta construção."
-            emptyMessage="Este save não tem uma base de cargueira. O jogo cria uma quando você constrói no interior."
+            description="A construção do interior. Arquivar a Ship não inclui esta construção."
+            emptyMessage="Este save não tem uma base de Freighter. O jogo cria uma quando você constrói no interior."
             screenshotUrl={screenshotUrl}
             {...idleHandlers}
             onSelect={setSelected}
@@ -421,7 +421,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             items={automatic}
             reorderable={false}
             columns={[
-              { id: "itemType", header: "Tipo" },
+              { id: "itemType", header: "Type" },
               { id: "stat", header: "Stat" },
               { id: "seed", header: "Seed" },
             ]}

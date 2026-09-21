@@ -309,7 +309,7 @@ describe("freighter / frigate / base / wonder", () => {
         ],
       }),
     );
-    expect(items[0]?.itemType).toBe("Planeta");
+    expect(items[0]?.itemType).toBe("Planet");
     expect(items[0]?.warning).toMatch(/grande/);
     expect(items[0]?.extra.objects).toBe("70");
   });
@@ -345,7 +345,7 @@ describe("freighter / frigate / base / wonder", () => {
       "Interior 1",
       "Interior 2",
     ]);
-    expect(interior[0]?.name).toBe("Base Cargueira");
+    expect(interior[0]?.name).toBe("Base Freighter");
     expect(interior[0]?.extra.objects).toBe("2");
     expect(interior[0]?.category).toBe("base");
   });

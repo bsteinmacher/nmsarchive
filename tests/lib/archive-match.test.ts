@@ -39,11 +39,11 @@ describe("matchingShips", () => {
 });
 
 describe("archiveUiCategory", () => {
-  it("trata FreighterBase como cargueira no arquivo", () => {
+  it("trata FreighterBase como Freighter no arquivo", () => {
     expect(
       isArchivedFreighterBase({
         category: "base",
-        shipType: "Cargueira",
+        shipType: "Freighter",
         extra: { baseType: "FreighterBase" },
       }),
     ).toBe(true);
@@ -56,10 +56,16 @@ describe("archiveUiCategory", () => {
     expect(
       isArchivedFreighterBase({
         category: "base",
-        shipType: "Planeta",
+        shipType: "Cargueira",
+      }),
+    ).toBe(true);
+    expect(
+      isArchivedFreighterBase({
+        category: "base",
+        shipType: "Planet",
       }),
     ).toBe(false);
-    expect(archiveUiCategory({ category: "base", shipType: "Planeta" })).toBe(
+    expect(archiveUiCategory({ category: "base", shipType: "Planet" })).toBe(
       "base",
     );
   });

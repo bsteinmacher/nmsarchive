@@ -1,7 +1,7 @@
 import {
   DEEP_SPACE_BASE_TYPE,
   DEEP_SPACE_LABEL,
-  FREIGHTER_BASE_LABEL,
+  FREIGHTER_BASE_LABEL_ALIASES,
   FREIGHTER_BASE_TYPE,
   SPACE_STATION_BASE_TYPE,
   SPACE_STATION_LABEL,
@@ -26,7 +26,10 @@ export function isArchivedFreighterBase(item: ArchiveCategoryHint): boolean {
   if (item.category !== "base") return false;
   return (
     archivedBaseType(item) === FREIGHTER_BASE_TYPE ||
-    item.shipType === FREIGHTER_BASE_LABEL
+    (item.shipType != null &&
+      (FREIGHTER_BASE_LABEL_ALIASES as readonly string[]).includes(
+        item.shipType,
+      ))
   );
 }
 

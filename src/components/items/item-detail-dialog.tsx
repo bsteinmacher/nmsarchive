@@ -242,7 +242,7 @@ export function ItemDetailDialog({
           ) : item ? (
             <div className="grid gap-4">
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {item.className ? <span>Classe {item.className}</span> : null}
+                {item.className ? <span>Class {item.className}</span> : null}
                 {item.galaxy != null ? (
                   <span>{formatGalaxy(item.galaxy)}</span>
                 ) : null}

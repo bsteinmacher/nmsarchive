@@ -77,10 +77,10 @@ const EMPTY_MT =
 
 export const multitoolsAdapter: CategoryAdapter = {
   category: "multitool",
-  label: "Multi-ferramentas",
+  label: "Multi Tools",
   columns: [
-    { id: "className", header: "Classe" },
-    { id: "itemType", header: "Tipo" },
+    { id: "className", header: "Class" },
+    { id: "itemType", header: "Type" },
     { id: "seed", header: "Seed" },
   ],
   list: listMultitools,

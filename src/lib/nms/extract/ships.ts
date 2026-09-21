@@ -164,9 +164,9 @@ export function reorderShipOwnership(
 
 export const shipsAdapter: CategoryAdapter = {
   category: "ship",
-  label: "Naves",
+  label: "Ships",
   columns: [
-    { id: "className", header: "Classe" },
+    { id: "className", header: "Class" },
     { id: "itemType", header: "Ship Type" },
     { id: "seed", header: "Seed" },
   ],
@@ -179,7 +179,7 @@ export const shipsAdapter: CategoryAdapter = {
       BaseContext: { PlayerStateData: { ShipOwnership: [payload] } },
     })[0];
     return {
-      name: listed?.empty ? "Nave" : (listed?.name ?? "Nave"),
+      name: listed?.empty ? "Ship" : (listed?.name ?? "Ship"),
       seed: listed?.seed || shipSeedFromPayload(payload),
       extra: listed?.extra ?? {},
     };

@@ -18,7 +18,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
           <span className="text-sm text-muted-foreground">
-            Arquivo pessoal · o save é só a ponte
+            Personal Archive
           </span>
         </header>
         <main id="conteudo" className="flex flex-1 flex-col p-6">

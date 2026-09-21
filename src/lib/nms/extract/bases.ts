@@ -10,7 +10,11 @@ import { nestedEnum } from "./names";
 import type { CategoryAdapter, ExtractedSlot, InsertResult } from "./types";
 
 export const FREIGHTER_BASE_TYPE = "FreighterBase";
-export const FREIGHTER_BASE_LABEL = "Cargueira";
+export const FREIGHTER_BASE_LABEL = "Freighter";
+export const FREIGHTER_BASE_LABEL_ALIASES = [
+  FREIGHTER_BASE_LABEL,
+  "Cargueira",
+] as const;
 export const DEEP_SPACE_BASE_TYPE = "PlayerSpaceBase";
 export const DEEP_SPACE_LABEL = "Deep Space";
 export const SPACE_STATION_BASE_TYPE = "PlayerSpaceStationBase";
@@ -18,16 +22,16 @@ export const SPACE_STATION_LABEL = "Space Station";
 export const SPACE_STATION_BASE_LIMIT = 20;
 
 const BASE_TYPE_LABELS: Record<string, string> = {
-  HomePlanetBase: "Planeta",
-  PlayerShipBase: "Nave",
+  HomePlanetBase: "Planet",
+  PlayerShipBase: "Ship",
   [FREIGHTER_BASE_TYPE]: FREIGHTER_BASE_LABEL,
   [DEEP_SPACE_BASE_TYPE]: DEEP_SPACE_LABEL,
   [SPACE_STATION_BASE_TYPE]: SPACE_STATION_LABEL,
 };
 
 const BASE_COLUMNS = [
-  { id: "itemType", header: "Tipo" },
-  { id: "objects", header: "Objetos" },
+  { id: "itemType", header: "Type" },
+  { id: "objects", header: "Objects" },
   { id: "seed", header: "Seed" },
 ] as const;
 
@@ -284,7 +288,7 @@ export const basesAdapter: CategoryAdapter = {
 
 export const deepSpaceAdapter: CategoryAdapter = {
   category: "deepspace",
-  label: DEEP_SPACE_LABEL,
+  label: "Deep Space Bases",
   columns: BASE_COLUMNS,
   list: listDeepSpaceBases,
   insert: (json, payload) =>
@@ -299,7 +303,7 @@ export const deepSpaceAdapter: CategoryAdapter = {
 
 export const spaceStationAdapter: CategoryAdapter = {
   category: "spacestation",
-  label: SPACE_STATION_LABEL,
+  label: "Space Stations",
   columns: BASE_COLUMNS,
   list: listSpaceStationBases,
   insert: (json, payload) =>

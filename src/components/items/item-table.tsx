@@ -28,11 +28,11 @@ export function ItemTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Nome</TableHead>
-          <TableHead>Classe</TableHead>
-          <TableHead>Tipo</TableHead>
+          <TableHead>Name</TableHead>
+          <TableHead>Class</TableHead>
+          <TableHead>Type</TableHead>
           <TableHead>Seed</TableHead>
-          <TableHead>Galáxia</TableHead>
+          <TableHead>Galaxy</TableHead>
           <TableHead>Tags</TableHead>
         </TableRow>
       </TableHeader>

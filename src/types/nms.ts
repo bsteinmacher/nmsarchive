@@ -1,14 +1,14 @@
 export const CATEGORIES = [
-  "ship",
+  "exosuit",
   "multitool",
+  "companion",
+  "ship",
   "freighter",
   "frigate",
-  "companion",
-  "wonder",
-  "exosuit",
   "base",
   "deepspace",
   "spacestation",
+  "wonder",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];
@@ -23,25 +23,25 @@ export const CATEGORY_META: Record<
   { label: string; href: `/${Category}`; description: string }
 > = {
   ship: {
-    label: "Naves",
+    label: "Ships",
     href: "/ship",
     description:
-      "Slots do save aberto (vazios visíveis, arraste para reordenar) e naves guardadas no arquivo.",
+      "Slots do save aberto (vazios visíveis, arraste para reordenar) e Ships no arquivo.",
   },
   multitool: {
-    label: "Multi-ferramentas",
+    label: "Multi Tools",
     href: "/multitool",
-    description: "Multi-tools do save (com vazios) e do arquivo pessoal.",
+    description: "Multi Tools do save (com vazios) e do arquivo pessoal.",
   },
   freighter: {
-    label: "Cargueiras",
+    label: "Freighters",
     href: "/freighter",
-    description: "Cargueira atual, frota extra e a base do interior.",
+    description: "Freighter atual, frota extra e a base do interior.",
   },
   frigate: {
-    label: "Fragatas",
+    label: "Frigates",
     href: "/frigate",
-    description: "Frota de fragatas e traits.",
+    description: "Frota de Frigates e traits.",
   },
   companion: {
     label: "Companions",
@@ -54,7 +54,7 @@ export const CATEGORY_META: Record<
     description: "Personal Wonders escolhidas pelo jogador.",
   },
   exosuit: {
-    label: "Traje",
+    label: "Exosuit",
     href: "/exosuit",
     description:
       "Só slots liberados e posição das tecnologias — não o conteúdo de itens.",
@@ -63,16 +63,16 @@ export const CATEGORY_META: Record<
     label: "Bases",
     href: "/base",
     description:
-      "Bases planetárias e de nave. Cargueira, Deep Space e Space Station têm menus próprios.",
+      "Bases planetárias e de Ship. Freighter, Deep Space e Space Station têm menus próprios.",
   },
   deepspace: {
-    label: "Deep Space",
+    label: "Deep Space Bases",
     href: "/deepspace",
     description:
       "Bases orbitais livres (COSMOS). Mesmo array das bases planetárias; não há limite separado no JSON.",
   },
   spacestation: {
-    label: "Space Station",
+    label: "Space Stations",
     href: "/spacestation",
     description:
       "Estação espacial reivindicada (COSMOS). Até 20 por save; a 21ª é recusada na hora de aplicar.",

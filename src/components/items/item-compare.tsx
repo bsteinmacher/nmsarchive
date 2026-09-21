@@ -85,7 +85,7 @@ export function ItemCompare({
         <p className="text-xs text-muted-foreground">
           {saveLabel
             ? `Diff raso contra ${saveLabel}.`
-            : "Seed, classe e tipo; o JSON fica recolhido."}
+            : "Seed, Class e Type; o JSON fica recolhido."}
         </p>
       </div>
       <ul className="grid gap-2">

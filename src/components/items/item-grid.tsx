@@ -67,7 +67,7 @@ export function ItemGrid({
                 </span>
                 {item.className ? (
                   <span className="rounded-full border px-2 py-0.5 text-xs">
-                    Classe {item.className}
+                    Class {item.className}
                   </span>
                 ) : null}
                 {slots.length > 0 ? (

@@ -19,10 +19,10 @@ describe("galaxies", () => {
     expect(parseGalaxyDisplay(256)).toBe(255);
   });
 
-  it("índice fora de 0–255 vira Galáxia {n}", () => {
+  it("índice fora de 0–255 vira Galaxy {n}", () => {
     expect(galaxyName(-1)).toBeUndefined();
     expect(galaxyName(256)).toBeUndefined();
-    expect(formatGalaxy(256)).toBe("Galáxia 257");
+    expect(formatGalaxy(256)).toBe("Galaxy 257");
   });
 
   it("rejeita display fora de 1–256", () => {

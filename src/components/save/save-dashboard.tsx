@@ -128,7 +128,7 @@ export function SaveDashboard() {
           Save aberto
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sessão deste browser: abrir um .hg, conferir moedas e galáxia, copiar
+          Sessão deste browser: abrir um .hg, conferir moedas e Galaxy, copiar
           itens para o arquivo. O JSON fica no IndexedDB; o servidor só recebe o
           item arquivado, nunca o .hg.
         </p>
@@ -162,7 +162,7 @@ export function SaveDashboard() {
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Stat label="Galáxia" value={summary.galaxyLabel} />
+              <Stat label="Galaxy" value={summary.galaxyLabel} />
               <Stat label="Tempo de jogo" value={formatPlayTime(summary.playTimeSec)} />
               <Stat label="Modo" value={summary.gameModeLabel} />
               <div className="col-span-full grid gap-3 sm:grid-cols-3">
@@ -183,7 +183,7 @@ export function SaveDashboard() {
                 />
               </div>
               <Stat
-                label="Naves"
+                label="Ships"
                 value={`${summary.shipCount} / ${summary.shipSlots}`}
               />
               <Stat label="Plataforma" value={summary.platform || "—"} />
@@ -213,7 +213,7 @@ export function SaveDashboard() {
                 try {
                   const items = exportAllShips();
                   if (items.length === 0) {
-                    toast.error("Nenhuma nave preenchida.");
+                    toast.error("Nenhuma Ship preenchida.");
                     return;
                   }
                   downloadNmsItemZip("ships.nmsitem.zip", items);

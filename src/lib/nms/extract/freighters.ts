@@ -74,11 +74,11 @@ export function listFreighters(json: unknown): ExtractedSlot[] {
   const name =
     asString(player.PlayerFreighterName)?.trim() ||
     asString(asRecord(player.FreighterInventory)?.Name)?.trim() ||
-    (filename ? nameFromFilename(filename) : "Cargueira atual vazia");
+    (filename ? nameFromFilename(filename) : "Empty current Freighter");
   items.push({
     category: "freighter",
     index: 0,
-    name: currentEmpty ? "Cargueira atual vazia" : name,
+    name: currentEmpty ? "Empty current Freighter" : name,
     seed: currentEmpty ? "" : seed,
     className: currentEmpty ? "" : className,
     itemType: currentEmpty ? "" : itemType,
@@ -235,10 +235,10 @@ export function freighterSeedFromPayload(payload: unknown): string {
 
 export const freightersAdapter: CategoryAdapter = {
   category: "freighter",
-  label: "Cargueiras",
+  label: "Freighters",
   columns: [
-    { id: "className", header: "Classe" },
-    { id: "itemType", header: "Tipo" },
+    { id: "className", header: "Class" },
+    { id: "itemType", header: "Type" },
     { id: "seed", header: "Seed" },
   ],
   list: listFreighters,
@@ -251,7 +251,7 @@ export const freightersAdapter: CategoryAdapter = {
       const name =
         asString(payload.PlayerFreighterName)?.trim() ||
         nameFromFilename(filename) ||
-        "Cargueira";
+        "Freighter";
       return {
         name,
         seed: freighterSeedFromPayload(payload),
@@ -260,7 +260,7 @@ export const freightersAdapter: CategoryAdapter = {
     }
     const filename = resourceFilename(rec?.Resource);
     return {
-      name: nameFromFilename(filename) || "Cargueira da frota",
+      name: nameFromFilename(filename) || "Fleet Freighter",
       seed: freighterSeedFromPayload(payload),
       extra: { role: "fleet", itemType: freighterTypeFromFilename(filename) },
     };

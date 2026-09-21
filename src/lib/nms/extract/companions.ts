@@ -159,9 +159,9 @@ export const companionsAdapter: CategoryAdapter = {
   category: "companion",
   label: "Companions",
   columns: [
-    { id: "level", header: "Nível" },
-    { id: "element", header: "Elemento" },
-    { id: "biome", header: "Bioma" },
+    { id: "level", header: "Level" },
+    { id: "element", header: "Element" },
+    { id: "biome", header: "Biome" },
     { id: "seed", header: "Seed" },
   ],
   list: listCompanions,
