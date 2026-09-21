@@ -123,10 +123,10 @@ export function TagInput({
   const showList = open && suggestions.length > 0 && !disabled;
 
   return (
-    <div ref={rootRef} className="relative grid gap-1.5">
+    <div ref={rootRef} className="relative w-full min-w-0">
       <div
         className={cn(
-          "flex min-h-8 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-transparent px-2 py-1",
+          "flex min-h-8 w-full min-w-0 flex-wrap items-center gap-1.5 rounded-lg border border-input bg-transparent px-2.5",
           "focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50",
           "dark:bg-input/30",
           disabled && "pointer-events-none opacity-50",
@@ -171,14 +171,14 @@ export function TagInput({
             showList ? `${optionId}-${active}` : undefined
           }
           aria-describedby={describedBy}
-          className="min-h-7 min-w-[8rem] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="h-7 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
         />
       </div>
       {showList ? (
         <ul
           id={listId}
           role="listbox"
-          className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg bg-popover p-1 text-sm shadow-md ring-1 ring-foreground/10"
+          className="absolute top-full left-0 z-20 mt-1 max-h-48 w-full overflow-auto rounded-lg bg-popover p-1 text-sm shadow-md ring-1 ring-foreground/10"
         >
           {suggestions.map((tag, index) => (
             <li

@@ -58,13 +58,13 @@ export function listExosuit(json: unknown): ExtractedSlot<ExosuitLayoutPayload>[
     {
       category: "exosuit",
       index: 0,
-      name: "Layout do traje",
+      name: "Exosuit layout",
       seed: "0x0",
       className: "",
       itemType: "layout",
       filename: "",
       empty: false,
-      slotLabel: "Traje",
+      slotLabel: "Exosuit",
       extra: {
         slots: String(valid),
         tech: String(techCount),
@@ -102,7 +102,7 @@ export function insertExosuit(
 
 export const exosuitAdapter: CategoryAdapter<ExosuitLayoutPayload> = {
   category: "exosuit",
-  label: "Traje",
+  label: "Exosuit",
   columns: [
     { id: "slots", header: "Slots" },
     { id: "tech", header: "Tech" },
@@ -122,7 +122,7 @@ export const exosuitAdapter: CategoryAdapter<ExosuitLayoutPayload> = {
       },
     })[0];
     return {
-      name: listed?.name ?? "Layout do traje",
+      name: listed?.name ?? "Exosuit layout",
       seed: "0x0",
       extra: listed?.extra ?? {},
     };

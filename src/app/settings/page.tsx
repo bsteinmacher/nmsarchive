@@ -59,7 +59,7 @@ export default function SettingsPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">
-          Configurações
+          Settings
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Caminho do banco, backups do SQLite e atualização do mapping.json. O
@@ -213,7 +213,7 @@ export default function SettingsPage() {
             </Table>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Nenhum backup ainda. Arquivar uma nave cria o primeiro.
+              Nenhum backup ainda. Arquivar uma Ship cria o primeiro.
             </p>
           )}
         </CardContent>

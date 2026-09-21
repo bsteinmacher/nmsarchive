@@ -17,15 +17,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "NMS Archive",
   description:
-    "Arquivo pessoal de naves, multi-ferramentas e descobertas de No Man's Sky.",
+    "Arquivo pessoal de Ships, Multi Tools e descobertas de No Man's Sky.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className="h-full">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-full antialiased`}
-      >
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`h-full ${geistSans.variable} ${geistMono.variable}`}
+    >
+      <body className="min-h-full font-sans antialiased">
         <AppProviders>
           <AppShell>{children}</AppShell>
         </AppProviders>

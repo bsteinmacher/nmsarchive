@@ -75,5 +75,5 @@ export function archiveSearchHref(
 
 export const CLASS_FILTER_OPTIONS = ITEM_CLASSES.map((value) => ({
   value,
-  label: `Classe ${value}`,
+  label: `Class ${value}`,
 }));

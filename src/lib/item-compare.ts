@@ -16,8 +16,8 @@ export type CompareSide = {
 
 const SHALLOW_FIELDS: { field: ShallowField; label: string }[] = [
   { field: "seed", label: "Seed" },
-  { field: "className", label: "Classe" },
-  { field: "itemType", label: "Tipo" },
+  { field: "className", label: "Class" },
+  { field: "itemType", label: "Type" },
 ];
 
 function normalize(field: ShallowField, value: string): string {

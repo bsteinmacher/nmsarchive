@@ -44,7 +44,7 @@ export function listFrigates(json: unknown): ExtractedSlot[] {
     const className = nestedEnum(rec.InventoryClass, "InventoryClass");
     const traits = asArray(rec.TraitIDs) ?? [];
     const custom = asString(rec.CustomName)?.trim();
-    const name = custom || itemType || `Fragata ${index + 1}`;
+    const name = custom || itemType || `Frigate ${index + 1}`;
     const seed = frigateSeedFromPayload(rec);
     return {
       category: "frigate",
@@ -70,10 +70,10 @@ const EMPTY_FRIGATE =
 
 export const frigatesAdapter: CategoryAdapter = {
   category: "frigate",
-  label: "Fragatas",
+  label: "Frigates",
   columns: [
-    { id: "className", header: "Classe" },
-    { id: "itemType", header: "Tipo" },
+    { id: "className", header: "Class" },
+    { id: "itemType", header: "Type" },
     { id: "traits", header: "Traits" },
     { id: "seed", header: "Seed" },
   ],
@@ -93,7 +93,7 @@ export const frigatesAdapter: CategoryAdapter = {
       BaseContext: { PlayerStateData: { FleetFrigates: [payload] } },
     })[0];
     return {
-      name: listed?.empty ? "Fragata" : (listed?.name ?? "Fragata"),
+      name: listed?.empty ? "Frigate" : (listed?.name ?? "Frigate"),
       seed: listed?.seed || frigateSeedFromPayload(payload),
       extra: listed?.extra ?? {},
     };

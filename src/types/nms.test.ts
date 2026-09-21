@@ -8,6 +8,21 @@ import {
 } from "@/types/nms";
 
 describe("categories", () => {
+  it("keeps the archive menu order", () => {
+    expect([...CATEGORIES]).toEqual([
+      "exosuit",
+      "multitool",
+      "companion",
+      "ship",
+      "freighter",
+      "frigate",
+      "base",
+      "deepspace",
+      "spacestation",
+      "wonder",
+    ]);
+  });
+
   it("covers every CATEGORIES entry in CATEGORY_META", () => {
     expect(Object.keys(CATEGORY_META).sort()).toEqual([...CATEGORIES].sort());
   });

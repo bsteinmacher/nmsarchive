@@ -158,7 +158,7 @@ export const wondersAdapter: CategoryAdapter<WonderPayload> = {
   category: "wonder",
   label: "Wonders",
   columns: [
-    { id: "itemType", header: "Tipo" },
+    { id: "itemType", header: "Type" },
     { id: "seed", header: "Seed" },
   ],
   list: listWonders,

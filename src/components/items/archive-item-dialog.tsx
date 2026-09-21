@@ -156,14 +156,14 @@ export function ArchiveItemDialog({
           ) : null}
           {item && isFreighterBaseSlot(item) ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-              Arquivar a nave não inclui esta construção. Guarde os dois se
+              Arquivar a Ship não inclui esta construção. Guarde os dois se
               quiser o interior noutro save.
             </p>
           ) : null}
           {category === "exosuit" ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
               Só slots, posições de tech e supercharged. Substâncias e produtos
-              do traje não entram no arquivo.
+              do Exosuit não entram no arquivo.
             </p>
           ) : null}
           {category === "deepspace" ? (

@@ -68,7 +68,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Arquivo</SidebarGroupLabel>
+          <SidebarGroupLabel>Personal Archive</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -77,7 +77,7 @@ export function AppSidebar() {
                   render={<Link href="/" />}
                 >
                   <LayoutGrid />
-                  <span>Todas</span>
+                  <span>All</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {CATEGORIES.map((category) => {
@@ -133,29 +133,20 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        <SidebarSeparator />
-        <SidebarGroup>
-          <SidebarGroupLabel>App</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={active("/settings")}
-                  render={<Link href="/settings" />}
-                >
-                  <Settings />
-                  <span>Configurações</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              isActive={active("/settings")}
+              render={<Link href="/settings" />}
+            >
+              <Settings />
+              <span>Settings</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
         <ThemeToggle />
-        <p className="px-2 pb-2 text-[11px] text-muted-foreground group-data-[collapsible=icon]:hidden">
-          o save é a ponte
-        </p>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

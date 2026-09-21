@@ -98,7 +98,7 @@ function ArchiveHomeInner({ category }: { category?: Category }) {
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">
-          Arquivo pessoal
+          Personal Archive
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
           O que você guarda fica aqui, mesmo depois de fechar o browser. O save
@@ -116,7 +116,7 @@ function ArchiveHomeInner({ category }: { category?: Category }) {
             }),
           )}
         >
-          Todas{totalAll ? ` (${totalAll})` : ""}
+          All{totalAll ? ` (${totalAll})` : ""}
         </Link>
         {CATEGORIES.map((slug) => {
           const meta = CATEGORY_META[slug];
@@ -184,7 +184,7 @@ function ArchiveHomeInner({ category }: { category?: Category }) {
               <div>
                 <CardTitle>
                   {category
-                    ? `Nada em ${CATEGORY_META[category].label.toLowerCase()}`
+                    ? `Nada em ${CATEGORY_META[category].label}`
                     : "Nada arquivado ainda"}
                 </CardTitle>
                 <CardDescription>
@@ -222,7 +222,7 @@ function ArchiveHomeInner({ category }: { category?: Category }) {
               "h-auto p-0",
             )}
           >
-            Ver em Configurações
+            Ver em Settings
           </Link>
         </div>
         {logs.isLoading ? (

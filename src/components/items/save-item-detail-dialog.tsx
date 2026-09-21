@@ -38,10 +38,10 @@ export function SaveItemDetailDialog({
   const slot = item?.slotLabel ?? (item ? String(item.index + 1) : "—");
   const bits = [
     `Slot ${slot}`,
-    item?.className ? `Classe ${item.className}` : null,
+    item?.className ? `Class ${item.className}` : null,
     item?.extra.element || null,
-    item?.extra.biome ? `Bioma ${item.extra.biome}` : null,
-    item?.extra.level ? `Nível ${item.extra.level}` : null,
+    item?.extra.biome ? `Biome ${item.extra.biome}` : null,
+    item?.extra.level ? `Level ${item.extra.level}` : null,
     item?.itemType || null,
     item?.seed || null,
   ].filter(Boolean);

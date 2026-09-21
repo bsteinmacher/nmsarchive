@@ -75,9 +75,9 @@ export function ArchiveFilters({
             }
           />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="grid gap-1.5">
-            <Label htmlFor={classId}>Classe</Label>
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor={classId}>Class</Label>
             <select
               id={classId}
               className={selectClass}
@@ -92,13 +92,13 @@ export function ArchiveFilters({
               <option value="">Qualquer</option>
               {classOptions.map((value) => (
                 <option key={value} value={value}>
-                  Classe {value}
+                  Class {value}
                 </option>
               ))}
             </select>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor={typeId}>Tipo</Label>
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor={typeId}>Type</Label>
             <select
               id={typeId}
               className={selectClass}
@@ -121,8 +121,8 @@ export function ArchiveFilters({
               ) : null}
             </select>
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor={galaxyId}>Galáxia</Label>
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor={galaxyId}>Galaxy</Label>
             <select
               id={galaxyId}
               className={selectClass}
@@ -144,7 +144,7 @@ export function ArchiveFilters({
               ))}
             </select>
           </div>
-          <div className="grid gap-1.5">
+          <div className="grid min-w-0 gap-1.5">
             <Label htmlFor={tagsId}>Tags</Label>
             <TagInput
               id={tagsId}
@@ -153,10 +153,13 @@ export function ArchiveFilters({
               placeholder="exotic"
               describedBy={tagsHintId}
             />
-            <p id={tagsHintId} className="text-xs text-muted-foreground">
-              Todas as tags escolhidas precisam bater.
-            </p>
           </div>
+          <p
+            id={tagsHintId}
+            className="text-pretty text-xs leading-snug text-muted-foreground sm:col-span-2 lg:col-span-1 lg:col-start-4"
+          >
+            Todas as tags escolhidas precisam bater.
+          </p>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">

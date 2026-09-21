@@ -273,7 +273,7 @@ export function galaxyName(index: number): string | undefined {
 export function formatGalaxy(index: number): string {
   const display = index + 1;
   const name = galaxyName(index);
-  return name ? `${display} · ${name}` : `Galáxia ${display}`;
+  return name ? `${display} · ${name}` : `Galaxy ${display}`;
 }
 
 /** Converte o número que o jogador vê (1–256) para RealityIndex (0–255). */
