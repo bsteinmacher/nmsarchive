@@ -31,6 +31,7 @@ Constante no código: `NMSITEM_SCHEMA_VERSION` em `src/lib/nmsitem.ts`.
 
 ### Added
 
+- Companions no arquivo pessoal mostram **Element** e **Biome** (tabela, cards e detalhes). Já estava no extra; a lista não exibia. A busca também casa esses campos.
 - Em **Ver detalhes** do save aberto, **Excluir** esvazia o slot (o array do jogo não encolhe). Em nave, também limpa peças/cores e o casco da Corvette. Não apaga o arquivo pessoal.
 - Frigates do save aberto reordenam por arrastar, como naves, multi-tools e companions.
 - `FleetFrigates` não pré-aloca 30 vazios: o JSON só tem as fragatas existentes (teto **30**). Aplicar acrescenta no fim; Excluir tira do array.

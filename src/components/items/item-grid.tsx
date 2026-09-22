@@ -69,6 +69,16 @@ export function ItemGrid({
                     Class {item.className}
                   </span>
                 ) : null}
+                {item.extra?.element ? (
+                  <span className="rounded-full border px-2 py-0.5 text-xs">
+                    {item.extra.element}
+                  </span>
+                ) : null}
+                {item.extra?.biome ? (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                    Biome {item.extra.biome}
+                  </span>
+                ) : null}
                 {slots.length > 0 ? (
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
                     No save · slot {slots[0].slotLabel ?? slots[0].index + 1}

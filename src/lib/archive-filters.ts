@@ -17,6 +17,7 @@ export type ArchiveFilterable = {
   shipType: string;
   galaxy: number | null;
   tags: { slug: string }[];
+  extra?: { biome?: string; element?: string };
 };
 
 function includesInsensitive(haystack: string, needle: string): boolean {
@@ -60,7 +61,9 @@ export function matchesArchiveFilters(
     const q = filters.q.trim();
     if (
       !includesInsensitive(item.name, q) &&
-      !includesInsensitive(item.description, q)
+      !includesInsensitive(item.description, q) &&
+      !includesInsensitive(item.extra?.element ?? "", q) &&
+      !includesInsensitive(item.extra?.biome ?? "", q)
     ) {
       return false;
     }

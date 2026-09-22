@@ -1,5 +1,12 @@
 export type ArchivedItemTag = { slug: string; label: string };
 
+export type ArchivedItemExtra = {
+  baseType?: string;
+  biome?: string;
+  element?: string;
+  level?: string;
+};
+
 export type ArchivedItemSummary = {
   id: string;
   category: string;
@@ -12,7 +19,7 @@ export type ArchivedItemSummary = {
   className: string;
   shipType: string;
   filename: string;
-  extra?: { baseType?: string };
+  extra?: ArchivedItemExtra;
   /** Seed derivado do payload (companions: identidade genética). */
   identitySeed?: string;
   tags: ArchivedItemTag[];

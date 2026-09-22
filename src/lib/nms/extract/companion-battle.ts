@@ -1,4 +1,4 @@
-import { asArray, asNumber } from "../value";
+import { asArray, asNumber, asRecord, asString } from "../value";
 import { biomeLabel, displayId, nestedEnum } from "./names";
 
 /**
@@ -143,6 +143,23 @@ export function companionBattleStats(
     biome,
     element: companionElement(biome, creatureType),
     level: companionLevel(rec.PetBattlerTreatsEaten),
+  };
+}
+
+/** Extra arquivado, ou o payload se o extra antigo não tiver bioma/elemento. */
+export function companionBattleFromArchived(input: {
+  extra?: Record<string, unknown> | null;
+  payload?: unknown;
+}): CompanionBattleStats {
+  const extra = input.extra ?? {};
+  const rec = asRecord(input.payload);
+  const fromPayload = rec
+    ? companionBattleStats(rec)
+    : { biome: "", element: "", level: "" };
+  return {
+    biome: asString(extra.biome) || fromPayload.biome,
+    element: asString(extra.element) || fromPayload.element,
+    level: asString(extra.level) || fromPayload.level,
   };
 }
 

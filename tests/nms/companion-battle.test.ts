@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  companionBattleFromArchived,
   companionBattleStats,
   companionElement,
   companionLevel,
@@ -48,6 +49,24 @@ describe("companionBattleStats", () => {
       element: "Gelo",
       level: "7",
     });
+  });
+
+  it("lê bioma/elemento do extra arquivado ou do payload", () => {
+    expect(companionBattleFromArchived({ extra: { biome: "Lush" } })).toEqual({
+      biome: "Lush",
+      element: "",
+      level: "",
+    });
+    expect(
+      companionBattleFromArchived({
+        extra: {},
+        payload: {
+          Biome: { Biome: "Frozen" },
+          CreatureType: { CreatureType: "Passive" },
+          PetBattlerTreatsEaten: [1],
+        },
+      }),
+    ).toEqual({ biome: "Frozen", element: "Gelo", level: "1" });
   });
 });
 

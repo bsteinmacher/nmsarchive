@@ -126,6 +126,10 @@ describe("archive-service", () => {
       },
       tags: [],
     });
+    expect(archived.extra).toMatchObject({
+      biome: "Radioactive",
+      element: "Radioativo",
+    });
     const updated = await updateItem(prisma, {
       id: archived.id,
       className: "S/S/S",
@@ -139,6 +143,10 @@ describe("archive-service", () => {
       },
     });
     expect(updated.className).toBe("S/S/S");
+    expect(updated.extra).toMatchObject({
+      biome: "Radioactive",
+      element: "Radioativo",
+    });
     const detail = await getItem(prisma, archived.id);
     expect(detail.metadata.extra).toMatchObject({ rank: "S/S/S", atk: "S" });
     expect(detail.payload).toEqual({ CreatureSeed: [true, "0x3c"] });

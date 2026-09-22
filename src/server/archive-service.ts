@@ -6,6 +6,7 @@ import {
   type ArchiveFilterInput,
 } from "@/lib/archive-filters";
 import { archiveUiCategory } from "@/lib/archive-match";
+import { companionBattleFromArchived } from "@/lib/nms/extract/companion-battle";
 import { seedFromPayload } from "@/lib/nms/extract";
 import { asNumber, asRecord, asString } from "@/lib/nms/value";
 import {
@@ -17,6 +18,7 @@ import { logOperation } from "@/server/operations";
 import { deleteScreenshot } from "@/server/screenshots";
 import type {
   ArchivedItemDetail,
+  ArchivedItemExtra,
   ArchivedItemSummary,
   ArchiveFilterOptions,
 } from "@/types/archive";
@@ -41,22 +43,41 @@ export type ListItemsFilter = ArchiveFilterInput & {
   category?: string;
 };
 
-function metadataSummary(metadata: unknown): {
+function metadataSummary(
+  category: string,
+  metadata: unknown,
+): {
   gameVersion: number | null;
   className: string;
   shipType: string;
   filename: string;
-  extra?: { baseType?: string };
+  extra?: ArchivedItemExtra;
 } {
   const rec = asRecord(metadata) ?? {};
   const extraRec = asRecord(rec.extra);
   const baseType = asString(extraRec?.baseType);
+  const battle =
+    category === "companion"
+      ? companionBattleFromArchived({
+          extra: extraRec,
+          payload: rec.payload,
+        })
+      : {
+          biome: asString(extraRec?.biome) ?? "",
+          element: asString(extraRec?.element) ?? "",
+          level: asString(extraRec?.level) ?? "",
+        };
+  const extra: ArchivedItemExtra = {};
+  if (baseType) extra.baseType = baseType;
+  if (battle.biome) extra.biome = battle.biome;
+  if (battle.element) extra.element = battle.element;
+  if (battle.level) extra.level = battle.level;
   return {
     gameVersion: asNumber(rec.gameVersion),
     className: asString(rec.className) ?? "",
     shipType: asString(rec.shipType) ?? "",
     filename: asString(rec.filename) ?? "",
-    extra: baseType ? { baseType } : undefined,
+    extra: Object.keys(extra).length ? extra : undefined,
   };
 }
 
@@ -86,7 +107,7 @@ function toSummary(row: {
   updatedAt: Date;
   tags: { tag: { slug: string; label: string } }[];
 }): ArchivedItemSummary {
-  const extra = metadataSummary(row.metadata);
+  const extra = metadataSummary(row.category, row.metadata);
   return {
     id: row.id,
     category: row.category,
