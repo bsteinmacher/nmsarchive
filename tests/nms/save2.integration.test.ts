@@ -14,6 +14,7 @@ import {
 import { listFreighters } from "@/lib/nms/extract/freighters";
 import { listFrigates } from "@/lib/nms/extract/frigates";
 import {
+  basePersistentType,
   listBases,
   listDeepSpaceBases,
   listFreighterBases,
@@ -32,7 +33,7 @@ import { decodeHg, decodeHgDetailed, encodeHg } from "@/lib/nms/lz4-blocks";
 import { loadMappingCached } from "@/lib/nms/mapping-node";
 import { parseHg, writeHg } from "@/lib/nms/parse";
 import { getPlayerState } from "@/lib/nms/player";
-import { asNumber } from "@/lib/nms/value";
+import { asArray, asNumber, asRecord } from "@/lib/nms/value";
 import { reorderShipOwnership } from "@/lib/nms/write";
 
 const savePath = path.join(process.cwd(), ".others", "save2.hg");
@@ -134,6 +135,52 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(after.PrimaryShip).toBe(to);
       expect(asLength(after.ShipOwnership)).toBe(12);
       expect(asLength(after.ShipUsesLegacyColours)).toBe(12);
+    },
+    60_000,
+  );
+
+  it(
+    "ao reordenar naves, PlayerShipBase.UserData segue o slot e FreighterBase não muda",
+    async () => {
+      const mapping = await loadMappingCached();
+      const bytes = new Uint8Array(readFileSync(savePath));
+      const parsed = parseHg(bytes, mapping);
+      const before = getPlayerState(parsed.json)!;
+      const basesBefore = asArray(before.PersistentPlayerBases) ?? [];
+      const hull = basesBefore.find(
+        (slot) => basePersistentType(slot) === "PlayerShipBase",
+      );
+      const freighter = basesBefore.find(
+        (slot) => basePersistentType(slot) === "FreighterBase",
+      );
+      const from = asNumber(asRecord(hull)?.UserData);
+      expect(from).toBeTypeOf("number");
+      if (from == null) return;
+      const shipsBefore = listShips(parsed.json);
+      const to = shipsBefore.findIndex(
+        (ship, index) => ship.empty && index !== from,
+      );
+      expect(to).toBeGreaterThanOrEqual(0);
+      const freighterUserData = asRecord(freighter)?.UserData;
+
+      const result = reorderShipOwnership(parsed.json, from, to);
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+
+      const after = getPlayerState(result.json)!;
+      const basesAfter = asArray(after.PersistentPlayerBases) ?? [];
+      const hullAfter = basesAfter.find(
+        (slot) =>
+          basePersistentType(slot) === "PlayerShipBase" &&
+          asRecord(slot)?.Name === asRecord(hull)?.Name &&
+          asArray(asRecord(slot)?.Objects)?.length ===
+            asArray(asRecord(hull)?.Objects)?.length,
+      );
+      const freighterAfter = basesAfter.find(
+        (slot) => basePersistentType(slot) === "FreighterBase",
+      );
+      expect(asNumber(asRecord(hullAfter)?.UserData)).toBe(to);
+      expect(asRecord(freighterAfter)?.UserData).toEqual(freighterUserData);
     },
     60_000,
   );

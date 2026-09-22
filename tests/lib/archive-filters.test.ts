@@ -46,6 +46,12 @@ describe("matchesArchiveFilters", () => {
     expect(matchesArchiveFilters(exoticS, { q: "euclid" })).toBe(true);
     expect(matchesArchiveFilters(exoticS, { q: "hauler" })).toBe(false);
     expect(matchesArchiveFilters(exoticS, { seed: "0xABC" })).toBe(true);
+    expect(
+      matchesArchiveFilters(
+        { ...exoticS, extra: { element: "Gelo", biome: "Frozen" } },
+        { q: "gelo" },
+      ),
+    ).toBe(true);
   });
 
   it("detecta filtros ativos", () => {

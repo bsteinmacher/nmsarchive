@@ -1,9 +1,16 @@
 import { frigateClassLabel } from "../freighter-type";
 import { getPlayerState } from "../player";
 import { asArray, asRecord, asString, normalizeSeed } from "../value";
-import { insertAtFirstEmpty, replaceAtIndex } from "./array";
+import {
+  clonePlayer,
+  replaceAtIndex,
+  reorderPlayerArray,
+} from "./array";
 import { nestedEnum } from "./names";
-import type { CategoryAdapter, ExtractedSlot } from "./types";
+import type { CategoryAdapter, ExtractedSlot, InsertResult } from "./types";
+
+/** Teto da frota no jogo. O JSON não pré-aloca 30 vazios — só as fragatas existentes. */
+export const FLEET_FRIGATE_LIMIT = 30;
 
 export function isEmptyFrigateSlot(slot: unknown): boolean {
   const rec = asRecord(slot);
@@ -65,8 +72,49 @@ export function listFrigates(json: unknown): ExtractedSlot[] {
   });
 }
 
-const EMPTY_FRIGATE =
-  "Não há slot vazio de fragata. O arquivo não expande FleetFrigates.";
+export function insertFrigate(
+  mappedJson: unknown,
+  payload: unknown,
+): InsertResult {
+  const cloned = clonePlayer(mappedJson);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  let arr = asArray(cloned.player.FleetFrigates);
+  if (!arr) {
+    arr = [];
+    cloned.player.FleetFrigates = arr;
+  }
+  const filled = arr.filter((slot) => !isEmptyFrigateSlot(slot)).length;
+  if (filled >= FLEET_FRIGATE_LIMIT) {
+    return {
+      ok: false,
+      error: `Este save já tem ${FLEET_FRIGATE_LIMIT} fragatas. Exclua uma no save ou no jogo antes de aplicar outra.`,
+    };
+  }
+  const emptyIndex = arr.findIndex(isEmptyFrigateSlot);
+  if (emptyIndex >= 0) {
+    arr[emptyIndex] = structuredClone(payload);
+    return { ok: true, json: cloned.json, index: emptyIndex };
+  }
+  arr.push(structuredClone(payload));
+  return { ok: true, json: cloned.json, index: arr.length - 1 };
+}
+
+export function clearFrigate(
+  mappedJson: unknown,
+  index: number,
+): InsertResult {
+  const cloned = clonePlayer(mappedJson);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  const arr = asArray(cloned.player.FleetFrigates);
+  if (!arr) {
+    return { ok: false, error: "FleetFrigates ausente neste save." };
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= arr.length) {
+    return { ok: false, error: "Índice de slot fora do array." };
+  }
+  arr.splice(index, 1);
+  return { ok: true, json: cloned.json, index };
+}
 
 export const frigatesAdapter: CategoryAdapter = {
   category: "frigate",
@@ -78,16 +126,12 @@ export const frigatesAdapter: CategoryAdapter = {
     { id: "seed", header: "Seed" },
   ],
   list: listFrigates,
-  insert: (json, payload) =>
-    insertAtFirstEmpty(
-      json,
-      "FleetFrigates",
-      payload,
-      isEmptyFrigateSlot,
-      EMPTY_FRIGATE,
-    ),
+  insert: insertFrigate,
   replace: (json, index, payload) =>
     replaceAtIndex(json, "FleetFrigates", index, payload),
+  clear: clearFrigate,
+  reorder: (json, from, to) =>
+    reorderPlayerArray(json, "FleetFrigates", from, to),
   summarize(payload) {
     const listed = listFrigates({
       BaseContext: { PlayerStateData: { FleetFrigates: [payload] } },

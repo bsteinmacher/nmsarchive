@@ -51,6 +51,8 @@ export type CategoryAdapter<TPayload = unknown> = {
   list(json: unknown): ExtractedSlot<TPayload>[];
   insert(json: unknown, payload: TPayload): InsertResult;
   replace?(json: unknown, index: number, payload: TPayload): InsertResult;
+  /** Esvazia o slot no lugar. O array do jogo não encolhe. */
+  clear?(json: unknown, index: number): InsertResult;
   reorder?(json: unknown, from: number, to: number): WriteResult;
   summarize(payload: TPayload): {
     name: string;

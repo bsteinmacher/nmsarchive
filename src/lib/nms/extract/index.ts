@@ -23,7 +23,9 @@ export {
   insertShip,
   replaceShip,
   reorderShipOwnership,
+  clearShip,
 } from "./ships";
+export { FLEET_FRIGATE_LIMIT } from "./frigates";
 export {
   DEEP_SPACE_BASE_TYPE,
   DEEP_SPACE_LABEL,
@@ -103,7 +105,13 @@ export function insertItem(
   const adapter = getAdapter(resolveInsertCategory(category, payload));
   const first = adapter.insert(json, payload);
   if (first.ok) return first;
-  if (!seed || !adapter.replace) return first;
+  if (!adapter.replace) return first;
+  const needles = new Set(
+    [seed, adapter.seedFromPayload(payload)]
+      .map((value) => value?.toLowerCase())
+      .filter((value): value is string => Boolean(value) && value !== "0x0"),
+  );
+  if (needles.size === 0) return first;
   const match = adapter
     .list(json)
     .find(
@@ -111,7 +119,7 @@ export function insertItem(
         !item.empty &&
         !item.readonly &&
         item.group !== "automatic" &&
-        item.seed.toLowerCase() === seed.toLowerCase(),
+        needles.has(item.seed.toLowerCase()),
     );
   if (!match) return first;
   return adapter.replace(json, match.index, payload);
@@ -128,6 +136,18 @@ export function replaceItem(
     return { ok: false, error: "Esta categoria não substitui slot." };
   }
   return adapter.replace(json, index, payload);
+}
+
+export function clearItem(
+  json: unknown,
+  category: Category,
+  index: number,
+): InsertResult {
+  const adapter = getAdapter(category);
+  if (!adapter.clear) {
+    return { ok: false, error: "Esta categoria não esvazia slot." };
+  }
+  return adapter.clear(json, index);
 }
 
 export function reorderCategory(

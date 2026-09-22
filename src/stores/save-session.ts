@@ -23,6 +23,7 @@ import {
 import {
   insertCategoryItem,
   reorderCategorySlots,
+  clearCategorySlot,
   setPlayerCurrencies,
   type PlayerCurrencies,
 } from "@/lib/nms/write";
@@ -81,6 +82,7 @@ type SaveSessionState = {
   clear: () => Promise<void>;
   importItem: (item: NmsItemFile) => Promise<number>;
   importShip: (item: NmsItemFile) => Promise<number>;
+  clearSlot: (category: Category, index: number) => Promise<void>;
   exportItem: (category: Category, index: number) => NmsItemFile;
   exportShip: (index: number) => NmsItemFile;
   exportAllShips: () => NmsItemFile[];
@@ -278,6 +280,15 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   },
 
   importShip: async (item) => get().importItem(item),
+
+  clearSlot: async (category, index) => {
+    if (mappedJson == null) throw new Error("Nenhum save aberto.");
+    const result = clearCategorySlot(mappedJson, category, index);
+    if (!result.ok) throw new Error(result.error);
+    mappedJson = result.json;
+    await persistJson();
+    set(applyParsed(mappedJson, {}));
+  },
 
   exportItem: (category, index) => {
     const { items, summary } = get();

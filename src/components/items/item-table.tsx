@@ -1,6 +1,6 @@
 "use client";
 
-import { archiveUiCategory, matchingItems, sessionCategoryForArchived } from "@/lib/archive-match";
+import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import type { ArchivedItemSummary } from "@/types/archive";
 import { CATEGORY_META, isCategory } from "@/types/nms";
@@ -23,6 +23,9 @@ export function ItemTable({
 }) {
   const sessionItems = useSaveSession((s) => s.items);
   const saveReady = useSaveSession((s) => s.status === "ready");
+  const showBattle = items.some(
+    (item) => item.extra?.element || item.extra?.biome,
+  );
 
   return (
     <Table>
@@ -31,6 +34,12 @@ export function ItemTable({
           <TableHead>Name</TableHead>
           <TableHead>Class</TableHead>
           <TableHead>Type</TableHead>
+          {showBattle ? (
+            <>
+              <TableHead>Element</TableHead>
+              <TableHead>Biome</TableHead>
+            </>
+          ) : null}
           <TableHead>Seed</TableHead>
           <TableHead>Galaxy</TableHead>
           <TableHead>Tags</TableHead>
@@ -42,10 +51,9 @@ export function ItemTable({
           const sessionCategory = sessionCategoryForArchived(item);
           const slots =
             saveReady && sessionCategory
-              ? matchingItems(
+              ? matchingSlotsForArchived(
                   sessionItems[sessionCategory],
-                  item.seed,
-                  sessionCategory,
+                  item,
                 )
               : [];
           const typeLabel =
@@ -71,6 +79,16 @@ export function ItemTable({
               </TableCell>
               <TableCell>{item.className || "—"}</TableCell>
               <TableCell className="whitespace-normal">{typeLabel}</TableCell>
+              {showBattle ? (
+                <>
+                  <TableCell className="whitespace-normal">
+                    {item.extra?.element || "—"}
+                  </TableCell>
+                  <TableCell className="whitespace-normal">
+                    {item.extra?.biome || "—"}
+                  </TableCell>
+                </>
+              ) : null}
               <TableCell className="font-mono text-xs whitespace-normal break-all">
                 {item.seed}
               </TableCell>

@@ -19,6 +19,23 @@ Não há compatibilidade binária com exports do GoatFungus/NomNom. O hub públi
 
 Constante no código: `NMSITEM_SCHEMA_VERSION` em `src/lib/nmsitem.ts`.
 
+## Unreleased
+
+### Fixed
+
+- Companion no arquivo pessoal: o selo **No save · slot** (e o apply quando a lista está cheia) não usa mais só `CreatureSeed`. Vários pets vêm `0x0` ou repetem a mesma semente; a identidade mistura as sementes genéticas do payload. O payload que você já arquivou estava certo — o selo apontava para o primeiro slot com aquele seed. Itens antigos batem pelo payload, sem re-arquivar.
+
+### Changed
+
+- Payload de nave (`category: "ship"`) pode incluir `kind: "ship"` com `ownership` e, opcionalmente, `customisation` (peças/cores) e `hull` (casco `PlayerShipBase` da Corvette). O envelope `.nmsitem` permanece na versão **1**. Arquivos antigos (só o objeto de `ShipOwnership`) continuam importando; o slot destino não herda visual nem casco de outra nave.
+
+### Added
+
+- Companions no arquivo pessoal mostram **Element** e **Biome** (tabela, cards e detalhes). Já estava no extra; a lista não exibia. A busca também casa esses campos.
+- Em **Ver detalhes** do save aberto, **Excluir** esvazia o slot (o array do jogo não encolhe). Em nave, também limpa peças/cores e o casco da Corvette. Não apaga o arquivo pessoal.
+- Frigates do save aberto reordenam por arrastar, como naves, multi-tools e companions.
+- `FleetFrigates` não pré-aloca 30 vazios: o JSON só tem as fragatas existentes (teto **30**). Aplicar acrescenta no fim; Excluir tira do array.
+
 ## 0.1.0 — Fase 5
 
 Deploy self-hosted e documentação do arquivo pessoal.

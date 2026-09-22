@@ -8,6 +8,7 @@ import {
 } from "../value";
 import {
   insertAtFirstEmpty,
+  emptySlotAt,
   inventoryClass,
   reorderPlayerArray,
   replaceAtIndex,
@@ -94,6 +95,12 @@ export const multitoolsAdapter: CategoryAdapter = {
     ),
   replace: (json, index, payload) =>
     replaceAtIndex(json, "Multitools", index, payload),
+  clear: (json, index) =>
+    emptySlotAt(json, "Multitools", index, isEmptyMultitoolSlot, {
+      Name: "",
+      Resource: { Filename: "", Seed: [false, "0x0"] },
+      Seed: [false, "0x0"],
+    }),
   reorder: (json, from, to) =>
     reorderPlayerArray(json, "Multitools", from, to, [], [
       "ActiveMultioolIndex",

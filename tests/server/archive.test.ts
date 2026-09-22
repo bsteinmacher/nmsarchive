@@ -126,6 +126,10 @@ describe("archive-service", () => {
       },
       tags: [],
     });
+    expect(archived.extra).toMatchObject({
+      biome: "Radioactive",
+      element: "Radioativo",
+    });
     const updated = await updateItem(prisma, {
       id: archived.id,
       className: "S/S/S",
@@ -139,9 +143,38 @@ describe("archive-service", () => {
       },
     });
     expect(updated.className).toBe("S/S/S");
+    expect(updated.extra).toMatchObject({
+      biome: "Radioactive",
+      element: "Radioativo",
+    });
     const detail = await getItem(prisma, archived.id);
     expect(detail.metadata.extra).toMatchObject({ rank: "S/S/S", atk: "S" });
     expect(detail.payload).toEqual({ CreatureSeed: [true, "0x3c"] });
+  });
+
+  it("expõe identitySeed do payload mesmo com CreatureSeed 0x0", async () => {
+    const archived = await archiveItem(prisma, {
+      category: "companion",
+      name: "UI_FIEND_NAME",
+      seed: "0x0",
+      description: "fiend do teste",
+      metadata: {
+        gameVersion: 1,
+        payload: {
+          CreatureID: "^FIEND",
+          CreatureSeed: [false, "0x0"],
+          SpeciesSeed: 1,
+          GenusSeed: 1,
+        },
+      },
+      tags: [],
+    });
+    expect(archived.identitySeed).toMatch(/^0x[0-9a-f]+$/);
+    expect(archived.identitySeed).not.toBe("0x0");
+    const listed = await listItems(prisma, { category: "companion" });
+    expect(listed.find((item) => item.id === archived.id)?.identitySeed).toBe(
+      archived.identitySeed,
+    );
   });
 
   it("lista FreighterBase em cargueiras, não em bases", async () => {

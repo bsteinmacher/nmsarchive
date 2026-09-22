@@ -224,6 +224,36 @@ export function replaceFreighter(
   return { ok: true, json: cloned.json, index };
 }
 
+export function clearFreighter(
+  mappedJson: unknown,
+  index: number,
+): InsertResult {
+  if (index === 0) {
+    return {
+      ok: false,
+      error: "A cargueira atual não pode ser esvaziada por aqui.",
+    };
+  }
+  const cloned = clonePlayer(mappedJson);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  const fleet = asArray(cloned.player.FreighterFleet);
+  if (!fleet) {
+    return { ok: false, error: "FreighterFleet ausente neste save." };
+  }
+  const fleetIndex = index - 1;
+  if (fleetIndex < 0 || fleetIndex >= fleet.length) {
+    return { ok: false, error: "Índice de slot fora da frota." };
+  }
+  const template = fleet.find((slot, i) => {
+    if (i === fleetIndex) return false;
+    return isEmptyFreighterResource(asRecord(slot)?.Resource);
+  });
+  fleet[fleetIndex] = structuredClone(
+    template ?? { Resource: { Filename: "", Seed: [false, "0x0"] } },
+  );
+  return { ok: true, json: cloned.json, index };
+}
+
 export function freighterSeedFromPayload(payload: unknown): string {
   const rec = asRecord(payload);
   if (!rec) return "0x0";
@@ -244,6 +274,7 @@ export const freightersAdapter: CategoryAdapter = {
   list: listFreighters,
   insert: insertFreighter,
   replace: replaceFreighter,
+  clear: clearFreighter,
   summarize(payload) {
     const rec = asRecord(payload);
     if (isCurrentPayload(payload)) {

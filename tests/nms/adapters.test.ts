@@ -8,7 +8,7 @@ import {
   listExosuit,
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters, insertFreighter } from "@/lib/nms/extract/freighters";
-import { listFrigates } from "@/lib/nms/extract/frigates";
+import { listFrigates, frigatesAdapter, FLEET_FRIGATE_LIMIT } from "@/lib/nms/extract/frigates";
 import {
   DEEP_SPACE_BASE_TYPE,
   SPACE_STATION_BASE_LIMIT,
@@ -98,6 +98,59 @@ describe("companions adapter", () => {
       empty: false,
     });
     expect(items[1]?.empty).toBe(true);
+  });
+
+  it("não usa CreatureSeed sozinho: 0x0 e sementes repetidas não colidem", () => {
+    const hover = {
+      ...filledPet,
+      CreatureID: "^HOVER_PET",
+      CreatureSeed: [true, "0xdf23350a15d95e55"],
+      SpeciesSeed: 0x8f1d1742428ab86,
+      GenusSeed: 0xe7eba318900a7ac,
+    };
+    const scuttler = {
+      ...filledPet,
+      CreatureID: "^SCUTTLER_PET",
+      CustomName: "",
+      CustomSpeciesName: "^UI_MINIFIEND_SPECIES",
+      CreatureSeed: [true, "0xdf23350a15d95e55"],
+      SpeciesSeed: 0xa22d911f164bc381,
+      GenusSeed: 0xa6b87a1522dd20c9,
+    };
+    const fiend = {
+      ...filledPet,
+      CreatureID: "^FIEND",
+      CustomName: "",
+      CustomSpeciesName: "^UI_FIEND_NAME",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 1,
+      GenusSeed: 1,
+    };
+    const quad = {
+      ...filledPet,
+      CreatureID: "^QUAD_PET",
+      CustomName: "",
+      CustomSpeciesName: "^UI_PETQUAD_SPECIES",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 0x4810114cf33dcf87,
+      GenusSeed: 0x5299c8590c513146,
+      ColourBaseSeed: 0xdc39ae7cda2d7d9a,
+    };
+    const jelly = {
+      ...filledPet,
+      CreatureID: "^LAND_JELLYFISH",
+      CustomName: "",
+      CustomSpeciesName: "",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 0x248f79aa264c7b5f,
+      GenusSeed: 0x1024c0f60c47c14,
+    };
+    const items = listCompanions(
+      save({ Pets: [hover, scuttler, fiend, quad, jelly] }),
+    );
+    const seeds = items.map((item) => item.seed);
+    expect(new Set(seeds).size).toBe(5);
+    expect(seeds.every((seed) => seed && seed !== "0x0")).toBe(true);
   });
 
   it("reordena Pets e remapeia PetBattleTeam", () => {
@@ -294,6 +347,72 @@ describe("freighter / frigate / base / wonder", () => {
       className: "S",
       extra: { traits: "3" },
     });
+  });
+
+  it("reordena FleetFrigates sem mudar o length; vazios participam", () => {
+    const emptyFrigate = { ResourceSeed: [false, "0x0"] };
+    const json = save({
+      FleetFrigates: [
+        {
+          CustomName: "Kunit",
+          ResourceSeed: [true, "0x11"],
+          FrigateClass: { FrigateClass: "Exploration" },
+        },
+        emptyFrigate,
+        {
+          CustomName: "Vanguard",
+          ResourceSeed: [true, "0x22"],
+          FrigateClass: { FrigateClass: "Combat" },
+        },
+      ],
+    });
+    const result = frigatesAdapter.reorder?.(json, 0, 1);
+    expect(result?.ok).toBe(true);
+    if (!result?.ok) return;
+    const listed = listFrigates(result.json);
+    expect(listed).toHaveLength(3);
+    expect(listed[0]?.empty).toBe(true);
+    expect(listed[1]?.name).toBe("Kunit");
+    expect(listed[2]?.name).toBe("Vanguard");
+  });
+
+  it("aplica fragata no fim do array até o teto de 30 e excluir remove do array", () => {
+    const kunit = {
+      CustomName: "Kunit",
+      ResourceSeed: [true, "0x11"],
+      FrigateClass: { FrigateClass: "Exploration" },
+    };
+    const extra = {
+      CustomName: "Nova",
+      ResourceSeed: [true, "0x99"],
+      FrigateClass: { FrigateClass: "Combat" },
+    };
+    const packed = save({ FleetFrigates: [kunit] });
+    const added = frigatesAdapter.insert(packed, extra);
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    expect(added.index).toBe(1);
+    expect(listFrigates(added.json)).toHaveLength(2);
+    expect(listFrigates(added.json)[1]?.name).toBe("Nova");
+
+    const removed = frigatesAdapter.clear?.(added.json, 0);
+    expect(removed?.ok).toBe(true);
+    if (!removed?.ok) return;
+    const after = listFrigates(removed.json);
+    expect(after).toHaveLength(1);
+    expect(after[0]?.name).toBe("Nova");
+    expect(after[0]?.empty).toBe(false);
+
+    const full = save({
+      FleetFrigates: Array.from({ length: FLEET_FRIGATE_LIMIT }, (_, i) => ({
+        CustomName: `F${i}`,
+        ResourceSeed: [true, `0x${(i + 1).toString(16)}`],
+        FrigateClass: { FrigateClass: "Combat" },
+      })),
+    });
+    const refused = frigatesAdapter.insert(full, extra);
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.error).toMatch(/30 fragatas/);
   });
 
   it("lista bases com aviso quando Objects é grande", () => {
@@ -507,5 +626,32 @@ describe("insertItem fallback de seed", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(listCompanions(result.json)[0]?.name).toBe("Nimbus 2");
+  });
+
+  it("não substitui outro companion só porque o CreatureSeed é 0x0", () => {
+    const fiend = {
+      ...filledPet,
+      CreatureID: "^FIEND",
+      CustomName: "fiend",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 1,
+      GenusSeed: 1,
+    };
+    const quad = {
+      ...filledPet,
+      CreatureID: "^QUAD_PET",
+      CustomName: "quad",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 0x4810114cf33dcf87,
+      GenusSeed: 0x5299c8590c513146,
+    };
+    const json = save({ Pets: [fiend, quad] });
+    const next = { ...quad, CustomName: "quad 2" };
+    const result = insertItem(json, "companion", next, "0x0");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const listed = listCompanions(result.json);
+    expect(listed[0]?.name).toBe("fiend");
+    expect(listed[1]?.name).toBe("quad 2");
   });
 });

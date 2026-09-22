@@ -8,6 +8,7 @@ import {
   isFreighterBaseSlot,
 } from "@/lib/nms/extract/bases";
 import type { ExtractedSlot } from "@/lib/nms/extract/types";
+import { asRecord, normalizeSeed } from "@/lib/nms/value";
 import { screenshotPublicUrl } from "@/lib/screenshots";
 import type { ArchivedItemSummary } from "@/types/archive";
 import { isCategory, type Category } from "@/types/nms";
@@ -67,29 +68,66 @@ export function archiveEnvelopeCategory(item: ArchiveCategoryHint): Category | n
   return isCategory(item.category) ? item.category : null;
 }
 
+function nonZeroSeeds(...seeds: Array<string | null | undefined>): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const seed of seeds) {
+    const normalized = seed?.toLowerCase();
+    if (!normalized || normalized === "0x0" || seen.has(normalized)) continue;
+    seen.add(normalized);
+    out.push(normalized);
+  }
+  return out;
+}
+
+function uniqueCompanionCreatureSeedHits(
+  items: ExtractedSlot[],
+  seed: string,
+): ExtractedSlot[] {
+  if (!seed || seed === "0x0") return [];
+  const hits = items.filter((item) => {
+    if (item.empty || item.readonly || item.category !== "companion") {
+      return false;
+    }
+    return (
+      normalizeSeed(asRecord(item.payload)?.CreatureSeed).toLowerCase() === seed
+    );
+  });
+  return hits.length === 1 ? hits : [];
+}
+
 export function matchingItems(
   items: ExtractedSlot[],
   seed: string,
   category: string,
+  identitySeed?: string | null,
 ): ExtractedSlot[] {
-  const normalized = seed.toLowerCase();
-  if (!normalized || normalized === "0x0") {
-    return items.filter(
-      (item) =>
-        !item.empty &&
-        !item.readonly &&
-        item.category === category &&
-        item.seed.toLowerCase() === normalized &&
-        item.group !== "automatic",
-    );
+  const needles = nonZeroSeeds(identitySeed, seed);
+  if (needles.length === 0) {
+    return [];
   }
-  return items.filter(
+  const hits = items.filter(
     (item) =>
       !item.empty &&
       !item.readonly &&
       item.category === category &&
-      item.seed.toLowerCase() === normalized,
+      needles.includes(item.seed.toLowerCase()),
   );
+  if (hits.length > 0) return hits;
+  if (category !== "companion") return [];
+  return uniqueCompanionCreatureSeedHits(items, seed.toLowerCase());
+}
+
+export function matchingSlotsForArchived(
+  slots: ExtractedSlot[],
+  item: ArchiveCategoryHint & {
+    seed: string;
+    identitySeed?: string | null;
+  },
+): ExtractedSlot[] {
+  const category = sessionCategoryForArchived(item);
+  if (!category) return [];
+  return matchingItems(slots, item.seed, category, item.identitySeed);
 }
 
 export function saveSlotUiCategory(item: ExtractedSlot): Category {
@@ -105,11 +143,10 @@ export function matchingArchivedItems(
     return [];
   }
   const uiCategory = saveSlotUiCategory(slot);
-  return items.filter(
-    (item) =>
-      item.seed.toLowerCase() === normalized &&
-      archiveUiCategory(item) === uiCategory,
-  );
+  return items.filter((item) => {
+    if (archiveUiCategory(item) !== uiCategory) return false;
+    return nonZeroSeeds(item.identitySeed, item.seed).includes(normalized);
+  });
 }
 
 export function archivedScreenshotUrl(

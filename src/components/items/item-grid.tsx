@@ -1,6 +1,6 @@
 "use client";
 
-import { archiveUiCategory, matchingItems, sessionCategoryForArchived } from "@/lib/archive-match";
+import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import { screenshotPublicUrl } from "@/lib/screenshots";
 import { cn } from "cn";
@@ -25,10 +25,9 @@ export function ItemGrid({
         const sessionCategory = sessionCategoryForArchived(item);
         const slots =
           saveReady && sessionCategory
-            ? matchingItems(
+            ? matchingSlotsForArchived(
                 sessionItems[sessionCategory],
-                item.seed,
-                sessionCategory,
+                item,
               )
             : [];
         const thumb = screenshotPublicUrl(item.screenshotPath);
@@ -68,6 +67,16 @@ export function ItemGrid({
                 {item.className ? (
                   <span className="rounded-full border px-2 py-0.5 text-xs">
                     Class {item.className}
+                  </span>
+                ) : null}
+                {item.extra?.element ? (
+                  <span className="rounded-full border px-2 py-0.5 text-xs">
+                    {item.extra.element}
+                  </span>
+                ) : null}
+                {item.extra?.biome ? (
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                    Biome {item.extra.biome}
                   </span>
                 ) : null}
                 {slots.length > 0 ? (

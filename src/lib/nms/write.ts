@@ -3,6 +3,7 @@ import {
   reorderCategory,
   reorderShipOwnership,
   insertShip,
+  clearItem,
   type InsertResult,
 } from "./extract";
 import { getPlayerState } from "./player";
@@ -39,6 +40,14 @@ export function insertCategoryItem(
   seed?: string,
 ): InsertResult {
   return insertItem(mappedJson, category, payload, seed);
+}
+
+export function clearCategorySlot(
+  mappedJson: unknown,
+  category: Category,
+  index: number,
+): InsertResult {
+  return clearItem(mappedJson, category, index);
 }
 
 export function reorderCategorySlots(

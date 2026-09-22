@@ -3,7 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { archiveEnvelopeCategory, archiveUiCategory, matchingItems, sessionCategoryForArchived } from "@/lib/archive-match";
+import { archiveEnvelopeCategory, archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import {
@@ -99,7 +99,7 @@ export function ItemDetailDialog({
     : null;
   const matches =
     item && sessionCategory
-      ? matchingItems(sessionItems[sessionCategory], item.seed, sessionCategory)
+      ? matchingSlotsForArchived(sessionItems[sessionCategory], item)
       : [];
   const saveReady = saveStatus === "ready";
   const uiCategory =
@@ -243,6 +243,10 @@ export function ItemDetailDialog({
             <div className="grid gap-4">
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                 {item.className ? <span>Class {item.className}</span> : null}
+                {item.extra?.element ? <span>{item.extra.element}</span> : null}
+                {item.extra?.biome ? (
+                  <span>Biome {item.extra.biome}</span>
+                ) : null}
                 {item.galaxy != null ? (
                   <span>{formatGalaxy(item.galaxy)}</span>
                 ) : null}
