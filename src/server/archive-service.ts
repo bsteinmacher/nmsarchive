@@ -6,6 +6,7 @@ import {
   type ArchiveFilterInput,
 } from "@/lib/archive-filters";
 import { archiveUiCategory } from "@/lib/archive-match";
+import { seedFromPayload } from "@/lib/nms/extract";
 import { asNumber, asRecord, asString } from "@/lib/nms/value";
 import {
   archivedMetadataSchema,
@@ -19,6 +20,7 @@ import type {
   ArchivedItemSummary,
   ArchiveFilterOptions,
 } from "@/types/archive";
+import { isCategory } from "@/types/nms";
 
 export type { ArchivedItemDetail, ArchivedItemSummary, ArchiveFilterOptions };
 
@@ -58,6 +60,18 @@ function metadataSummary(metadata: unknown): {
   };
 }
 
+function identitySeedFromMetadata(
+  category: string,
+  metadata: unknown,
+): string | undefined {
+  if (!isCategory(category)) return undefined;
+  const payload = asRecord(metadata)?.payload;
+  if (payload == null) return undefined;
+  const identity = seedFromPayload(category, payload);
+  if (!identity || identity === "0x0") return undefined;
+  return identity;
+}
+
 function toSummary(row: {
   id: string;
   category: string;
@@ -87,6 +101,7 @@ function toSummary(row: {
     shipType: extra.shipType,
     filename: extra.filename,
     extra: extra.extra,
+    identitySeed: identitySeedFromMetadata(row.category, row.metadata),
     tags: row.tags.map((t) => t.tag),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,

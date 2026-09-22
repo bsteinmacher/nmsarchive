@@ -21,6 +21,10 @@ Constante no código: `NMSITEM_SCHEMA_VERSION` em `src/lib/nmsitem.ts`.
 
 ## Unreleased
 
+### Fixed
+
+- Companion no arquivo pessoal: o selo **No save · slot** (e o apply quando a lista está cheia) não usa mais só `CreatureSeed`. Vários pets vêm `0x0` ou repetem a mesma semente; a identidade mistura as sementes genéticas do payload. O payload que você já arquivou estava certo — o selo apontava para o primeiro slot com aquele seed. Itens antigos batem pelo payload, sem re-arquivar.
+
 ### Changed
 
 - Payload de nave (`category: "ship"`) pode incluir `kind: "ship"` com `ownership` e, opcionalmente, `customisation` (peças/cores) e `hull` (casco `PlayerShipBase` da Corvette). O envelope `.nmsitem` permanece na versão **1**. Arquivos antigos (só o objeto de `ShipOwnership`) continuam importando; o slot destino não herda visual nem casco de outra nave.

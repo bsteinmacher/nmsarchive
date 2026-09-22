@@ -16,9 +16,54 @@ export function isEmptyCompanionSlot(slot: unknown): boolean {
   return !displayId(rec?.CreatureID);
 }
 
+const SEED_MIX_GOLDEN = 0x9e3779b97f4a7c15n;
+
+function foldHex(acc: bigint, hex: string): bigint {
+  const n = BigInt(hex);
+  return (
+    (acc ^ (n + SEED_MIX_GOLDEN + (acc << 6n) + (acc >> 2n))) &
+    0xffffffffffffffffn
+  );
+}
+
+function foldText(acc: bigint, text: string): bigint {
+  let mix = acc;
+  for (let i = 0; i < text.length; i++) {
+    mix = foldHex(mix, `0x${text.charCodeAt(i).toString(16)}`);
+  }
+  return mix;
+}
+
+/**
+ * CreatureSeed sozinho não identifica o pet: ovos/mecânicos vêm 0x0, e
+ * espécies diferentes podem repetir a mesma semente (ex. HOVER_PET e
+ * SCUTTLER_PET). Mistura as sementes genéticas + CreatureID.
+ */
 export function companionSeedFromPayload(payload: unknown): string {
   const rec = asRecord(payload);
-  return normalizeSeed(rec?.CreatureSeed);
+  if (!rec) return "0x0";
+  const creature = normalizeSeed(rec.CreatureSeed);
+  const secondary = normalizeSeed(rec.CreatureSecondarySeed);
+  const species = normalizeSeed(rec.SpeciesSeed);
+  const genus = normalizeSeed(rec.GenusSeed);
+  const colour = normalizeSeed(rec.ColourBaseSeed);
+  const id = displayId(rec.CreatureID);
+  const allZero =
+    creature === "0x0" &&
+    secondary === "0x0" &&
+    species === "0x0" &&
+    genus === "0x0" &&
+    colour === "0x0";
+  if (allZero && !id) return "0x0";
+  let mix = 0n;
+  mix = foldHex(mix, creature);
+  mix = foldHex(mix, secondary);
+  mix = foldHex(mix, species);
+  mix = foldHex(mix, genus);
+  mix = foldHex(mix, colour);
+  if (id) mix = foldText(mix, id);
+  const hex = mix.toString(16);
+  return hex === "0" ? "0x0" : `0x${hex}`;
 }
 
 function companionName(rec: Record<string, unknown>): string {

@@ -100,6 +100,59 @@ describe("companions adapter", () => {
     expect(items[1]?.empty).toBe(true);
   });
 
+  it("não usa CreatureSeed sozinho: 0x0 e sementes repetidas não colidem", () => {
+    const hover = {
+      ...filledPet,
+      CreatureID: "^HOVER_PET",
+      CreatureSeed: [true, "0xdf23350a15d95e55"],
+      SpeciesSeed: 0x8f1d1742428ab86,
+      GenusSeed: 0xe7eba318900a7ac,
+    };
+    const scuttler = {
+      ...filledPet,
+      CreatureID: "^SCUTTLER_PET",
+      CustomName: "",
+      CustomSpeciesName: "^UI_MINIFIEND_SPECIES",
+      CreatureSeed: [true, "0xdf23350a15d95e55"],
+      SpeciesSeed: 0xa22d911f164bc381,
+      GenusSeed: 0xa6b87a1522dd20c9,
+    };
+    const fiend = {
+      ...filledPet,
+      CreatureID: "^FIEND",
+      CustomName: "",
+      CustomSpeciesName: "^UI_FIEND_NAME",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 1,
+      GenusSeed: 1,
+    };
+    const quad = {
+      ...filledPet,
+      CreatureID: "^QUAD_PET",
+      CustomName: "",
+      CustomSpeciesName: "^UI_PETQUAD_SPECIES",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 0x4810114cf33dcf87,
+      GenusSeed: 0x5299c8590c513146,
+      ColourBaseSeed: 0xdc39ae7cda2d7d9a,
+    };
+    const jelly = {
+      ...filledPet,
+      CreatureID: "^LAND_JELLYFISH",
+      CustomName: "",
+      CustomSpeciesName: "",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 0x248f79aa264c7b5f,
+      GenusSeed: 0x1024c0f60c47c14,
+    };
+    const items = listCompanions(
+      save({ Pets: [hover, scuttler, fiend, quad, jelly] }),
+    );
+    const seeds = items.map((item) => item.seed);
+    expect(new Set(seeds).size).toBe(5);
+    expect(seeds.every((seed) => seed && seed !== "0x0")).toBe(true);
+  });
+
   it("reordena Pets e remapeia PetBattleTeam", () => {
     const json = save({
       Pets: [filledPet, emptyPet],
@@ -573,5 +626,32 @@ describe("insertItem fallback de seed", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(listCompanions(result.json)[0]?.name).toBe("Nimbus 2");
+  });
+
+  it("não substitui outro companion só porque o CreatureSeed é 0x0", () => {
+    const fiend = {
+      ...filledPet,
+      CreatureID: "^FIEND",
+      CustomName: "fiend",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 1,
+      GenusSeed: 1,
+    };
+    const quad = {
+      ...filledPet,
+      CreatureID: "^QUAD_PET",
+      CustomName: "quad",
+      CreatureSeed: [false, "0x0"],
+      SpeciesSeed: 0x4810114cf33dcf87,
+      GenusSeed: 0x5299c8590c513146,
+    };
+    const json = save({ Pets: [fiend, quad] });
+    const next = { ...quad, CustomName: "quad 2" };
+    const result = insertItem(json, "companion", next, "0x0");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const listed = listCompanions(result.json);
+    expect(listed[0]?.name).toBe("fiend");
+    expect(listed[1]?.name).toBe("quad 2");
   });
 });

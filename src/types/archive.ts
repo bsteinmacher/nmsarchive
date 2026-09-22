@@ -13,6 +13,8 @@ export type ArchivedItemSummary = {
   shipType: string;
   filename: string;
   extra?: { baseType?: string };
+  /** Seed derivado do payload (companions: identidade genética). */
+  identitySeed?: string;
   tags: ArchivedItemTag[];
   screenshotPath: string | null;
   createdAt: Date;

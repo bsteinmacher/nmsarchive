@@ -105,7 +105,13 @@ export function insertItem(
   const adapter = getAdapter(resolveInsertCategory(category, payload));
   const first = adapter.insert(json, payload);
   if (first.ok) return first;
-  if (!seed || !adapter.replace) return first;
+  if (!adapter.replace) return first;
+  const needles = new Set(
+    [seed, adapter.seedFromPayload(payload)]
+      .map((value) => value?.toLowerCase())
+      .filter((value): value is string => Boolean(value) && value !== "0x0"),
+  );
+  if (needles.size === 0) return first;
   const match = adapter
     .list(json)
     .find(
@@ -113,7 +119,7 @@ export function insertItem(
         !item.empty &&
         !item.readonly &&
         item.group !== "automatic" &&
-        item.seed.toLowerCase() === seed.toLowerCase(),
+        needles.has(item.seed.toLowerCase()),
     );
   if (!match) return first;
   return adapter.replace(json, match.index, payload);

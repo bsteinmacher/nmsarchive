@@ -1,6 +1,6 @@
 "use client";
 
-import { archiveUiCategory, matchingItems, sessionCategoryForArchived } from "@/lib/archive-match";
+import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { formatGalaxy } from "@/lib/nms/galaxies";
 import { screenshotPublicUrl } from "@/lib/screenshots";
 import { cn } from "cn";
@@ -25,10 +25,9 @@ export function ItemGrid({
         const sessionCategory = sessionCategoryForArchived(item);
         const slots =
           saveReady && sessionCategory
-            ? matchingItems(
+            ? matchingSlotsForArchived(
                 sessionItems[sessionCategory],
-                item.seed,
-                sessionCategory,
+                item,
               )
             : [];
         const thumb = screenshotPublicUrl(item.screenshotPath);

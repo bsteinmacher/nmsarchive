@@ -144,6 +144,31 @@ describe("archive-service", () => {
     expect(detail.payload).toEqual({ CreatureSeed: [true, "0x3c"] });
   });
 
+  it("expõe identitySeed do payload mesmo com CreatureSeed 0x0", async () => {
+    const archived = await archiveItem(prisma, {
+      category: "companion",
+      name: "UI_FIEND_NAME",
+      seed: "0x0",
+      description: "fiend do teste",
+      metadata: {
+        gameVersion: 1,
+        payload: {
+          CreatureID: "^FIEND",
+          CreatureSeed: [false, "0x0"],
+          SpeciesSeed: 1,
+          GenusSeed: 1,
+        },
+      },
+      tags: [],
+    });
+    expect(archived.identitySeed).toMatch(/^0x[0-9a-f]+$/);
+    expect(archived.identitySeed).not.toBe("0x0");
+    const listed = await listItems(prisma, { category: "companion" });
+    expect(listed.find((item) => item.id === archived.id)?.identitySeed).toBe(
+      archived.identitySeed,
+    );
+  });
+
   it("lista FreighterBase em cargueiras, não em bases", async () => {
     const interior = await archiveItem(prisma, {
       category: "base",
