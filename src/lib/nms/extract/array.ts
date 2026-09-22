@@ -31,6 +31,27 @@ export function insertAtFirstEmpty(
   return { ok: true, json: cloned.json, index };
 }
 
+export function emptySlotAt(
+  mappedJson: unknown,
+  arrayKey: string,
+  index: number,
+  isEmpty: (slot: unknown) => boolean,
+  fallback: unknown,
+): InsertResult {
+  const cloned = clonePlayer(mappedJson);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  const arr = asArray(cloned.player[arrayKey]);
+  if (!arr) {
+    return { ok: false, error: `${arrayKey} ausente neste save.` };
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= arr.length) {
+    return { ok: false, error: "Índice de slot fora do array." };
+  }
+  const template = arr.find((slot, i) => i !== index && isEmpty(slot));
+  arr[index] = structuredClone(template ?? fallback);
+  return { ok: true, json: cloned.json, index };
+}
+
 export function replaceAtIndex(
   mappedJson: unknown,
   arrayKey: string,

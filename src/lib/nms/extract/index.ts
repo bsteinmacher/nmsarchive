@@ -23,6 +23,7 @@ export {
   insertShip,
   replaceShip,
   reorderShipOwnership,
+  clearShip,
 } from "./ships";
 export {
   DEEP_SPACE_BASE_TYPE,
@@ -128,6 +129,18 @@ export function replaceItem(
     return { ok: false, error: "Esta categoria não substitui slot." };
   }
   return adapter.replace(json, index, payload);
+}
+
+export function clearItem(
+  json: unknown,
+  category: Category,
+  index: number,
+): InsertResult {
+  const adapter = getAdapter(category);
+  if (!adapter.clear) {
+    return { ok: false, error: "Esta categoria não esvazia slot." };
+  }
+  return adapter.clear(json, index);
 }
 
 export function reorderCategory(

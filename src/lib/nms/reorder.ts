@@ -27,3 +27,15 @@ export function remapSlotIndex(index: number, from: number, to: number): number 
   if (index === to) return from;
   return index;
 }
+
+/**
+ * Índice em CharacterCustomisationData para um slot de ShipOwnership (0–11).
+ * Slots 0–5 → 3–8; slots 6–11 → 17–22. O resto do array é player, MT,
+ * veículos e cargueira — não reordenar.
+ */
+export function shipCustomisationIndex(shipIndex: number): number | null {
+  if (!Number.isInteger(shipIndex) || shipIndex < 0 || shipIndex > 11) {
+    return null;
+  }
+  return shipIndex < 6 ? 3 + shipIndex : 17 + (shipIndex - 6);
+}

@@ -48,6 +48,29 @@ describe(".nmsitem", () => {
     expect(() => parseNmsItem('{"name":"x"}')).toThrow(/schema/);
   });
 
+  it("aceita payload composto kind=ship sem subir nmsitem", () => {
+    const packed = {
+      kind: "ship" as const,
+      ownership: payload,
+      customisation: {
+        SelectedPreset: "^",
+        CustomData: { DescriptorGroups: ["^DROPS_COCKS13"] },
+      },
+    };
+    const item = buildNmsItem({
+      category: "ship",
+      name: "Golden Vector",
+      seed: "0xABC",
+      gameVersion: 6783,
+      payload: packed,
+      galaxy: 0,
+    });
+    const round = parseNmsItem(serializeNmsItem(item));
+    expect(round.nmsitem).toBe(1);
+    expect(shipSeedMismatch(round)).toBeNull();
+    expect(round.payload).toMatchObject({ kind: "ship" });
+  });
+
   it("aceita category deepspace e spacestation no envelope", () => {
     const deep = buildNmsItem({
       category: "deepspace",

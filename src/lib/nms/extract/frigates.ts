@@ -1,7 +1,7 @@
 import { frigateClassLabel } from "../freighter-type";
 import { getPlayerState } from "../player";
 import { asArray, asRecord, asString, normalizeSeed } from "../value";
-import { insertAtFirstEmpty, replaceAtIndex } from "./array";
+import { emptySlotAt, insertAtFirstEmpty, replaceAtIndex } from "./array";
 import { nestedEnum } from "./names";
 import type { CategoryAdapter, ExtractedSlot } from "./types";
 
@@ -88,6 +88,10 @@ export const frigatesAdapter: CategoryAdapter = {
     ),
   replace: (json, index, payload) =>
     replaceAtIndex(json, "FleetFrigates", index, payload),
+  clear: (json, index) =>
+    emptySlotAt(json, "FleetFrigates", index, isEmptyFrigateSlot, {
+      ResourceSeed: [false, "0x0"],
+    }),
   summarize(payload) {
     const listed = listFrigates({
       BaseContext: { PlayerStateData: { FleetFrigates: [payload] } },

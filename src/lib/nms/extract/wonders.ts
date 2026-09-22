@@ -154,6 +154,34 @@ export function replaceWonder(
   return { ok: true, json: cloned.json, index };
 }
 
+export function clearWonder(
+  mappedJson: unknown,
+  index: number,
+): InsertResult {
+  const cloned = clonePlayer(mappedJson);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  const records = asArray(cloned.player.WonderCustomRecords);
+  const extras = asArray(cloned.player.WonderCustomRecordsExtraData);
+  if (!records || !extras) {
+    return {
+      ok: false,
+      error: "WonderCustomRecords ausente neste save.",
+    };
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= records.length) {
+    return { ok: false, error: "Índice de slot fora do array." };
+  }
+  const emptyRecord = records.find(
+    (record, i) => i !== index && isEmptyWonderSlot(record, extras[i]),
+  );
+  const emptyExtra = extras.find(
+    (extra, i) => i !== index && isEmptyWonderSlot(records[i], extra),
+  );
+  records[index] = structuredClone(emptyRecord ?? {});
+  extras[index] = structuredClone(emptyExtra ?? {});
+  return { ok: true, json: cloned.json, index };
+}
+
 export const wondersAdapter: CategoryAdapter<WonderPayload> = {
   category: "wonder",
   label: "Wonders",
@@ -164,6 +192,7 @@ export const wondersAdapter: CategoryAdapter<WonderPayload> = {
   list: listWonders,
   insert: insertWonder,
   replace: replaceWonder,
+  clear: clearWonder,
   summarize(payload) {
     const extra = asRecord(payload.extra);
     const name = asString(extra?.CustomName)?.trim() || "Wonder";

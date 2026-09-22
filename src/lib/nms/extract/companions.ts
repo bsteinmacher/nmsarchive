@@ -1,7 +1,7 @@
 import { getPlayerState } from "../player";
 import { remapSlotIndex, reorderSlots } from "../reorder";
 import { asArray, asNumber, asRecord, asString, normalizeSeed } from "../value";
-import { clonePlayer, insertAtFirstEmpty, replaceAtIndex } from "./array";
+import { clonePlayer, emptySlotAt, insertAtFirstEmpty, replaceAtIndex } from "./array";
 import { companionBattleStats } from "./companion-battle";
 import { displayId, emptySlotLabel } from "./names";
 import type {
@@ -168,6 +168,12 @@ export const companionsAdapter: CategoryAdapter = {
   insert: insertCompanion,
   replace: (json, index, payload) =>
     replaceAtIndex(json, "Pets", index, payload),
+  clear: (json, index) =>
+    emptySlotAt(json, "Pets", index, isEmptyCompanionSlot, {
+      CreatureID: "",
+      CustomName: "",
+      CreatureSeed: [false, "0x0"],
+    }),
   reorder: reorderCompanions,
   summarize(payload) {
     const listed = listCompanions({

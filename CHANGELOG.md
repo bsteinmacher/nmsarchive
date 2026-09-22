@@ -19,6 +19,16 @@ Não há compatibilidade binária com exports do GoatFungus/NomNom. O hub públi
 
 Constante no código: `NMSITEM_SCHEMA_VERSION` em `src/lib/nmsitem.ts`.
 
+## Unreleased
+
+### Changed
+
+- Payload de nave (`category: "ship"`) pode incluir `kind: "ship"` com `ownership` e, opcionalmente, `customisation` (peças/cores) e `hull` (casco `PlayerShipBase` da Corvette). O envelope `.nmsitem` permanece na versão **1**. Arquivos antigos (só o objeto de `ShipOwnership`) continuam importando; o slot destino não herda visual nem casco de outra nave.
+
+### Added
+
+- Em **Ver detalhes** do save aberto, **Excluir** esvazia o slot (o array do jogo não encolhe). Em nave, também limpa peças/cores e o casco da Corvette. Não apaga o arquivo pessoal.
+
 ## 0.1.0 — Fase 5
 
 Deploy self-hosted e documentação do arquivo pessoal.

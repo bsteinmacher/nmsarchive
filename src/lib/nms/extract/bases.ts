@@ -256,6 +256,29 @@ function isPlanetLikeEmpty(slot: unknown): boolean {
   );
 }
 
+export function clearPersistentBase(
+  mappedJson: unknown,
+  index: number,
+): InsertResult {
+  const cloned = clonePlayer(mappedJson);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  const arr = asArray(cloned.player.PersistentPlayerBases);
+  if (!arr) {
+    return { ok: false, error: "PersistentPlayerBases ausente neste save." };
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= arr.length) {
+    return { ok: false, error: "Índice de slot fora do array." };
+  }
+  const rec = asRecord(arr[index]) ?? {};
+  const typeNested = rec.BaseType;
+  arr[index] = {
+    Name: "",
+    Objects: [],
+    ...(typeNested != null ? { BaseType: structuredClone(typeNested) } : {}),
+  };
+  return { ok: true, json: cloned.json, index };
+}
+
 export function resolveInsertCategory(
   category: Category,
   payload: unknown,
@@ -281,6 +304,7 @@ export const basesAdapter: CategoryAdapter = {
     ),
   replace: (json, index, payload) =>
     replaceAtIndex(json, "PersistentPlayerBases", index, payload),
+  clear: clearPersistentBase,
   summarize: (payload) => summarizeFromList(listBases, payload, "Base"),
   seedFromPayload: baseSeedFromPayload,
   missingMessage: MISSING_BASES,
@@ -295,6 +319,7 @@ export const deepSpaceAdapter: CategoryAdapter = {
     insertBaseOfType(json, payload, DEEP_SPACE_BASE_TYPE),
   replace: (json, index, payload) =>
     replaceAtIndex(json, "PersistentPlayerBases", index, payload),
+  clear: clearPersistentBase,
   summarize: (payload) =>
     summarizeFromList(listDeepSpaceBases, payload, DEEP_SPACE_LABEL),
   seedFromPayload: baseSeedFromPayload,
@@ -315,6 +340,7 @@ export const spaceStationAdapter: CategoryAdapter = {
     ),
   replace: (json, index, payload) =>
     replaceAtIndex(json, "PersistentPlayerBases", index, payload),
+  clear: clearPersistentBase,
   summarize: (payload) =>
     summarizeFromList(listSpaceStationBases, payload, SPACE_STATION_LABEL),
   seedFromPayload: baseSeedFromPayload,

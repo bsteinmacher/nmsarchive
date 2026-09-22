@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,6 +34,9 @@ export function SaveItemDetailDialog({
   onArchive?: (item: ExtractedSlot) => void;
 }) {
   const exportItem = useSaveSession((s) => s.exportItem);
+  const clearSlot = useSaveSession((s) => s.clearSlot);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const actionCategory = item?.category ?? category;
   const adapter = getAdapter(actionCategory);
   const slot = item?.slotLabel ?? (item ? String(item.index + 1) : "—");
@@ -45,6 +49,12 @@ export function SaveItemDetailDialog({
     item?.itemType || null,
     item?.seed || null,
   ].filter(Boolean);
+  const canClear =
+    item != null &&
+    !item.empty &&
+    !item.readonly &&
+    adapter.clear != null &&
+    !(actionCategory === "freighter" && item.index === 0);
   const archived = trpc.items.list.useQuery(
     {
       category: item ? saveSlotUiCategory(item) : undefined,
@@ -65,6 +75,25 @@ export function SaveItemDetailDialog({
     { id: archivedHit?.id ?? "" },
     { enabled: open && archivedHit != null },
   );
+
+  useEffect(() => {
+    if (!open) setConfirmDelete(false);
+  }, [open, item?.index, actionCategory]);
+
+  async function onClear() {
+    if (!item) return;
+    setClearing(true);
+    try {
+      await clearSlot(item.category, item.index);
+      toast.success("Excluído do save");
+      setConfirmDelete(false);
+      onOpenChange(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao excluir");
+    } finally {
+      setClearing(false);
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -101,7 +130,43 @@ export function SaveItemDetailDialog({
           />
         ) : null}
         {item ? <JsonTree value={item.payload} /> : null}
+        {confirmDelete && item ? (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+            <p className="text-sm">
+              Excluir {item.name} deste save? O slot fica vazio. O arquivo
+              pessoal não muda.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => void onClear()}
+                disabled={clearing}
+              >
+                {clearing ? "Excluindo…" : "Excluir do save"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setConfirmDelete(false)}
+                disabled={clearing}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : null}
         <DialogFooter>
+          {canClear ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setConfirmDelete(true)}
+              disabled={confirmDelete}
+            >
+              Excluir
+            </Button>
+          ) : null}
           {item && !item.readonly && !item.empty ? (
             <Button
               type="button"
