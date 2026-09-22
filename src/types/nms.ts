@@ -13,8 +13,13 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
-/** Naves, MTs e pets: lista com slots vazios + drag-and-drop (PLAN §2.7.5). */
-export const REORDERABLE_CATEGORIES = ["ship", "multitool", "companion"] as const;
+/** Naves, MTs, pets e fragatas: lista com slots vazios + drag-and-drop. */
+export const REORDERABLE_CATEGORIES = [
+  "ship",
+  "multitool",
+  "companion",
+  "frigate",
+] as const;
 
 export type ReorderableCategory = (typeof REORDERABLE_CATEGORIES)[number];
 
@@ -41,7 +46,8 @@ export const CATEGORY_META: Record<
   frigate: {
     label: "Frigates",
     href: "/frigate",
-    description: "Frota de Frigates e traits.",
+    description:
+      "Frota de Frigates (até 30). O save só lista as que existem — não há slots vazios pré-alocados.",
   },
   companion: {
     label: "Companions",

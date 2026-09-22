@@ -8,7 +8,7 @@ import {
   listExosuit,
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters, insertFreighter } from "@/lib/nms/extract/freighters";
-import { listFrigates } from "@/lib/nms/extract/frigates";
+import { listFrigates, frigatesAdapter, FLEET_FRIGATE_LIMIT } from "@/lib/nms/extract/frigates";
 import {
   DEEP_SPACE_BASE_TYPE,
   SPACE_STATION_BASE_LIMIT,
@@ -294,6 +294,72 @@ describe("freighter / frigate / base / wonder", () => {
       className: "S",
       extra: { traits: "3" },
     });
+  });
+
+  it("reordena FleetFrigates sem mudar o length; vazios participam", () => {
+    const emptyFrigate = { ResourceSeed: [false, "0x0"] };
+    const json = save({
+      FleetFrigates: [
+        {
+          CustomName: "Kunit",
+          ResourceSeed: [true, "0x11"],
+          FrigateClass: { FrigateClass: "Exploration" },
+        },
+        emptyFrigate,
+        {
+          CustomName: "Vanguard",
+          ResourceSeed: [true, "0x22"],
+          FrigateClass: { FrigateClass: "Combat" },
+        },
+      ],
+    });
+    const result = frigatesAdapter.reorder?.(json, 0, 1);
+    expect(result?.ok).toBe(true);
+    if (!result?.ok) return;
+    const listed = listFrigates(result.json);
+    expect(listed).toHaveLength(3);
+    expect(listed[0]?.empty).toBe(true);
+    expect(listed[1]?.name).toBe("Kunit");
+    expect(listed[2]?.name).toBe("Vanguard");
+  });
+
+  it("aplica fragata no fim do array até o teto de 30 e excluir remove do array", () => {
+    const kunit = {
+      CustomName: "Kunit",
+      ResourceSeed: [true, "0x11"],
+      FrigateClass: { FrigateClass: "Exploration" },
+    };
+    const extra = {
+      CustomName: "Nova",
+      ResourceSeed: [true, "0x99"],
+      FrigateClass: { FrigateClass: "Combat" },
+    };
+    const packed = save({ FleetFrigates: [kunit] });
+    const added = frigatesAdapter.insert(packed, extra);
+    expect(added.ok).toBe(true);
+    if (!added.ok) return;
+    expect(added.index).toBe(1);
+    expect(listFrigates(added.json)).toHaveLength(2);
+    expect(listFrigates(added.json)[1]?.name).toBe("Nova");
+
+    const removed = frigatesAdapter.clear?.(added.json, 0);
+    expect(removed?.ok).toBe(true);
+    if (!removed?.ok) return;
+    const after = listFrigates(removed.json);
+    expect(after).toHaveLength(1);
+    expect(after[0]?.name).toBe("Nova");
+    expect(after[0]?.empty).toBe(false);
+
+    const full = save({
+      FleetFrigates: Array.from({ length: FLEET_FRIGATE_LIMIT }, (_, i) => ({
+        CustomName: `F${i}`,
+        ResourceSeed: [true, `0x${(i + 1).toString(16)}`],
+        FrigateClass: { FrigateClass: "Combat" },
+      })),
+    });
+    const refused = frigatesAdapter.insert(full, extra);
+    expect(refused.ok).toBe(false);
+    if (!refused.ok) expect(refused.error).toMatch(/30 fragatas/);
   });
 
   it("lista bases com aviso quando Objects é grande", () => {

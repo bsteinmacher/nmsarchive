@@ -25,6 +25,7 @@ export {
   reorderShipOwnership,
   clearShip,
 } from "./ships";
+export { FLEET_FRIGATE_LIMIT } from "./frigates";
 export {
   DEEP_SPACE_BASE_TYPE,
   DEEP_SPACE_LABEL,

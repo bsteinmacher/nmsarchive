@@ -133,8 +133,9 @@ export function SaveItemDetailDialog({
         {confirmDelete && item ? (
           <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
             <p className="text-sm">
-              Excluir {item.name} deste save? O slot fica vazio. O arquivo
-              pessoal não muda.
+              {item.category === "frigate"
+                ? `Excluir ${item.name} deste save? Ela sai da frota. O arquivo pessoal não muda.`
+                : `Excluir ${item.name} deste save? O slot fica vazio. O arquivo pessoal não muda.`}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Button

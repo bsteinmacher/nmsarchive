@@ -48,11 +48,12 @@ describe("categories", () => {
     expect((CATEGORIES as readonly string[]).includes("inventory")).toBe(false);
   });
 
-  it("marks ships, multitools and companions as reorderable", () => {
+  it("marks ships, multitools, companions and frigates as reorderable", () => {
     expect([...REORDERABLE_CATEGORIES]).toEqual([
       "ship",
       "multitool",
       "companion",
+      "frigate",
     ]);
   });
 

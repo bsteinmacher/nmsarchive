@@ -33,6 +33,7 @@ import {
 import { archivedScreenshotUrl } from "@/lib/archive-match";
 import type { ArchiveView } from "@/lib/archive-url";
 import {
+  FLEET_FRIGATE_LIMIT,
   getAdapter,
   isFreighterBaseSlot,
   isHiddenFromBasesMenu,
@@ -310,12 +311,17 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     );
   }
 
+  const slotCount =
+    category === "frigate" ? FLEET_FRIGATE_LIMIT : primary.length;
   const caption =
     category === "exosuit"
       ? "Exosuit layout"
-      : `${adapter.label} no save (${filled} preenchida${filled === 1 ? "" : "s"} / ${primary.length} slots)`;
+      : `${adapter.label} no save (${filled} preenchida${filled === 1 ? "" : "s"} / ${slotCount} slots)`;
 
-  const description = reorderable
+  const description =
+    category === "frigate"
+      ? "Até 30 fragatas. O JSON só tem as que existem; aplicar acrescenta no fim. Arraste para reordenar."
+      : reorderable
     ? "Arraste pela alça para trocar de lugar — slots vazios entram na troca e o array não muda de tamanho."
     : category === "exosuit"
       ? "Só quantidade de slots e posição das tecnologias. Substâncias e produtos ficam no save, fora do arquivo."
