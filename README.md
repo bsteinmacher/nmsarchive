@@ -112,6 +112,14 @@ npm test
 
 Vitest cobre LZ4, mapping e, se existir, `.others/save2.hg` (gitignored). Sem esse arquivo o teste de integração é skip.
 
+### Ícones e imagens
+
+Ícones estáticos do jogo (classe S/A/B/C, moedas, tipos…) ficam em `public/icons/`: PNG com fundo transparente, nome minúsculo em kebab-case, uma pasta por família. Exemplo: `public/icons/class/s.png` → `/icons/class/s.png`.
+
+Chrome da interface (lixeira, tema, grid) vem do `lucide-react`, não de arquivo. Screenshots que o usuário sobe vão para `data/screenshots/` (gitignored) — não misturar com os ícones versionados.
+
+Convenção completa: [`PLAN.md` §4.1](./PLAN.md#41-ícones-e-imagens-estáticas).
+
 ## Saves locais de fixture
 
 Coloque `save*.hg` / `mf_save*.hg` pessoais em `.others/`. Fixture de referência: `save2.hg`. A pasta está no `.gitignore` e **não sobe para o GitHub**.

@@ -15,7 +15,7 @@ Este documento é a fonte da verdade para implementação no Cursor. Siga as fas
 1. [Decisão de arquitetura](#1-decisão-de-arquitetura) — inclui [como o arquivo é persistido](#17-como-o-arquivo-é-persistido) e [Colossal Archive](#18-colossal-archive-depois-deste-projeto)
 2. [Pesquisa técnica (saves `.hg`)](#2-pesquisa-técnica-saves-hg) — inclui [bases COSMOS](#276-bases-cosmos-deep-space-e-space-station)
 3. [Schema Prisma](#3-schema-prisma)
-4. [Estrutura de pastas](#4-estrutura-de-pastas)
+4. [Estrutura de pastas](#4-estrutura-de-pastas) — inclui [ícones e imagens](#41-ícones-e-imagens-estáticas)
 5. [Formato `.nmsitem`](#5-formato-nmsitem)
 6. [Fases de desenvolvimento](#6-fases-de-desenvolvimento) — próxima: [Fase 6](#fase-6--colossal-archive-depois-não-implementar-agora) (fora deste repo)
 7. [Riscos e mitigações](#7-riscos-e-mitigações)
@@ -681,6 +681,8 @@ nmsarchive/
 ├── .others/                      # gitignored — save pessoal (save2.hg, mf_save2.hg)
 ├── data/                         # gitignored (db, mapping cache, backups, screenshots)
 ├── public/
+│   └── icons/                    # UI do jogo (PNG); ver §4.1
+│       └── class/                # s.png a.png b.png c.png
 ├── tests/
 │   ├── fixtures/                 # save sintético versionado; .hg real NÃO entra no git
 │   └── nms/
@@ -735,6 +737,34 @@ nmsarchive/
 ```
 
 Alias `@/*` → `src/*`.
+
+### 4.1 Ícones e imagens estáticas
+
+Três lugares distintos — não misturar:
+
+| O quê | Onde | Git |
+|---|---|---|
+| Ícones / UI do jogo (classe, moeda, tipo de nave…) | `public/icons/<grupo>/<nome>.png` | versionado |
+| Screenshot do item arquivado | `data/screenshots/<uuid>.webp` | gitignored |
+| Chrome da interface (fechar, tema, grid) | `lucide-react` (componente) | não é arquivo |
+| Favicon do App Router | `src/app/favicon.ico` ou `src/app/icon.png` | versionado |
+| Asset importado no bundle (raro) | `src/assets/` | versionado |
+
+**Ícones do jogo** são PNG com fundo transparente. Nome **minúsculo, kebab-case**, uma pasta por família. `public/arquivo.png` vira a URL `/arquivo.png`.
+
+```
+public/icons/class/s.png              → /icons/class/s.png
+public/icons/class/a.png
+public/icons/class/b.png
+public/icons/class/c.png
+public/icons/currency/nanites.png
+public/icons/ship/fighter.png
+public/icons/categories/multitool.png
+```
+
+Não criar `src/images/` paralelo. Não usar os SVGs de boilerplate do create-next-app (`vercel.svg`, `file.svg`, `window.svg`) como padrão. Lucide cobre só chrome genérico; selo de classe S/A/B/C e outros glyphs do NMS são arquivo em `public/icons/`.
+
+Classe na UI aponta para `/icons/class/{s,a,b,c}.png` quando o PNG existir; até lá o badge continua texto (`Class S`).
 
 ---
 

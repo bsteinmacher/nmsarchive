@@ -15,3 +15,7 @@ Formato LZ4 dos saves (magic 0xFEEDA1E5)
 
 Nomes das 256 galáxias
   Lista comunitária (wiki / fandom), versionada em src/lib/nms/galaxies.ts.
+
+Ícones de UI do jogo em public/icons/
+  Recortes de No Man's Sky para o arquivo pessoal.
+  © Hello Games. Não são cobertos pela licença MIT deste repositório.
