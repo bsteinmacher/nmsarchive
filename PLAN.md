@@ -60,7 +60,7 @@ Requisito de segurança: *nunca armazenar o save completo no servidor*. A arquit
 Fluxo mental (o que o usuário está fazendo):
 
 1. **Guardar:** abrir `save.hg` → escolher um slot (nave, MT, pet…) → Arquivar no SQLite (e/ou baixar `.nmsitem`).
-2. **Usar:** no arquivo, escolher um item → aplicar num slot vazio (ou substituir) do save aberto → baixar `save.hg` novo.
+2. **Usar:** no arquivo, escolher um item → aplicar num slot vazio (ou substituir) do save aberto → gravar no mesmo `.hg` (com backup local) ou baixar, se o arquivo foi aberto avulso.
 3. O JSON do save vive em memória + IndexedDB. **Não** vai para a API.
 4. O servidor só conhece itens arquivados, metadados de saves (nome, versão, hash, **não** o blob) e o log de operações.
 
@@ -265,7 +265,7 @@ Stack: `libNOM.io` (I/O multiplataforma, LZ4 via `K4os.Compression.LZ4`) + `libN
 
 - Detectar plataforma pelo diretório (`st_<SteamID>`, `DefaultUser`, …).
 - Slot = par `save.hg` / `mf_save.hg`.
-- Nunca escrever sem backup local (no nosso caso: backup do JSON no IndexedDB + backup do SQLite antes de importar *para o arquivo*).
+- Nunca escrever sem backup local (no nosso caso: cópia do `.hg` na pasta de backup antes de gravar de volta + backup do JSON no IndexedDB + backup do SQLite antes de importar *para o arquivo*).
 
 ### 2.6 Caminhos de save (PC)
 
@@ -276,7 +276,11 @@ Stack: `libNOM.io` (I/O multiplataforma, LZ4 via `K4os.Compression.LZ4`) + `libN
 | GOG | `%AppData%\HelloGames\NMS\DefaultUser\` |
 | Microsoft Store | WGS sob `Packages\HelloGames.NoMansSky_*` — **fora do MVP** |
 
-O app é upload manual. Não precisamos varrer o disco no browser (sem File System Access API). O README da Fase 5 documenta os paths Steam/GOG.
+O processo local (`npm run dev` ou o servidor neste computador) descobre a pasta Steam/GOG, lembra a escolha em `data/local-game.json` e lê/grava só `save*.hg` dentro dela. A rota `/api/game-folder` aceita só `localhost` / `127.0.0.1`. O JSON mapeado continua no IndexedDB. Arquivo avulso, sem pasta, ainda baixa uma cópia.
+
+Cada slot é um par: índice ímpar = save do jogador (`save.hg`, `save3.hg`, …), par = automático (`save2.hg`, `save4.hg`, …). `save.hg` conta como índice 1. A UI lista os slots que existem e abre o arquivo com `lastModified` mais recente; trocar de slot escolhe de novo o mais recente do par. Gravar escreve nesse mesmo arquivo. Antes, copia os bytes que estão no disco para `Documentos/NMS Archive` com nome `save4-YYYY-MM-DD-HH-MM-SS.hg`.
+
+O README documenta os paths Steam/GOG.
 
 ### 2.7 JSON interno (chaves legíveis)
 
@@ -383,7 +387,7 @@ O parser **não** deve tipar o save inteiro. Tipar só o que extraímos. O resto
 
 ### 2.7.1 Probe do save local (`.others/save2.hg`)
 
-Pasta **gitignored**. Não commitar. Fixture de desenvolvimento: `save2.hg` (LZ4, 13 blocos, ~1.5 MB → ~6.4 MB JSON) + `mf_save2.hg` (432 bytes, XXTEA).
+Pasta **gitignored**. Não commitar. Fixture de desenvolvimento: `save2.hg` (LZ4, 14 blocos, ~1.5 MB → ~6.4 MB JSON) + `mf_save2.hg` (432 bytes, XXTEA).
 
 | Dado | Valor |
 |---|---|

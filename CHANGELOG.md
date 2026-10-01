@@ -31,6 +31,7 @@ Constante no código: `NMSITEM_SCHEMA_VERSION` em `src/lib/nmsitem.ts`.
 
 ### Added
 
+- Em `/save`, o app neste computador acha a pasta do jogo, abre o save mais recente e grava por cima do mesmo arquivo. Antes, copia um backup `saveN-YYYY-MM-DD-HH-MM-SS.hg` para Documentos (`NMS Archive`). A rota local só responde em localhost.
 - Companions no arquivo pessoal mostram **Element** e **Biome** (tabela, cards e detalhes). Já estava no extra; a lista não exibia. A busca também casa esses campos.
 - Em **Ver detalhes** do save aberto, **Excluir** esvazia o slot (o array do jogo não encolhe). Em nave, também limpa peças/cores e o casco da Corvette. Não apaga o arquivo pessoal.
 - Frigates do save aberto reordenam por arrastar, como naves, multi-tools e companions.

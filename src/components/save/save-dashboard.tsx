@@ -29,8 +29,10 @@ import { downloadBytes } from "@/lib/download";
 import { formatPlayTime } from "@/lib/nms/player";
 import { gameVersionMismatch, parseNmsItem } from "@/lib/nmsitem";
 import { downloadNmsItemZip } from "@/lib/nmsitem-zip";
+import { useSaveLocation } from "@/stores/save-location";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { CurrencyEditDialog, type CurrencyField } from "./currencies-dialog";
+import { SaveLocationPanel } from "./save-location-panel";
 import { UploadDropzone } from "./upload-dropzone";
 
 function Stat({ label, value }: { label: string; value: string }) {
@@ -83,6 +85,7 @@ export function SaveDashboard() {
   const exportAllShips = useSaveSession((s) => s.exportAllShips);
   const downloadRewritten = useSaveSession((s) => s.downloadRewritten);
   const downloadOriginal = useSaveSession((s) => s.downloadOriginal);
+  const boundToFolder = useSaveLocation((s) => s.boundName);
   const importRef = useRef<HTMLInputElement>(null);
   const [pendingItem, setPendingItem] = useState<ReturnType<
     typeof parseNmsItem
@@ -128,19 +131,19 @@ export function SaveDashboard() {
           Save aberto
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Sessão deste browser: abrir um .hg, conferir moedas e Galaxy, copiar
-          itens para o arquivo. O JSON fica no IndexedDB; o servidor só recebe o
-          item arquivado, nunca o .hg.
+          A pasta do jogo é deste computador. O JSON do save aberto fica no
+          IndexedDB. O .hg só passa pelo app local para abrir e gravar de volta.
         </p>
       </div>
 
+      <SaveLocationPanel />
+
       <Card>
         <CardHeader>
-          <CardTitle>Carregar save</CardTitle>
+          <CardTitle>Arquivo avulso</CardTitle>
           <CardDescription>
-            Steam/GOG <code>save*.hg</code>. O app não lê nem regenera{" "}
-            <code>mf_save</code> — o jogo atual costuma carregar sem esse
-            arquivo. Sempre copie o save original antes de substituir.
+            Sem a pasta, a gravação volta a ser download. O app não lê nem
+            regenera <code>mf_save</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -247,7 +250,7 @@ export function SaveDashboard() {
             <DropdownMenu>
               <DropdownMenuTrigger render={<Button variant="outline" />}>
                 <Download />
-                Baixar save
+                {boundToFolder ? "Baixar cópia" : "Baixar save"}
               </DropdownMenuTrigger>
               <DropdownMenuContent>
                 <DropdownMenuItem
@@ -286,7 +289,7 @@ export function SaveDashboard() {
                     }
                   }}
                 >
-                  Original (backup)
+                  Como foi aberto
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

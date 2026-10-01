@@ -12,7 +12,7 @@ O save completo **nunca** vai para o servidor.
 
 ## Aviso de risco
 
-Editar save pode corromper o slot. Sempre copie `save.hg` (e o `mf_save*.hg` da pasta, se existir) **antes** de devolver um arquivo gerado pelo app.
+Editar save pode corromper o slot. Ao gravar pela pasta do jogo, o app copia o arquivo do disco para a pasta de backup (`save4-YYYY-MM-DD-HH-MM-SS.hg`) antes de substituir. Em Permadeath, guarde também uma cópia sua. O `mf_save*.hg` não é alterado.
 
 **Não use em Ironman / Permadeath / expedição sem essa cópia.** O jogo pode recusar o save ou avançar a expedição com dados errados. O app não é um editor oficial da Hello Games.
 
@@ -23,7 +23,7 @@ Editar save pode corromper o slot. Sempre copie `save.hg` (e o `mf_save*.hg` da 
 
 ## Onde está o save (PC)
 
-O app não varre o disco — você escolhe o `save*.hg` no browser.
+O app neste computador acha a pasta do Steam (`st_<id>`) ou do GOG (`DefaultUser`), lista os slots e abre o save mais recente. Salvar grava nesse mesmo arquivo. Um `save*.hg` avulso, fora dessa pasta, continua só como download.
 
 | Loja | Pasta |
 |---|---|
@@ -36,11 +36,11 @@ Xbox, PlayStation e Switch ficam fora do MVP. Cross-save da Hello Games (patch 5
 ### Captura e devolução
 
 1. Feche o jogo (ou pelo menos saia para o menu) para o arquivo no disco não estar em escrita.
-2. Copie `save.hg` para um backup seu. O `mf_save.hg` do mesmo slot pode ir junto, mas o NMS Archive **não lê nem regenera** esse metadata.
-3. Em `/save`, escolha o `save.hg`. O parse roda num Web Worker; o JSON fica em memória + IndexedDB.
+2. Em `/save`, a pasta do jogo aparece sozinha (Steam `st_<id>` ou GOG `DefaultUser`). O par de cada slot aparece na hora; o arquivo mais recente abre sozinho. O parse roda num Web Worker; o JSON fica em memória + IndexedDB.
+3. O backup vai para Documentos, na pasta `NMS Archive`. O caminho aparece em **Configurações**.
 4. Arquive itens no SQLite e/ou baixe `.nmsitem`. Aplique de volta num slot vazio (sem expandir o array).
-5. “Baixar save” gera um `save.hg` novo (LZ4 block `0xFEEDA1E5`). Há também o download do original.
-6. Substitua só o `save.hg` na pasta do jogo. Deixe o `mf_save.hg` antigo no lugar, se existir — o jogo atual costuma carregar mesmo com metadata ausente ou velho.
+5. “Salvar neste arquivo” copia o `.hg` do disco para `save4-YYYY-MM-DD-HH-MM-SS.hg` em Documentos e grava por cima do mesmo arquivo (LZ4 block `0xFEEDA1E5`). “Baixar cópia” continua disponível. Save avulso só baixa. O servidor precisa estar neste computador (`npm run dev`); a imagem Docker não vê a pasta do Steam.
+6. Deixe o `mf_save.hg` no lugar — o app não lê nem regenera esse metadata, e o jogo atual costuma carregar mesmo com ele ausente ou velho.
 
 Galáxia no JSON é `0–255` (Euclid = 0). Na UI aparece `1–256` com o nome (`1 · Euclid`, `256 · Odyalutai`).
 
