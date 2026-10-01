@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  chooseRememberedFolder,
+  zenityDirectoryArgs,
+  zenityDirectoryResult,
   discoverAt,
   documentsDirectory,
   isInside,
@@ -23,6 +26,42 @@ async function tempDir() {
   temps.push(dir);
   return dir;
 }
+
+describe("chooseRememberedFolder", () => {
+  it("mantém a pasta salva, escolhe a mais recente e respeita a remoção", () => {
+    expect(
+      chooseRememberedFolder({
+        dismissed: false,
+        configured: "/jogo/st_1",
+        newestPath: "/jogo/st_2",
+      }),
+    ).toBe("/jogo/st_1");
+    expect(
+      chooseRememberedFolder({
+        dismissed: false,
+        configured: null,
+        newestPath: "/jogo/st_2",
+      }),
+    ).toBe("/jogo/st_2");
+    expect(
+      chooseRememberedFolder({
+        dismissed: true,
+        configured: null,
+        newestPath: "/jogo/st_2",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("zenityDirectoryArgs", () => {
+  it("abre o seletor na pasta inicial e trata cancelar", () => {
+    expect(zenityDirectoryArgs("/home/ada")).toContain("--filename=/home/ada/");
+    expect(zenityDirectoryArgs("/home/ada/")).toContain("--directory");
+    expect(zenityDirectoryResult(0, "/home/ada/st_1\n")).toBe("/home/ada/st_1");
+    expect(zenityDirectoryResult(1, "")).toBeNull();
+    expect(() => zenityDirectoryResult(255, "")).toThrow(GameFolderError);
+  });
+});
 
 describe("documentsDirectory", () => {
   it("lê Documentos do user-dirs e cai em ~/Documents", () => {

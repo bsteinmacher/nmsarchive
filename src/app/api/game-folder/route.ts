@@ -1,6 +1,7 @@
 import os from "node:os";
 import {
   GameFolderError,
+  clearGameFolder,
   gameFolderStatus,
   isLocalRequest,
   selectGameFolder,
@@ -28,6 +29,15 @@ export async function GET(req: Request) {
   if (!isLocalRequest(req)) return denied();
   try {
     return Response.json(await gameFolderStatus(os.homedir()));
+  } catch (err) {
+    return failure(err);
+  }
+}
+
+export async function DELETE(req: Request) {
+  if (!isLocalRequest(req)) return denied();
+  try {
+    return Response.json(await clearGameFolder(os.homedir()));
   } catch (err) {
     return failure(err);
   }
