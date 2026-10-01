@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, RefreshCw, Save } from "lucide-react";
+import { FolderOpen, RefreshCw, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,6 +63,63 @@ async function run(action: () => Promise<void>) {
   }
 }
 
+function UnselectedFolder() {
+  const selectLocalFolder = useSaveLocation((s) => s.selectLocalFolder);
+  const [customPath, setCustomPath] = useState("");
+  const [picking, setPicking] = useState(false);
+
+  async function chooseFromDialog() {
+    setPicking(true);
+    try {
+      const res = await fetch("/api/game-folder/pick", { method: "POST" });
+      const body = (await res.json()) as { path?: string; cancelled?: boolean; error?: string };
+      if (!res.ok) throw new Error(body.error ?? "Não consegui abrir o seletor de pasta.");
+      if (body.cancelled || !body.path) return;
+      await selectLocalFolder(body.path);
+    } finally {
+      setPicking(false);
+    }
+  }
+
+  return (
+    <form
+      className="grid gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        const next = customPath.trim();
+        if (!next) return;
+        void run(() => selectLocalFolder(next));
+      }}
+    >
+      <p className="text-sm text-muted-foreground">
+        Escolha a pasta da conta, ou cole o caminho. No Steam ela se chama{" "}
+        <code>st_</code> e o número, no GOG <code>DefaultUser</code>.
+      </p>
+      <Button
+        type="button"
+        className="justify-self-start"
+        disabled={picking}
+        onClick={() => void run(chooseFromDialog)}
+      >
+        <FolderOpen />
+        {picking ? "Escolhendo…" : "Escolher pasta"}
+      </Button>
+      <div className="flex items-center gap-2">
+        <input
+          className={`${selectClass} flex-1`}
+          value={customPath}
+          placeholder="/caminho/da/pasta/st_…"
+          aria-label="Caminho da pasta dos saves"
+          onChange={(event) => setCustomPath(event.target.value)}
+        />
+        <Button type="submit" variant="outline" disabled={!customPath.trim() || picking}>
+          Usar este caminho
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export function SaveLocationPanel() {
   const supported = useSaveLocation((s) => s.supported);
   const hydrated = useSaveLocation((s) => s.hydrated);
@@ -81,6 +138,7 @@ export function SaveLocationPanel() {
   const locationError = useSaveLocation((s) => s.error);
   const resumeSaveFolder = useSaveLocation((s) => s.resumeSaveFolder);
   const selectLocalFolder = useSaveLocation((s) => s.selectLocalFolder);
+  const clearLocalFolder = useSaveLocation((s) => s.clearLocalFolder);
   const reloadFromDisk = useSaveLocation((s) => s.reloadFromDisk);
   const selectSlot = useSaveLocation((s) => s.selectSlot);
   const selectFile = useSaveLocation((s) => s.selectFile);
@@ -89,7 +147,6 @@ export function SaveLocationPanel() {
   const summary = useSaveSession((s) => s.summary);
   const origin = useSaveSession((s) => s.origin);
   const [confirmStale, setConfirmStale] = useState(false);
-  const [customPath, setCustomPath] = useState("");
 
   const busy = scanning || writing || status === "loading" || !hydrated;
   const selected = entryFor(slots, selectedName);
@@ -166,32 +223,7 @@ export function SaveLocationPanel() {
             um save.hg avulso abaixo.
           </p>
         ) : !saveFolderName ? (
-          <form
-            className="grid gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const next = customPath.trim();
-              if (!next) return;
-              void run(() => selectLocalFolder(next));
-            }}
-          >
-            <p className="text-sm text-muted-foreground">
-              Não achei saves do No Man&apos;s Sky neste computador. Cole o
-              caminho da pasta da conta: no Steam ela se chama <code>st_</code>{" "}
-              e o número, no GOG <code>DefaultUser</code>.
-            </p>
-            <input
-              className={selectClass}
-              value={customPath}
-              placeholder="/caminho/da/pasta/st_…"
-              aria-label="Caminho da pasta dos saves"
-              onChange={(event) => setCustomPath(event.target.value)}
-            />
-            <Button type="submit" className="justify-self-start" disabled={!customPath.trim()}>
-              <FolderOpen />
-              Usar esta pasta
-            </Button>
-          </form>
+          <UnselectedFolder />
         ) : savePermission !== "granted" ? (
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -230,12 +262,25 @@ export function SaveLocationPanel() {
               </div>
               <div className="grid gap-1">
                 <p className="text-xs text-muted-foreground">Pasta</p>
-                <p
-                  className="truncate font-mono text-sm"
-                  title={saveFolderPath ?? saveFolderName}
-                >
-                  {saveFolderPath ?? saveFolderName}
-                </p>
+                <div className="flex min-w-0 items-center gap-1">
+                  <p
+                    className="min-w-0 flex-1 truncate font-mono text-sm"
+                    title={saveFolderPath ?? saveFolderName}
+                  >
+                    {saveFolderPath ?? saveFolderName}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-xs"
+                    className="shrink-0 rounded-full"
+                    aria-label="Remover pasta selecionada"
+                    disabled={busy}
+                    onClick={() => void run(() => clearLocalFolder())}
+                  >
+                    <X />
+                  </Button>
+                </div>
               </div>
               <label className="grid gap-1.5 sm:col-span-2">
                 <span className="text-xs text-muted-foreground">Slot</span>
@@ -247,6 +292,7 @@ export function SaveLocationPanel() {
                     void run(() => selectSlot(Number(event.target.value)));
                   }}
                 >
+                  {slots.length === 0 ? <option value="">Nenhum</option> : null}
                   {slots.map((slot) => (
                     <option key={slot.slot} value={String(slot.slot)}>
                       {slotLabel(slot)}
@@ -264,6 +310,7 @@ export function SaveLocationPanel() {
                     void run(() => selectFile(event.target.value));
                   }}
                 >
+                  {files.length === 0 ? <option value="">Nenhum</option> : null}
                   {files.map((file) => (
                     <option key={file.name} value={file.name}>
                       {fileOptionLabel(file, newest?.name)}
@@ -374,10 +421,8 @@ export function SaveLocationPanel() {
 export function SaveFolderSettings() {
   const hydrated = useSaveLocation((s) => s.hydrated);
   const saveFolderPath = useSaveLocation((s) => s.saveFolderPath);
-  const localFolders = useSaveLocation((s) => s.localFolders);
   const backupFolderName = useSaveLocation((s) => s.backupFolderName);
-  const selectLocalFolder = useSaveLocation((s) => s.selectLocalFolder);
-  const [customPath, setCustomPath] = useState("");
+  const clearLocalFolder = useSaveLocation((s) => s.clearLocalFolder);
 
   return (
     <Card>
@@ -391,63 +436,32 @@ export function SaveFolderSettings() {
       <CardContent className="grid gap-3 text-sm">
         {!hydrated ? (
           <p className="text-muted-foreground">Procurando a pasta do jogo…</p>
+        ) : !saveFolderPath ? (
+          <UnselectedFolder />
         ) : (
-          <>
-            {localFolders.length > 1 ? (
-              <label className="grid gap-1.5">
-                <span className="text-muted-foreground">Conta</span>
-                <select
-                  className={selectClass}
-                  value={saveFolderPath ?? ""}
-                  onChange={(event) => {
-                    void run(() => selectLocalFolder(event.target.value));
-                  }}
-                >
-                  {localFolders.map((folder) => (
-                    <option key={folder.path} value={folder.path}>
-                      {folder.storage} · {folder.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <p>
-                <span className="text-muted-foreground">Saves · </span>
-                {saveFolderPath ? <code>{saveFolderPath}</code> : "nenhuma pasta ainda"}
-              </p>
-            )}
-            {!saveFolderPath ? (
-              <form
-                className="grid gap-2"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const next = customPath.trim();
-                  if (!next) return;
-                  void run(() => selectLocalFolder(next));
-                }}
-              >
-                <input
-                  className={selectClass}
-                  value={customPath}
-                  placeholder="/caminho/da/pasta/st_…"
-                  aria-label="Caminho da pasta dos saves"
-                  onChange={(event) => setCustomPath(event.target.value)}
-                />
-                <Button type="submit" variant="outline" className="justify-self-start">
-                  Usar esta pasta
-                </Button>
-              </form>
-            ) : null}
-            <p>
-              <span className="text-muted-foreground">Backups · </span>
-              {backupFolderName ? (
-                <code>{backupFolderName}</code>
-              ) : (
-                "Documentos/NMS Archive"
-              )}
-            </p>
-          </>
+          <p className="flex min-w-0 items-center gap-1">
+            <span className="text-muted-foreground">Saves · </span>
+            <code className="min-w-0 flex-1 truncate">{saveFolderPath}</code>
+            <Button
+              type="button"
+              variant="secondary"
+              size="icon-xs"
+              className="shrink-0 rounded-full"
+              aria-label="Remover pasta selecionada"
+              onClick={() => void run(() => clearLocalFolder())}
+            >
+              <X />
+            </Button>
+          </p>
         )}
+        <p>
+          <span className="text-muted-foreground">Backups · </span>
+          {backupFolderName ? (
+            <code>{backupFolderName}</code>
+          ) : (
+            "Documentos/NMS Archive"
+          )}
+        </p>
       </CardContent>
     </Card>
   );

@@ -81,6 +81,7 @@ type SaveLocationState = {
   hydrateLocation: () => Promise<void>;
   chooseSaveFolder: () => Promise<void>;
   selectLocalFolder: (folderPath: string) => Promise<void>;
+  clearLocalFolder: () => Promise<void>;
   resumeSaveFolder: () => Promise<void>;
   chooseBackupFolder: () => Promise<void>;
   reloadFromDisk: () => Promise<void>;
@@ -478,6 +479,19 @@ export const useSaveLocation = create<SaveLocationState>((set, get) => ({
     await applyLocal((await res.json()) as LocalStatus, {
       autoload: true,
       reloadSelected: true,
+    });
+  },
+
+  clearLocalFolder: async () => {
+    set({ scanning: true, error: null });
+    const res = await fetch("/api/game-folder", { method: "DELETE" });
+    if (!res.ok) {
+      set({ scanning: false, error: await apiError(res) });
+      return;
+    }
+    await applyLocal((await res.json()) as LocalStatus, {
+      autoload: false,
+      reloadSelected: false,
     });
   },
 

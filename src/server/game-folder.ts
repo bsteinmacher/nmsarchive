@@ -1,3 +1,5 @@
+import { spawn } from "node:child_process";
+import { constants } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
@@ -48,7 +50,18 @@ export type GameFolderStatus = {
 type LocalGameConfig = {
   saveDir: string | null;
   backupDir: string | null;
+  dismissed: boolean;
 };
+
+export function chooseRememberedFolder(input: {
+  dismissed: boolean;
+  configured: string | null;
+  newestPath: string | null;
+}): string | null {
+  if (input.dismissed) return null;
+  if (input.configured) return input.configured;
+  return input.newestPath;
+}
 
 export class GameFolderError extends Error {
   constructor(
@@ -125,9 +138,10 @@ async function readConfig(): Promise<LocalGameConfig> {
     return {
       saveDir: typeof raw.saveDir === "string" ? raw.saveDir : null,
       backupDir: typeof raw.backupDir === "string" ? raw.backupDir : null,
+      dismissed: raw.dismissed === true,
     };
   } catch {
-    return { saveDir: null, backupDir: null };
+    return { saveDir: null, backupDir: null, dismissed: false };
   }
 }
 
@@ -259,9 +273,13 @@ export async function gameFolderStatus(home: string): Promise<GameFolderStatus> 
       selectedPath = null;
     }
   }
-  if (!selectedPath && folders[0]) {
-    selectedPath = folders[0].path;
-    await writeConfig({ ...config, saveDir: selectedPath });
+  selectedPath = chooseRememberedFolder({
+    dismissed: config.dismissed,
+    configured: selectedPath,
+    newestPath: folders[0]?.path ?? null,
+  });
+  if (selectedPath && selectedPath !== config.saveDir) {
+    await writeConfig({ ...config, saveDir: selectedPath, dismissed: false });
   }
   const backupDir = await resolvedBackupDir(home, {
     ...config,
@@ -292,7 +310,62 @@ export async function selectGameFolder(home: string, requested: string): Promise
     throw new GameFolderError("Nenhum save.hg nessa pasta.", 400);
   }
   const config = await readConfig();
-  await writeConfig({ ...config, saveDir: real });
+  await writeConfig({ ...config, saveDir: real, dismissed: false });
+  return gameFolderStatus(home);
+}
+
+export function zenityDirectoryArgs(startDir: string): string[] {
+  const folder = startDir.endsWith(path.sep) ? startDir : `${startDir}${path.sep}`;
+  return ["--file-selection", "--directory", "--title=Pasta dos saves", `--filename=${folder}`];
+}
+
+export function zenityDirectoryResult(code: number | null, stdout: string): string | null {
+  if (code === 1) return null;
+  if (code !== 0) {
+    throw new GameFolderError("Não consegui abrir o seletor de pasta.", 500);
+  }
+  const picked = stdout.trim();
+  if (!picked) throw new GameFolderError("O seletor não devolveu a pasta.", 500);
+  return picked;
+}
+
+async function zenityBin(): Promise<string | null> {
+  const dirs = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  for (const dir of dirs) {
+    const candidate = path.join(dir, "zenity");
+    try {
+      await fs.access(candidate, constants.X_OK);
+      return candidate;
+    } catch {
+      // Keep looking.
+    }
+  }
+  return null;
+}
+
+export async function pickDirectoryDialog(startDir: string): Promise<string | null> {
+  const bin = await zenityBin();
+  if (!bin) {
+    throw new GameFolderError("Não achei um seletor de pasta neste computador.", 500);
+  }
+  const child = spawn(bin, zenityDirectoryArgs(startDir), { stdio: ["ignore", "pipe", "pipe"] });
+  let stdout = "";
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", (chunk: string) => {
+    stdout += chunk;
+  });
+  const code = await new Promise<number | null>((resolve, reject) => {
+    child.on("error", () => {
+      reject(new GameFolderError("Não consegui abrir o seletor de pasta.", 500));
+    });
+    child.on("close", (status) => resolve(status));
+  });
+  return zenityDirectoryResult(code, stdout);
+}
+
+export async function clearGameFolder(home: string): Promise<GameFolderStatus> {
+  const config = await readConfig();
+  await writeConfig({ ...config, saveDir: null, dismissed: true });
   return gameFolderStatus(home);
 }
 
