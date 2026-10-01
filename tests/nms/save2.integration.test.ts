@@ -41,13 +41,13 @@ const hasSave = existsSync(savePath);
 
 describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
   it(
-    "decodifica 13 blocos LZ4, mapeia naves e preserva bytes Latin-1 inválidos em UTF-8",
+    "decodifica 14 blocos LZ4, mapeia naves e preserva bytes Latin-1 inválidos em UTF-8",
     async () => {
       const bytes = new Uint8Array(readFileSync(savePath));
       expect(detect(bytes)).toBe("lz4");
 
       const decoded = decodeHgDetailed(bytes);
-      expect(decoded.blockCount).toBe(13);
+      expect(decoded.blockCount).toBe(14);
       expect(decoded.bytes[0]).toBe(0x7b);
       expect(decoded.bytes[decoded.bytes.length - 1]).toBe(0);
 
@@ -194,7 +194,9 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
 
       const tools = listMultitools(parsed.json);
       expect(tools).toHaveLength(6);
-      expect(tools.filter((t) => !t.empty)).toHaveLength(6);
+      expect(tools.filter((t) => !t.empty)).toHaveLength(4);
+      expect(tools[4]?.empty).toBe(true);
+      expect(tools[5]?.empty).toBe(true);
       expect(tools.some((t) => t.itemType === "Atlas Staff")).toBe(true);
 
       const pets = listCompanions(parsed.json);
@@ -228,7 +230,7 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
 
       expect(listFrigates(parsed.json)).toHaveLength(17);
       const bases = listBases(parsed.json);
-      expect(bases).toHaveLength(68);
+      expect(bases).toHaveLength(69);
       expect(
         bases.every(
           (item) =>

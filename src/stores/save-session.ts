@@ -44,6 +44,8 @@ type SessionMeta = {
   mappingVersion: string;
   sha256?: string;
   formatHint?: string;
+  origin?: "directory" | "upload";
+  diskModified?: number | null;
 };
 
 type Status = "idle" | "hydrating" | "loading" | "ready" | "error";
@@ -73,12 +75,19 @@ type SaveSessionState = {
   mappingVersion: string | null;
   sha256: string | null;
   formatHint: string | null;
+  origin: "directory" | "upload" | null;
+  diskModified: number | null;
   unknownKeys: string[];
   summary: PlayerSummary | null;
   ships: ExtractedShip[];
   items: ItemsByCategory;
   hydrate: () => Promise<void>;
-  loadFile: (file: File) => Promise<void>;
+  loadFile: (
+    file: File,
+    source?: { origin?: "directory" | "upload" },
+  ) => Promise<void>;
+  previewFile: (file: File) => Promise<PlayerSummary>;
+  noteDiskWrite: (diskModified: number, bytes: Uint8Array) => Promise<void>;
   clear: () => Promise<void>;
   importItem: (item: NmsItemFile) => Promise<number>;
   importShip: (item: NmsItemFile) => Promise<number>;
@@ -146,6 +155,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   mappingVersion: null,
   sha256: null,
   formatHint: null,
+  origin: null,
+  diskModified: null,
   unknownKeys: [],
   summary: null,
   ships: [],
@@ -180,6 +191,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
             mappingVersion: sessionMeta.mappingVersion,
             sha256,
             formatHint,
+            origin: sessionMeta.origin ?? null,
+            diskModified: sessionMeta.diskModified ?? null,
           }),
         );
         return;
@@ -190,7 +203,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     set({ status: "idle", hydrated: true });
   },
 
-  loadFile: async (file) => {
+  loadFile: async (file, source) => {
     assertSaveFile(file);
     set({ status: "loading", error: null });
     try {
@@ -202,6 +215,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       const parsed = await parseHgClient(bytes, mapping);
       const sha256 = await sha256Hex(bytes);
       const formatHint = detect(bytes);
+      const origin = source?.origin ?? "upload";
       mappedJson = parsed.json;
       originalBytes = bytes;
       mappingFile = mapping;
@@ -211,6 +225,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
         mappingVersion: parsed.mappingVersion,
         sha256,
         formatHint,
+        origin,
+        diskModified: origin === "directory" ? file.lastModified : null,
       };
       await Promise.all([
         idbSet(IDB_JSON, parsed.json),
@@ -225,6 +241,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
           mappingVersion: parsed.mappingVersion,
           sha256,
           formatHint,
+          origin: meta.origin ?? null,
+          diskModified: meta.diskModified ?? null,
         }),
       );
     } catch (err) {
@@ -252,6 +270,8 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       mappingVersion: null,
       sha256: null,
       formatHint: null,
+      origin: null,
+      diskModified: null,
       unknownKeys: [],
       summary: null,
       ships: [],
@@ -348,6 +368,32 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     mappedJson = result.json;
     await persistJson();
     set(applyParsed(mappedJson, {}));
+  },
+
+  previewFile: async (file) => {
+    assertSaveFile(file);
+    const mapping = mappingFile ?? (await fetchMapping());
+    if (!mappingFile) mappingFile = mapping;
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const parsed = await parseHgClient(bytes, mapping);
+    return summarizePlayer(parsed.json);
+  },
+
+  noteDiskWrite: async (diskModified, bytes) => {
+    const sha256 = await sha256Hex(bytes);
+    originalBytes = bytes;
+    const previous = (await idbGet(IDB_META)) as SessionMeta | undefined;
+    const meta: SessionMeta = {
+      fileName: previous?.fileName ?? get().fileName ?? "save.hg",
+      unknownKeys: previous?.unknownKeys ?? get().unknownKeys,
+      mappingVersion: previous?.mappingVersion ?? get().mappingVersion ?? "",
+      sha256,
+      formatHint: previous?.formatHint ?? get().formatHint ?? undefined,
+      origin: "directory",
+      diskModified,
+    };
+    await Promise.all([idbSet(IDB_META, meta), idbSet(IDB_ORIGINAL, bytes)]);
+    set({ diskModified, sha256, origin: "directory" });
   },
 
   downloadRewritten: async () => {

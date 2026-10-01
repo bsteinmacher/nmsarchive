@@ -54,7 +54,7 @@ export function UploadDropzone() {
       <p>
         {loading
           ? "Decodificando LZ4 e aplicando mapping no worker…"
-          : "Solte um save.hg aqui ou escolha o arquivo. Nada é enviado ao servidor."}
+          : "Solte um save.hg aqui. Nada é enviado ao servidor."}
       </p>
       <input
         ref={inputRef}
@@ -73,9 +73,6 @@ export function UploadDropzone() {
       >
         Escolher save.hg
       </Button>
-      <p className="text-xs">
-        Fixture local de testes: <code>.others/save2.hg</code> (gitignored)
-      </p>
     </div>
   );
 }

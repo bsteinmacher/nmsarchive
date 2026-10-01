@@ -18,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { SaveFolderSettings } from "@/components/save/save-location-panel";
 import { formatOperationLabel } from "@/lib/operation-labels";
 import { trpc } from "@/lib/trpc";
 
@@ -62,10 +63,12 @@ export default function SettingsPage() {
           Settings
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Caminho do banco, backups do SQLite e atualização do mapping.json. O
-          save aberto não passa por aqui.
+          Pastas do save e dos backups, banco local e mapping.json. O conteúdo
+          do .hg não passa por aqui.
         </p>
       </div>
+
+      <SaveFolderSettings />
 
       <Card>
         <CardHeader>
