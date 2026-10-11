@@ -5,7 +5,6 @@ import { cn } from "cn";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -116,13 +115,14 @@ export function SaveSlotGrid({
   const previewCols = columns.filter((col) => col.id !== "seed").slice(0, 3);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{caption}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <section className="grid gap-3">
+      <div className="grid gap-1">
+        <h2 className="font-heading text-base leading-snug font-medium">
+          {caption}
+        </h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {items.map((item) => {
             const slot = item.slotLabel ?? String(item.index + 1);
             const isOver = over === item.index && dragging !== item.index;
@@ -230,11 +230,6 @@ export function SaveSlotGrid({
                         {meta.join(" · ")}
                       </p>
                     ) : null}
-                    {item.seed ? (
-                      <p className="mt-1 font-mono text-xs break-all text-muted-foreground">
-                        {item.seed}
-                      </p>
-                    ) : null}
                   </div>
                   <div className="mt-auto">
                     <SaveSlotActions
@@ -248,9 +243,8 @@ export function SaveSlotGrid({
               </li>
             );
           })}
-        </ul>
-      </CardContent>
-    </Card>
+      </ul>
+    </section>
   );
 }
 

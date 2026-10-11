@@ -102,14 +102,17 @@ function SlotTable({
     );
   }
 
+  const visibleColumns = columns.filter((col) => col.id !== "seed");
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{caption}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
+    <section className="grid gap-3">
+      <div className="grid gap-1">
+        <h2 className="font-heading text-base leading-snug font-medium">
+          {caption}
+        </h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <Table>
           <TableHeader>
             <TableRow>
               {reorderable ? (
@@ -119,7 +122,7 @@ function SlotTable({
               ) : null}
               <TableHead>Slot</TableHead>
               <TableHead>Nome</TableHead>
-              {columns.map((col) => (
+              {visibleColumns.map((col) => (
                 <TableHead key={col.id}>{col.header}</TableHead>
               ))}
               <TableHead className="text-right">Ações</TableHead>
@@ -201,11 +204,8 @@ function SlotTable({
                       </span>
                     ) : null}
                   </TableCell>
-                  {columns.map((col) => (
-                    <TableCell
-                      key={col.id}
-                      className={cn(col.id === "seed" && "font-mono text-xs")}
-                    >
+                  {visibleColumns.map((col) => (
+                    <TableCell key={col.id}>
                       {dash(columnValue(item, col))}
                     </TableCell>
                   ))}
@@ -221,9 +221,8 @@ function SlotTable({
               );
             })}
           </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+      </Table>
+    </section>
   );
 }
 

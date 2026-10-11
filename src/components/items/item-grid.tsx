@@ -1,7 +1,6 @@
 "use client";
 
 import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
-import { formatGalaxy } from "@/lib/nms/galaxies";
 import { screenshotPublicUrl } from "@/lib/screenshots";
 import { cn } from "cn";
 import type { ArchivedItemSummary } from "@/types/archive";
@@ -89,21 +88,15 @@ export function ItemGrid({
                 <p className="font-heading text-base font-medium break-words">
                   {item.name}
                 </p>
-                <p className="mt-1 font-mono text-xs break-all text-muted-foreground">
-                  {item.seed}
-                </p>
               </div>
               <p className="line-clamp-2 text-sm text-muted-foreground">
                 {item.description}
               </p>
-              <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                {item.galaxy != null ? (
-                  <span>{formatGalaxy(item.galaxy)}</span>
-                ) : null}
-                {item.tags.length > 0 ? (
-                  <span>{item.tags.map((t) => t.label).join(" · ")}</span>
-                ) : null}
-              </div>
+              {item.tags.length > 0 ? (
+                <p className="mt-auto text-xs text-muted-foreground">
+                  {item.tags.map((t) => t.label).join(" · ")}
+                </p>
+              ) : null}
             </button>
           </li>
         );

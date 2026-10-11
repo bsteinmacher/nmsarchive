@@ -1,5 +1,6 @@
 import {
   insertItem,
+  applyItem,
   reorderCategory,
   reorderShipOwnership,
   insertShip,
@@ -10,6 +11,7 @@ import { getPlayerState, missingPlayerMessage, type SaveContext } from "./player
 import type { MappingFile } from "./mapping";
 import { writeHg } from "./parse";
 import type { Category } from "@/types/nms";
+import type { ApplyRequest } from "./extract/apply-depth";
 
 export type WriteResult =
   | { ok: true; json: unknown }
@@ -41,6 +43,17 @@ export function insertCategoryItem(
   context: SaveContext = "main",
 ): InsertResult {
   return insertItem(mappedJson, category, payload, seed, context);
+}
+
+export function applyCategoryItem(
+  mappedJson: unknown,
+  category: Category,
+  payload: unknown,
+  seed?: string,
+  context: SaveContext = "main",
+  request?: ApplyRequest,
+): InsertResult {
+  return applyItem(mappedJson, category, payload, seed, context, request);
 }
 
 export function clearCategorySlot(

@@ -3,6 +3,10 @@ import {
   parseArchiveSearch,
   serializeArchiveSearch,
 } from "@/lib/archive-url";
+import {
+  archiveViewCookieAssignment,
+  parseArchiveViewCookie,
+} from "@/lib/archive-view";
 
 describe("archive-url", () => {
   it("serializa classe S, tag exotic e galáxia 1–256", () => {
@@ -22,5 +26,15 @@ describe("archive-url", () => {
     expect(parsed.tags).toEqual(["exotic"]);
     expect(parsed.galaxyDisplay).toBe(256);
     expect(parsed.view).toBe("table");
+  });
+
+  it("guarda tabela ou grade no cookie e ignora o resto", () => {
+    expect(parseArchiveViewCookie("table")).toBe("table");
+    expect(parseArchiveViewCookie("grid")).toBe("grid");
+    expect(parseArchiveViewCookie("lista")).toBeUndefined();
+    expect(parseArchiveViewCookie(undefined)).toBeUndefined();
+    expect(archiveViewCookieAssignment("table")).toContain(
+      "nmsarchive-view=table",
+    );
   });
 });

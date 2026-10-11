@@ -24,12 +24,13 @@ import {
   type SaveContext,
 } from "@/lib/nms/player";
 import {
-  insertCategoryItem,
+  applyCategoryItem,
   reorderCategorySlots,
   clearCategorySlot,
   setPlayerCurrencies,
   type PlayerCurrencies,
 } from "@/lib/nms/write";
+import type { ApplyRequest } from "@/lib/nms/extract/apply-depth";
 import {
   buildNmsItem,
   type NmsItemFile,
@@ -97,8 +98,8 @@ type SaveSessionState = {
   previewFile: (file: File) => Promise<PlayerSummary>;
   noteDiskWrite: (diskModified: number, bytes: Uint8Array) => Promise<void>;
   clear: () => Promise<void>;
-  importItem: (item: NmsItemFile) => Promise<number>;
-  importShip: (item: NmsItemFile) => Promise<number>;
+  importItem: (item: NmsItemFile, options?: ApplyRequest) => Promise<number>;
+  importShip: (item: NmsItemFile, options?: ApplyRequest) => Promise<number>;
   clearSlot: (category: Category, index: number) => Promise<void>;
   exportItem: (category: Category, index: number) => NmsItemFile;
   exportShip: (index: number) => NmsItemFile;
@@ -311,7 +312,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     set(applyParsed(mappedJson, context, {}));
   },
 
-  importItem: async (item) => {
+  importItem: async (item, options) => {
     if (mappedJson == null || !mappingFile) {
       throw new Error("Nenhum save aberto.");
     }
@@ -319,12 +320,13 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       throw new Error("Categoria desconhecida neste arquivo.");
     }
     const context = get().saveContext;
-    const result = insertCategoryItem(
+    const result = applyCategoryItem(
       mappedJson,
       item.category,
       item.payload,
       item.seed,
       context,
+      options,
     );
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
@@ -334,7 +336,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     return result.index;
   },
 
-  importShip: async (item) => get().importItem(item),
+  importShip: async (item, options) => get().importItem(item, options),
 
   clearSlot: async (category, index) => {
     if (mappedJson == null) throw new Error("Nenhum save aberto.");

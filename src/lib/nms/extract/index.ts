@@ -1,6 +1,10 @@
 import type { SaveContext } from "../player";
 import type { Category } from "@/types/nms";
 import {
+  zeroCompanionTreats,
+  type ApplyRequest,
+} from "./apply-depth";
+import {
   basesAdapter,
   deepSpaceAdapter,
   resolveInsertCategory,
@@ -8,10 +12,10 @@ import {
 } from "./bases";
 import { companionsAdapter } from "./companions";
 import { exosuitAdapter } from "./exosuit";
-import { freightersAdapter } from "./freighters";
+import { applyFreighter, freightersAdapter } from "./freighters";
 import { frigatesAdapter } from "./frigates";
-import { multitoolsAdapter } from "./multitools";
-import { shipsAdapter } from "./ships";
+import { applyMultitool, multitoolsAdapter } from "./multitools";
+import { applyShip, shipsAdapter } from "./ships";
 import type { CategoryAdapter, ExtractedSlot, InsertResult, WriteResult } from "./types";
 import { wondersAdapter } from "./wonders";
 
@@ -127,6 +131,41 @@ export function insertItem(
     );
   if (!match) return first;
   return adapter.replace(json, match.index, payload, context);
+}
+
+export function applyItem(
+  json: unknown,
+  category: Category,
+  payload: unknown,
+  seed?: string,
+  context: SaveContext = "main",
+  request?: ApplyRequest,
+): InsertResult {
+  const depth = request?.depth ?? "full";
+  const index = request?.index;
+
+  if (category === "companion") {
+    const body =
+      request?.companionLevel === "zero"
+        ? zeroCompanionTreats(payload)
+        : payload;
+    if (index == null) return insertItem(json, category, body, seed, context);
+    return replaceItem(json, category, index, body, context);
+  }
+
+  if (category === "ship" || category === "multitool" || category === "freighter") {
+    if (index == null) {
+      if (depth === "full") return insertItem(json, category, payload, seed, context);
+      return { ok: false, error: "Escolha o slot destino." };
+    }
+    if (category === "ship") return applyShip(json, index, payload, depth, context);
+    if (category === "multitool") {
+      return applyMultitool(json, index, payload, depth, context);
+    }
+    return applyFreighter(json, index, payload, depth, context);
+  }
+
+  return insertItem(json, category, payload, seed, context);
 }
 
 export function replaceItem(

@@ -1,7 +1,6 @@
 "use client";
 
 import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
-import { formatGalaxy } from "@/lib/nms/galaxies";
 import type { ArchivedItemSummary } from "@/types/archive";
 import { CATEGORY_META, isCategory } from "@/types/nms";
 import { useSaveSession } from "@/stores/save-session";
@@ -40,8 +39,6 @@ export function ItemTable({
               <TableHead>Biome</TableHead>
             </>
           ) : null}
-          <TableHead>Seed</TableHead>
-          <TableHead>Galaxy</TableHead>
           <TableHead>Tags</TableHead>
         </TableRow>
       </TableHeader>
@@ -89,12 +86,6 @@ export function ItemTable({
                   </TableCell>
                 </>
               ) : null}
-              <TableCell className="font-mono text-xs whitespace-normal break-all">
-                {item.seed}
-              </TableCell>
-              <TableCell className="whitespace-normal">
-                {item.galaxy != null ? formatGalaxy(item.galaxy) : "—"}
-              </TableCell>
               <TableCell className="whitespace-normal text-muted-foreground">
                 {item.tags.length
                   ? item.tags.map((t) => t.label).join(" · ")

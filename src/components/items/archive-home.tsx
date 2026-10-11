@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useId, useMemo, useState } from "react";
+import { Suspense, useEffect, useId, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive } from "lucide-react";
@@ -23,7 +23,9 @@ import {
   archiveSearchHref,
   parseArchiveSearch,
   type ArchiveUrlState,
+  type ArchiveView,
 } from "@/lib/archive-url";
+import { rememberArchiveView } from "@/lib/archive-view";
 import { trpc } from "@/lib/trpc";
 import {
   archiveHref,
@@ -41,16 +43,23 @@ function formatWhen(date: Date) {
   });
 }
 
-function ArchiveHomeInner({ category }: { category?: Category }) {
+function ArchiveHomeInner({
+  category,
+  storedView,
+}: {
+  category?: Category;
+  storedView?: ArchiveView;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const filterId = useId();
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const state = useMemo(
-    () => parseArchiveSearch(searchParams),
-    [searchParams],
-  );
+  const state = useMemo(() => {
+    const parsed = parseArchiveSearch(searchParams);
+    if (searchParams.has("view") || storedView == null) return parsed;
+    return { ...parsed, view: storedView };
+  }, [searchParams, storedView]);
 
   const listInput = useMemo(() => {
     let galaxy: number | undefined;
@@ -87,7 +96,15 @@ function ArchiveHomeInner({ category }: { category?: Category }) {
       state.q,
   );
 
+  useEffect(() => {
+    const explicit = searchParams.get("view");
+    if (explicit === "table" || explicit === "grid") {
+      rememberArchiveView(explicit);
+    }
+  }, [searchParams]);
+
   function setState(next: ArchiveUrlState) {
+    rememberArchiveView(next.view);
     router.replace(archiveSearchHref(pathname, next), { scroll: false });
   }
 
@@ -274,14 +291,20 @@ function ArchiveHomeInner({ category }: { category?: Category }) {
   );
 }
 
-export function ArchiveHome({ category }: { category?: Category }) {
+export function ArchiveHome({
+  category,
+  storedView,
+}: {
+  category?: Category;
+  storedView?: ArchiveView;
+}) {
   return (
     <Suspense
       fallback={
         <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
       }
     >
-      <ArchiveHomeInner category={category} />
+      <ArchiveHomeInner category={category} storedView={storedView} />
     </Suspense>
   );
 }
