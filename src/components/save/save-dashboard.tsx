@@ -1,13 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download, FileJson, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, FileJson, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -29,9 +31,9 @@ import { downloadBytes } from "@/lib/download";
 import { formatPlayTime } from "@/lib/nms/player";
 import { gameVersionMismatch, parseNmsItem } from "@/lib/nmsitem";
 import { downloadNmsItemZip } from "@/lib/nmsitem-zip";
-import { useSaveLocation } from "@/stores/save-location";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { CurrencyEditDialog, type CurrencyField } from "./currencies-dialog";
+import { SaveContextSwitch } from "./save-context-switch";
 import { SaveLocationPanel } from "./save-location-panel";
 import { UploadDropzone } from "./upload-dropzone";
 
@@ -83,9 +85,10 @@ export function SaveDashboard() {
   const clear = useSaveSession((s) => s.clear);
   const importItem = useSaveSession((s) => s.importItem);
   const exportAllShips = useSaveSession((s) => s.exportAllShips);
+  const expeditionAvailable = useSaveSession((s) => s.expeditionAvailable);
   const downloadRewritten = useSaveSession((s) => s.downloadRewritten);
   const downloadOriginal = useSaveSession((s) => s.downloadOriginal);
-  const boundToFolder = useSaveLocation((s) => s.boundName);
+  const dirty = useSaveSession((s) => s.dirty);
   const importRef = useRef<HTMLInputElement>(null);
   const [pendingItem, setPendingItem] = useState<ReturnType<
     typeof parseNmsItem
@@ -94,6 +97,28 @@ export function SaveDashboard() {
   const [editingCurrency, setEditingCurrency] = useState<CurrencyField | null>(
     null,
   );
+  const [sourcePanel, setSourcePanel] = useState<null | "folder" | "loose">(
+    null,
+  );
+  const [confirmDiscard, setConfirmDiscard] = useState(false);
+
+  function toggleSource(panel: "folder" | "loose") {
+    setSourcePanel((current) => (current === panel ? null : panel));
+  }
+
+  async function closeSave() {
+    setConfirmDiscard(false);
+    await clear();
+    toast.message("Sessão do save encerrada.");
+  }
+
+  function requestClose() {
+    if (dirty) {
+      setConfirmDiscard(true);
+      return;
+    }
+    void closeSave();
+  }
 
   async function commitImport(item: ReturnType<typeof parseNmsItem>) {
     try {
@@ -136,80 +161,49 @@ export function SaveDashboard() {
         </p>
       </div>
 
-      <SaveLocationPanel />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Arquivo avulso</CardTitle>
-          <CardDescription>
-            Sem a pasta, a gravação volta a ser download. O app não lê nem
-            regenera <code>mf_save</code>.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <UploadDropzone />
-          {error ? (
-            <p className="text-sm text-destructive">{error}</p>
-          ) : null}
-        </CardContent>
-      </Card>
-
       {status === "ready" && summary ? (
-        <>
-          <Card>
-            <CardHeader className="border-b">
-              <CardTitle>{summary.saveName || fileName || "Save"}</CardTitle>
-              <CardDescription>
-                {summary.saveSummary || "Sem SaveSummary"} · mapping{" "}
-                {mappingVersion}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-3 pt-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Stat label="Galaxy" value={summary.galaxyLabel} />
-              <Stat label="Tempo de jogo" value={formatPlayTime(summary.playTimeSec)} />
-              <Stat label="Modo" value={summary.gameModeLabel} />
-              <div className="col-span-full grid gap-3 sm:grid-cols-3">
-                <CurrencyStat
-                  label="Units"
-                  value={summary.units.toLocaleString("pt-BR")}
-                  onEdit={() => setEditingCurrency("units")}
-                />
-                <CurrencyStat
-                  label="Nanites"
-                  value={summary.nanites.toLocaleString("pt-BR")}
-                  onEdit={() => setEditingCurrency("nanites")}
-                />
-                <CurrencyStat
-                  label="Quicksilver"
-                  value={summary.specials.toLocaleString("pt-BR")}
-                  onEdit={() => setEditingCurrency("specials")}
-                />
-              </div>
-              <Stat
-                label="Ships"
-                value={`${summary.shipCount} / ${summary.shipSlots}`}
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle>{summary.saveName || fileName || "Save"}</CardTitle>
+            <CardDescription>
+              {summary.saveSummary || "Sem SaveSummary"} · mapping{" "}
+              {mappingVersion}
+            </CardDescription>
+            {expeditionAvailable ? (
+              <CardAction>
+                <SaveContextSwitch />
+              </CardAction>
+            ) : null}
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Stat label="Galaxy" value={summary.galaxyLabel} />
+            <Stat label="Tempo de jogo" value={formatPlayTime(summary.playTimeSec)} />
+            <Stat label="Modo" value={summary.gameModeLabel} />
+            <div className="col-span-full grid gap-3 sm:grid-cols-3">
+              <CurrencyStat
+                label="Units"
+                value={summary.units.toLocaleString("pt-BR")}
+                onEdit={() => setEditingCurrency("units")}
               />
-              <Stat label="Plataforma" value={summary.platform || "—"} />
-              <Stat label="Versão" value={String(summary.gameVersion)} />
-            </CardContent>
-          </Card>
-
-          {unknownKeys.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Chaves desconhecidas</CardTitle>
-                <CardDescription>
-                  O mapping não cobriu {unknownKeys.length} chave(s). O parser
-                  as manteve como estão.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="font-mono text-xs">
-                {unknownKeys.join(", ")}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          <div className="flex flex-wrap gap-2">
+              <CurrencyStat
+                label="Nanites"
+                value={summary.nanites.toLocaleString("pt-BR")}
+                onEdit={() => setEditingCurrency("nanites")}
+              />
+              <CurrencyStat
+                label="Quicksilver"
+                value={summary.specials.toLocaleString("pt-BR")}
+                onEdit={() => setEditingCurrency("specials")}
+              />
+            </div>
+            <Stat
+              label="Ships"
+              value={`${summary.shipCount} / ${summary.shipSlots}`}
+            />
+            <Stat label="Plataforma" value={summary.platform || "—"} />
+            <Stat label="Versão" value={String(summary.gameVersion)} />
+          </CardContent>
+          <CardFooter className="flex-wrap gap-2">
             <Button
               type="button"
               onClick={() => {
@@ -247,66 +241,151 @@ export function SaveDashboard() {
                 e.target.value = "";
               }}
             />
-            <DropdownMenu>
-              <DropdownMenuTrigger render={<Button variant="outline" />}>
-                <Download />
-                {boundToFolder ? "Baixar cópia" : "Baixar save"}
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => {
-                    void (async () => {
-                      try {
-                        const bytes = await downloadRewritten();
-                        const name = (fileName ?? "save.hg").replace(
-                          /(\.hg)?$/i,
-                          "-edited.hg",
-                        );
-                        downloadBytes(name, bytes);
-                      } catch (err) {
-                        toast.error(
-                          err instanceof Error
-                            ? err.message
-                            : "Falha ao recomprimir",
-                        );
-                      }
-                    })();
-                  }}
-                >
-                  Recomprimido (LZ4)
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    try {
-                      downloadBytes(
-                        fileName ?? "save.hg",
-                        downloadOriginal(),
-                      );
-                    } catch (err) {
-                      toast.error(
-                        err instanceof Error ? err.message : "Sem original",
-                      );
-                    }
-                  }}
-                >
-                  Como foi aberto
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <Button
               type="button"
               variant="ghost"
-              onClick={() => {
-                void clear();
-                toast.message("Sessão do save encerrada.");
-              }}
+              className="sm:ml-auto"
+              onClick={requestClose}
             >
               <Trash2 />
               Fechar save
             </Button>
-          </div>
-        </>
+          </CardFooter>
+        </Card>
+      ) : (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {status === "hydrating" || status === "loading"
+                ? "Carregando o save…"
+                : "Nenhum save aberto"}
+            </CardTitle>
+            <CardDescription>
+              Abra a pasta do jogo ou solte um save.hg para ver galáxia, moedas
+              e naves.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {unknownKeys.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Chaves desconhecidas</CardTitle>
+            <CardDescription>
+              O mapping não cobriu {unknownKeys.length} chave(s). O parser
+              as manteve como estão.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="font-mono text-xs">
+            {unknownKeys.join(", ")}
+          </CardContent>
+        </Card>
       ) : null}
+
+      <SaveLocationPanel
+        expanded={sourcePanel === "folder"}
+        onToggle={() => toggleSource("folder")}
+      />
+
+      <Card>
+        <CardHeader className={sourcePanel === "loose" ? "border-b" : undefined}>
+          <CardTitle>Arquivo avulso</CardTitle>
+          {sourcePanel === "loose" ? (
+            <CardDescription>
+              Sem a pasta, a gravação volta a ser download. O app não lê nem
+              regenera <code>mf_save</code>.
+            </CardDescription>
+          ) : null}
+          <CardAction>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-expanded={sourcePanel === "loose"}
+              aria-label={
+                sourcePanel === "loose"
+                  ? "Recolher arquivo avulso"
+                  : "Abrir arquivo avulso"
+              }
+              onClick={() => toggleSource("loose")}
+            >
+              {sourcePanel === "loose" ? <ChevronUp /> : <ChevronDown />}
+            </Button>
+          </CardAction>
+        </CardHeader>
+        {sourcePanel === "loose" ? (
+          <CardContent className="space-y-3">
+            <UploadDropzone />
+            {error ? (
+              <p className="text-sm text-destructive">{error}</p>
+            ) : null}
+            {status === "ready" && summary ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="outline" />}>
+                  <Download />
+                  Baixar cópia
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      void (async () => {
+                        try {
+                          const bytes = await downloadRewritten();
+                          const name = (fileName ?? "save.hg").replace(
+                            /(\.hg)?$/i,
+                            "-edited.hg",
+                          );
+                          downloadBytes(name, bytes);
+                        } catch (err) {
+                          toast.error(
+                            err instanceof Error
+                              ? err.message
+                              : "Falha ao recomprimir",
+                          );
+                        }
+                      })();
+                    }}
+                  >
+                    Arquivo editado
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      try {
+                        downloadBytes(fileName ?? "save.hg", downloadOriginal());
+                      } catch (err) {
+                        toast.error(
+                          err instanceof Error ? err.message : "Sem original",
+                        );
+                      }
+                    }}
+                  >
+                    Arquivo original
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </CardContent>
+        ) : null}
+      </Card>
+
+      <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Alterações não salvas</DialogTitle>
+            <DialogDescription>
+              As alterações feitas não foram salvas. Use Salvar neste arquivo,
+              ou Baixar cópia e escolha Arquivo editado.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => void closeSave()}>
+              Fechar mesmo assim
+            </Button>
+            <Button onClick={() => setConfirmDiscard(false)}>Voltar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <CurrencyEditDialog
         field={editingCurrency}

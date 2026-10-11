@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { FolderOpen, RefreshCw, Save, X } from "lucide-react";
+import { ChevronDown, ChevronUp, FolderOpen, RefreshCw, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -120,7 +121,13 @@ function UnselectedFolder() {
   );
 }
 
-export function SaveLocationPanel() {
+export function SaveLocationPanel({
+  expanded,
+  onToggle,
+}: {
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   const supported = useSaveLocation((s) => s.supported);
   const hydrated = useSaveLocation((s) => s.hydrated);
   const saveFolderName = useSaveLocation((s) => s.saveFolderName);
@@ -206,14 +213,29 @@ export function SaveLocationPanel() {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className={expanded ? "border-b" : undefined}>
         <CardTitle>Pasta do jogo</CardTitle>
-        <CardDescription>
-          A pasta do jogo neste computador. Cada slot mostra o save do jogador
-          e o automático, e o mais recente abre sozinho. Salvar grava nesse
-          mesmo arquivo, depois de um backup com data e hora.
-        </CardDescription>
+        {expanded ? (
+          <CardDescription>
+            A pasta do jogo neste computador. Cada slot mostra o save do jogador
+            e o automático, e o mais recente abre sozinho. Salvar grava nesse
+            mesmo arquivo, depois de um backup com data e hora.
+          </CardDescription>
+        ) : null}
+        <CardAction>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-expanded={expanded}
+            aria-label={expanded ? "Recolher pasta do jogo" : "Abrir pasta do jogo"}
+            onClick={onToggle}
+          >
+            {expanded ? <ChevronUp /> : <ChevronDown />}
+          </Button>
+        </CardAction>
       </CardHeader>
+      {expanded ? (
       <CardContent className="grid gap-4">
         {!hydrated ? (
           <p className="text-sm text-muted-foreground">Procurando a pasta do jogo…</p>
@@ -389,6 +411,7 @@ export function SaveLocationPanel() {
           <p className="text-sm text-destructive">{locationError}</p>
         ) : null}
       </CardContent>
+      ) : null}
 
       <Dialog open={confirmStale} onOpenChange={setConfirmStale}>
         <DialogContent className="sm:max-w-md">

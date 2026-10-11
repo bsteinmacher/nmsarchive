@@ -1,5 +1,5 @@
 import { frigateClassLabel } from "../freighter-type";
-import { getPlayerState } from "../player";
+import { getPlayerState, type SaveContext } from "../player";
 import { asArray, asRecord, asString, normalizeSeed } from "../value";
 import {
   clonePlayer,
@@ -24,8 +24,11 @@ export function frigateSeedFromPayload(payload: unknown): string {
   return normalizeSeed(rec?.ResourceSeed);
 }
 
-export function listFrigates(json: unknown): ExtractedSlot[] {
-  const player = getPlayerState(json);
+export function listFrigates(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  const player = getPlayerState(json, context);
   const frigates = player?.FleetFrigates;
   if (!Array.isArray(frigates)) return [];
 
@@ -75,8 +78,9 @@ export function listFrigates(json: unknown): ExtractedSlot[] {
 export function insertFrigate(
   mappedJson: unknown,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   let arr = asArray(cloned.player.FleetFrigates);
   if (!arr) {
@@ -102,8 +106,9 @@ export function insertFrigate(
 export function clearFrigate(
   mappedJson: unknown,
   index: number,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const arr = asArray(cloned.player.FleetFrigates);
   if (!arr) {
@@ -127,11 +132,11 @@ export const frigatesAdapter: CategoryAdapter = {
   ],
   list: listFrigates,
   insert: insertFrigate,
-  replace: (json, index, payload) =>
-    replaceAtIndex(json, "FleetFrigates", index, payload),
+  replace: (json, index, payload, context) =>
+    replaceAtIndex(json, "FleetFrigates", index, payload, context),
   clear: clearFrigate,
-  reorder: (json, from, to) =>
-    reorderPlayerArray(json, "FleetFrigates", from, to),
+  reorder: (json, from, to, context) =>
+    reorderPlayerArray(json, "FleetFrigates", from, to, [], [], context),
   summarize(payload) {
     const listed = listFrigates({
       BaseContext: { PlayerStateData: { FleetFrigates: [payload] } },

@@ -1,4 +1,4 @@
-import { getPlayerState } from "../player";
+import { getPlayerState, missingPlayerMessage, type SaveContext } from "../player";
 import { remapSlotIndex, reorderSlots, shipCustomisationIndex } from "../reorder";
 import { shipTypeFromFilename } from "../ship-type";
 import {
@@ -140,8 +140,11 @@ export function isEmptyShipSlot(slot: unknown): boolean {
 
 export { emptySlotLabel } from "./names";
 
-export function listShips(json: unknown): ExtractedShip[] {
-  const player = getPlayerState(json);
+export function listShips(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedShip[] {
+  const player = getPlayerState(json, context);
   const ships = player?.ShipOwnership;
   if (!Array.isArray(ships) || !player) return [];
 
@@ -185,8 +188,11 @@ export function listShips(json: unknown): ExtractedShip[] {
   });
 }
 
-export function listFilledShips(json: unknown): ExtractedShip[] {
-  return listShips(json).filter((ship) => !ship.empty);
+export function listFilledShips(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedShip[] {
+  return listShips(json, context).filter((ship) => !ship.empty);
 }
 
 export function shipSeedFromPayload(payload: unknown): string {
@@ -195,8 +201,12 @@ export function shipSeedFromPayload(payload: unknown): string {
   return normalizeSeed(resource?.Seed);
 }
 
-export function insertShip(mappedJson: unknown, payload: unknown): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+export function insertShip(
+  mappedJson: unknown,
+  payload: unknown,
+  context: SaveContext = "main",
+): InsertResult {
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const ships = asArray(cloned.player.ShipOwnership);
   if (!ships) {
@@ -227,8 +237,12 @@ export const EMPTY_SHIP_OWNERSHIP = {
   Resource: { Filename: "", Seed: [false, "0x0"] as [boolean, string] },
 };
 
-export function clearShip(mappedJson: unknown, index: number): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+export function clearShip(
+  mappedJson: unknown,
+  index: number,
+  context: SaveContext = "main",
+): InsertResult {
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const ships = asArray(cloned.player.ShipOwnership);
   if (!ships) {
@@ -258,8 +272,9 @@ export function replaceShip(
   mappedJson: unknown,
   index: number,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const ships = asArray(cloned.player.ShipOwnership);
   if (!ships) {
@@ -325,11 +340,12 @@ export function reorderShipOwnership(
   mappedJson: unknown,
   from: number,
   to: number,
+  context: SaveContext = "main",
 ): WriteResult {
   const json = structuredClone(mappedJson);
-  const player = getPlayerState(json);
+  const player = getPlayerState(json, context);
   if (!player) {
-    return { ok: false, error: "PlayerStateData ausente neste save." };
+    return { ok: false, error: missingPlayerMessage(context) };
   }
   const ships = asArray(player.ShipOwnership);
   if (!ships) {

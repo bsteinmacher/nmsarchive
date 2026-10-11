@@ -1,14 +1,15 @@
-import { getPlayerState } from "../player";
+import { getPlayerState, missingPlayerMessage, type SaveContext } from "../player";
 import { remapSlotIndex, reorderSlots } from "../reorder";
 import { asArray, asNumber, asRecord } from "../value";
 import type { InsertResult, WriteResult } from "./types";
 
 export function clonePlayer(
   mappedJson: unknown,
+  context: SaveContext = "main",
 ): { json: unknown; player: Record<string, unknown> } | { error: string } {
   const json = structuredClone(mappedJson);
-  const player = getPlayerState(json);
-  if (!player) return { error: "PlayerStateData ausente neste save." };
+  const player = getPlayerState(json, context);
+  if (!player) return { error: missingPlayerMessage(context) };
   return { json, player };
 }
 
@@ -18,8 +19,9 @@ export function insertAtFirstEmpty(
   payload: unknown,
   isEmpty: (slot: unknown) => boolean,
   emptyError: string,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const arr = asArray(cloned.player[arrayKey]);
   if (!arr) {
@@ -37,8 +39,9 @@ export function emptySlotAt(
   index: number,
   isEmpty: (slot: unknown) => boolean,
   fallback: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const arr = asArray(cloned.player[arrayKey]);
   if (!arr) {
@@ -57,8 +60,9 @@ export function replaceAtIndex(
   arrayKey: string,
   index: number,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const arr = asArray(cloned.player[arrayKey]);
   if (!arr) {
@@ -78,8 +82,9 @@ export function reorderPlayerArray(
   to: number,
   parallelKeys: readonly string[] = [],
   indexKeys: readonly string[] = [],
+  context: SaveContext = "main",
 ): WriteResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const arr = asArray(cloned.player[arrayKey]);
   if (!arr) {
