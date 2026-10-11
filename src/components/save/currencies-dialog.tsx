@@ -81,7 +81,7 @@ export function CurrencyEditDialog({
     try {
       await updateCurrencies({ [field]: parsedValue });
       toast.success(
-        `${meta.label} atualizado neste save. Use “Baixar save” para levar o .hg ao jogo.`,
+        `${meta.label} atualizado neste save. Para levar ao jogo, use Salvar neste arquivo ou Baixar cópia e escolha Arquivo editado.`,
       );
       onClose();
     } catch (err) {

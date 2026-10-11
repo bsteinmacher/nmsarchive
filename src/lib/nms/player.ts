@@ -11,6 +11,13 @@ export const GAME_MODES: Record<number, string> = {
   6: "Seasonal",
 };
 
+export type SaveContext = "main" | "expedition";
+
+const CONTEXT_FIELD = {
+  main: "BaseContext",
+  expedition: "ExpeditionContext",
+} as const satisfies Record<SaveContext, string>;
+
 export type PlayerSummary = {
   saveName: string;
   saveSummary: string;
@@ -28,22 +35,57 @@ export type PlayerSummary = {
   shipSlots: number;
 };
 
-export function getPlayerState(json: unknown): Record<string, unknown> | null {
+export function contextRecord(
+  json: unknown,
+  context: SaveContext = "main",
+): Record<string, unknown> | null {
   const root = asRecord(json);
   if (!root) return null;
-  const base = asRecord(root.BaseContext);
-  return asRecord(base?.PlayerStateData) ?? asRecord(root.PlayerStateData);
+  return asRecord(root[CONTEXT_FIELD[context]]);
 }
 
-export function summarizePlayer(json: unknown): PlayerSummary {
+export function getPlayerState(
+  json: unknown,
+  context: SaveContext = "main",
+): Record<string, unknown> | null {
+  const root = asRecord(json);
+  if (!root) return null;
+  const player = asRecord(contextRecord(json, context)?.PlayerStateData);
+  if (player) return player;
+  if (context === "main") return asRecord(root.PlayerStateData);
+  return null;
+}
+
+export function hasExpeditionContext(json: unknown): boolean {
+  return getPlayerState(json, "expedition") != null;
+}
+
+/** Contexto em que o jogo está. Qualquer ActiveContext diferente de Main, com expedição no arquivo, abre nela. */
+export function initialSaveContext(json: unknown): SaveContext {
+  if (!hasExpeditionContext(json)) return "main";
+  const active = asString(asRecord(json)?.ActiveContext);
+  if (active && active !== "Main") return "expedition";
+  return "main";
+}
+
+export function missingPlayerMessage(context: SaveContext = "main"): string {
+  return context === "expedition"
+    ? "PlayerStateData ausente nesta expedição."
+    : "PlayerStateData ausente neste save.";
+}
+
+export function summarizePlayer(
+  json: unknown,
+  context: SaveContext = "main",
+): PlayerSummary {
   const root = asRecord(json) ?? {};
   const common = asRecord(root.CommonStateData) ?? {};
-  const base = asRecord(root.BaseContext) ?? {};
-  const player = getPlayerState(json) ?? {};
+  const selected = contextRecord(json, context) ?? {};
+  const player = getPlayerState(json, context) ?? {};
   const address = asRecord(player.UniverseAddress) ?? {};
   const ships = asArray(player.ShipOwnership) ?? [];
   const galaxy = asNumber(address.RealityIndex) ?? 0;
-  const gameMode = asNumber(base.GameMode) ?? 0;
+  const gameMode = asNumber(selected.GameMode) ?? 0;
   const filledShips = ships.filter((slot) => {
     const rec = asRecord(slot);
     const resource = asRecord(rec?.Resource);

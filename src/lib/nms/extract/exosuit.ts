@@ -1,4 +1,4 @@
-import { getPlayerState } from "../player";
+import { getPlayerState, type SaveContext } from "../player";
 import { asNumber, asRecord } from "../value";
 import { clonePlayer } from "./array";
 import {
@@ -22,8 +22,11 @@ function isLayoutPayload(payload: unknown): payload is ExosuitLayoutPayload {
   return Boolean(rec && asRecord(rec.Inventory) && asRecord(rec.Inventory_TechOnly));
 }
 
-export function extractExosuitLayout(json: unknown): ExosuitLayoutPayload | null {
-  const player = getPlayerState(json);
+export function extractExosuitLayout(
+  json: unknown,
+  context: SaveContext = "main",
+): ExosuitLayoutPayload | null {
+  const player = getPlayerState(json, context);
   if (!player) return null;
   if (!asRecord(player.Inventory) && !asRecord(player.Inventory_TechOnly)) {
     return null;
@@ -35,8 +38,11 @@ export function extractExosuitLayout(json: unknown): ExosuitLayoutPayload | null
   };
 }
 
-export function listExosuit(json: unknown): ExtractedSlot<ExosuitLayoutPayload>[] {
-  const payload = extractExosuitLayout(json);
+export function listExosuit(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot<ExosuitLayoutPayload>[] {
+  const payload = extractExosuitLayout(json, context);
   if (!payload) return [];
   const general = payload.Inventory;
   const tech = payload.Inventory_TechOnly;
@@ -79,11 +85,12 @@ export function listExosuit(json: unknown): ExtractedSlot<ExosuitLayoutPayload>[
 export function insertExosuit(
   mappedJson: unknown,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
   if (!isLayoutPayload(payload)) {
     return { ok: false, error: "Payload de traje inválido (faltam os grids)." };
   }
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const general = asRecord(cloned.player.Inventory);
   const tech = asRecord(cloned.player.Inventory_TechOnly);
@@ -110,7 +117,8 @@ export const exosuitAdapter: CategoryAdapter<ExosuitLayoutPayload> = {
   ],
   list: listExosuit,
   insert: insertExosuit,
-  replace: (json, _index, payload) => insertExosuit(json, payload),
+  replace: (json, _index, payload, context) =>
+    insertExosuit(json, payload, context),
   summarize(payload) {
     const listed = listExosuit({
       BaseContext: {

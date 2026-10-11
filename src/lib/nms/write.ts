@@ -6,7 +6,7 @@ import {
   clearItem,
   type InsertResult,
 } from "./extract";
-import { getPlayerState } from "./player";
+import { getPlayerState, missingPlayerMessage, type SaveContext } from "./player";
 import type { MappingFile } from "./mapping";
 import { writeHg } from "./parse";
 import type { Category } from "@/types/nms";
@@ -38,16 +38,18 @@ export function insertCategoryItem(
   category: Category,
   payload: unknown,
   seed?: string,
+  context: SaveContext = "main",
 ): InsertResult {
-  return insertItem(mappedJson, category, payload, seed);
+  return insertItem(mappedJson, category, payload, seed, context);
 }
 
 export function clearCategorySlot(
   mappedJson: unknown,
   category: Category,
   index: number,
+  context: SaveContext = "main",
 ): InsertResult {
-  return clearItem(mappedJson, category, index);
+  return clearItem(mappedJson, category, index, context);
 }
 
 export function reorderCategorySlots(
@@ -55,18 +57,20 @@ export function reorderCategorySlots(
   category: Category,
   from: number,
   to: number,
+  context: SaveContext = "main",
 ): WriteResult {
-  return reorderCategory(mappedJson, category, from, to);
+  return reorderCategory(mappedJson, category, from, to, context);
 }
 
 export function setPlayerCurrencies(
   mappedJson: unknown,
   coins: Partial<PlayerCurrencies>,
+  context: SaveContext = "main",
 ): WriteResult {
   const json = structuredClone(mappedJson);
-  const player = getPlayerState(json);
+  const player = getPlayerState(json, context);
   if (!player) {
-    return { ok: false, error: "PlayerStateData ausente neste save." };
+    return { ok: false, error: missingPlayerMessage(context) };
   }
   if (coins.units != null) player.Units = coins.units;
   if (coins.nanites != null) player.Nanites = coins.nanites;

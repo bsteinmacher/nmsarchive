@@ -1,5 +1,5 @@
 import type { Category } from "@/types/nms";
-import { getPlayerState } from "../player";
+import { getPlayerState, type SaveContext } from "../player";
 import { asArray, asNumber, asRecord, asString } from "../value";
 import {
   clonePlayer,
@@ -117,8 +117,11 @@ function fallbackName(typeKey: string, index: number, itemType: string): string 
   return itemType ? `Base ${itemType}` : `Base ${index + 1}`;
 }
 
-export function listPersistentBases(json: unknown): ExtractedSlot[] {
-  const player = getPlayerState(json);
+export function listPersistentBases(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  const player = getPlayerState(json, context);
   const bases = player?.PersistentPlayerBases;
   if (!Array.isArray(bases)) return [];
 
@@ -169,22 +172,34 @@ export function listPersistentBases(json: unknown): ExtractedSlot[] {
   });
 }
 
-export function listBases(json: unknown): ExtractedSlot[] {
-  return listPersistentBases(json).filter(
+export function listBases(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  return listPersistentBases(json, context).filter(
     (item) => !isDeepSpaceBaseSlot(item) && !isSpaceStationBaseSlot(item),
   );
 }
 
-export function listFreighterBases(json: unknown): ExtractedSlot[] {
-  return listPersistentBases(json).filter(isFreighterBaseSlot);
+export function listFreighterBases(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  return listPersistentBases(json, context).filter(isFreighterBaseSlot);
 }
 
-export function listDeepSpaceBases(json: unknown): ExtractedSlot[] {
-  return listPersistentBases(json).filter(isDeepSpaceBaseSlot);
+export function listDeepSpaceBases(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  return listPersistentBases(json, context).filter(isDeepSpaceBaseSlot);
 }
 
-export function listSpaceStationBases(json: unknown): ExtractedSlot[] {
-  return listPersistentBases(json).filter(isSpaceStationBaseSlot);
+export function listSpaceStationBases(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  return listPersistentBases(json, context).filter(isSpaceStationBaseSlot);
 }
 
 function summarizeFromList(
@@ -209,8 +224,9 @@ function insertBaseOfType(
   payload: unknown,
   type: string,
   limit?: number,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const arr = asArray(cloned.player.PersistentPlayerBases);
   if (!arr) {
@@ -259,8 +275,9 @@ function isPlanetLikeEmpty(slot: unknown): boolean {
 export function clearPersistentBase(
   mappedJson: unknown,
   index: number,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const arr = asArray(cloned.player.PersistentPlayerBases);
   if (!arr) {
@@ -294,16 +311,17 @@ export const basesAdapter: CategoryAdapter = {
   label: "Bases",
   columns: BASE_COLUMNS,
   list: listBases,
-  insert: (json, payload) =>
+  insert: (json, payload, context) =>
     insertAtFirstEmpty(
       json,
       "PersistentPlayerBases",
       payload,
       isPlanetLikeEmpty,
       EMPTY_BASE,
+      context,
     ),
-  replace: (json, index, payload) =>
-    replaceAtIndex(json, "PersistentPlayerBases", index, payload),
+  replace: (json, index, payload, context) =>
+    replaceAtIndex(json, "PersistentPlayerBases", index, payload, context),
   clear: clearPersistentBase,
   summarize: (payload) => summarizeFromList(listBases, payload, "Base"),
   seedFromPayload: baseSeedFromPayload,
@@ -315,10 +333,10 @@ export const deepSpaceAdapter: CategoryAdapter = {
   label: "Deep Space Bases",
   columns: BASE_COLUMNS,
   list: listDeepSpaceBases,
-  insert: (json, payload) =>
-    insertBaseOfType(json, payload, DEEP_SPACE_BASE_TYPE),
-  replace: (json, index, payload) =>
-    replaceAtIndex(json, "PersistentPlayerBases", index, payload),
+  insert: (json, payload, context) =>
+    insertBaseOfType(json, payload, DEEP_SPACE_BASE_TYPE, undefined, context),
+  replace: (json, index, payload, context) =>
+    replaceAtIndex(json, "PersistentPlayerBases", index, payload, context),
   clear: clearPersistentBase,
   summarize: (payload) =>
     summarizeFromList(listDeepSpaceBases, payload, DEEP_SPACE_LABEL),
@@ -331,15 +349,16 @@ export const spaceStationAdapter: CategoryAdapter = {
   label: "Space Stations",
   columns: BASE_COLUMNS,
   list: listSpaceStationBases,
-  insert: (json, payload) =>
+  insert: (json, payload, context) =>
     insertBaseOfType(
       json,
       payload,
       SPACE_STATION_BASE_TYPE,
       SPACE_STATION_BASE_LIMIT,
+      context,
     ),
-  replace: (json, index, payload) =>
-    replaceAtIndex(json, "PersistentPlayerBases", index, payload),
+  replace: (json, index, payload, context) =>
+    replaceAtIndex(json, "PersistentPlayerBases", index, payload, context),
   clear: clearPersistentBase,
   summarize: (payload) =>
     summarizeFromList(listSpaceStationBases, payload, SPACE_STATION_LABEL),

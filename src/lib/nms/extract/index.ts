@@ -1,3 +1,4 @@
+import type { SaveContext } from "../player";
 import type { Category } from "@/types/nms";
 import {
   basesAdapter,
@@ -75,24 +76,26 @@ export function getAdapter(category: Category): CategoryAdapter {
 export function listCategory(
   json: unknown,
   category: Category,
+  context: SaveContext = "main",
 ): ExtractedSlot[] {
-  return getAdapter(category).list(json);
+  return getAdapter(category).list(json, context);
 }
 
 export function listAllCategories(
   json: unknown,
+  context: SaveContext = "main",
 ): Record<Category, ExtractedSlot[]> {
   return {
-    ship: ADAPTERS.ship.list(json),
-    multitool: ADAPTERS.multitool.list(json),
-    companion: ADAPTERS.companion.list(json),
-    exosuit: ADAPTERS.exosuit.list(json),
-    freighter: ADAPTERS.freighter.list(json),
-    frigate: ADAPTERS.frigate.list(json),
-    base: ADAPTERS.base.list(json),
-    deepspace: ADAPTERS.deepspace.list(json),
-    spacestation: ADAPTERS.spacestation.list(json),
-    wonder: ADAPTERS.wonder.list(json),
+    ship: ADAPTERS.ship.list(json, context),
+    multitool: ADAPTERS.multitool.list(json, context),
+    companion: ADAPTERS.companion.list(json, context),
+    exosuit: ADAPTERS.exosuit.list(json, context),
+    freighter: ADAPTERS.freighter.list(json, context),
+    frigate: ADAPTERS.frigate.list(json, context),
+    base: ADAPTERS.base.list(json, context),
+    deepspace: ADAPTERS.deepspace.list(json, context),
+    spacestation: ADAPTERS.spacestation.list(json, context),
+    wonder: ADAPTERS.wonder.list(json, context),
   };
 }
 
@@ -101,9 +104,10 @@ export function insertItem(
   category: Category,
   payload: unknown,
   seed?: string,
+  context: SaveContext = "main",
 ): InsertResult {
   const adapter = getAdapter(resolveInsertCategory(category, payload));
-  const first = adapter.insert(json, payload);
+  const first = adapter.insert(json, payload, context);
   if (first.ok) return first;
   if (!adapter.replace) return first;
   const needles = new Set(
@@ -113,7 +117,7 @@ export function insertItem(
   );
   if (needles.size === 0) return first;
   const match = adapter
-    .list(json)
+    .list(json, context)
     .find(
       (item) =>
         !item.empty &&
@@ -122,7 +126,7 @@ export function insertItem(
         needles.has(item.seed.toLowerCase()),
     );
   if (!match) return first;
-  return adapter.replace(json, match.index, payload);
+  return adapter.replace(json, match.index, payload, context);
 }
 
 export function replaceItem(
@@ -130,24 +134,26 @@ export function replaceItem(
   category: Category,
   index: number,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
   const adapter = getAdapter(category);
   if (!adapter.replace) {
     return { ok: false, error: "Esta categoria não substitui slot." };
   }
-  return adapter.replace(json, index, payload);
+  return adapter.replace(json, index, payload, context);
 }
 
 export function clearItem(
   json: unknown,
   category: Category,
   index: number,
+  context: SaveContext = "main",
 ): InsertResult {
   const adapter = getAdapter(category);
   if (!adapter.clear) {
     return { ok: false, error: "Esta categoria não esvazia slot." };
   }
-  return adapter.clear(json, index);
+  return adapter.clear(json, index, context);
 }
 
 export function reorderCategory(
@@ -155,12 +161,13 @@ export function reorderCategory(
   category: Category,
   from: number,
   to: number,
+  context: SaveContext = "main",
 ): WriteResult {
   const adapter = getAdapter(category);
   if (!adapter.reorder) {
     return { ok: false, error: "Esta categoria não reordena." };
   }
-  return adapter.reorder(json, from, to);
+  return adapter.reorder(json, from, to, context);
 }
 
 export function seedFromPayload(category: Category, payload: unknown): string {

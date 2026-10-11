@@ -1,5 +1,5 @@
 import { freighterTypeFromFilename } from "../freighter-type";
-import { getPlayerState } from "../player";
+import { getPlayerState, type SaveContext } from "../player";
 import {
   asArray,
   asRecord,
@@ -58,8 +58,11 @@ export function currentFreighterPayload(
   };
 }
 
-export function listFreighters(json: unknown): ExtractedSlot[] {
-  const player = getPlayerState(json);
+export function listFreighters(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  const player = getPlayerState(json, context);
   if (!player) return [];
   const currentResource = player.CurrentFreighter;
   const hasCurrentKey = "CurrentFreighter" in player;
@@ -124,8 +127,9 @@ export function listFreighters(json: unknown): ExtractedSlot[] {
 function applyCurrent(
   mappedJson: unknown,
   payload: CurrentFreighterPayload,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   cloned.player.CurrentFreighter = structuredClone(payload.Resource);
   cloned.player.FreighterInventory = structuredClone(payload.Inventory);
@@ -164,9 +168,10 @@ function applyCurrent(
 export function insertFreighter(
   mappedJson: unknown,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
   if (isCurrentPayload(payload)) {
-    return applyCurrent(mappedJson, payload);
+    return applyCurrent(mappedJson, payload, context);
   }
   if (!isFleetPayload(payload)) {
     return {
@@ -174,7 +179,7 @@ export function insertFreighter(
       error: "Payload de cargueira sem kind current/fleet.",
     };
   }
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const fleet = asArray(cloned.player.FreighterFleet);
   if (!fleet) {
@@ -201,14 +206,15 @@ export function replaceFreighter(
   mappedJson: unknown,
   index: number,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
   if (index === 0 || isCurrentPayload(payload)) {
     if (!isCurrentPayload(payload)) {
       return { ok: false, error: "Slot atual exige payload kind=current." };
     }
-    return applyCurrent(mappedJson, payload);
+    return applyCurrent(mappedJson, payload, context);
   }
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const fleet = asArray(cloned.player.FreighterFleet);
   if (!fleet) {
@@ -227,6 +233,7 @@ export function replaceFreighter(
 export function clearFreighter(
   mappedJson: unknown,
   index: number,
+  context: SaveContext = "main",
 ): InsertResult {
   if (index === 0) {
     return {
@@ -234,7 +241,7 @@ export function clearFreighter(
       error: "A cargueira atual não pode ser esvaziada por aqui.",
     };
   }
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const fleet = asArray(cloned.player.FreighterFleet);
   if (!fleet) {

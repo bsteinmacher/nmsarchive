@@ -1,4 +1,4 @@
-import { getPlayerState } from "../player";
+import { getPlayerState, type SaveContext } from "../player";
 import { asArray, asRecord, asString, normalizeSeed } from "../value";
 import { clonePlayer } from "./array";
 import { displayId, nestedEnum } from "./names";
@@ -38,8 +38,11 @@ export function isEmptyWonderSlot(record: unknown, extra: unknown): boolean {
   return !name && seed === "0x0";
 }
 
-export function listWonders(json: unknown): ExtractedSlot<WonderPayload>[] {
-  const player = getPlayerState(json);
+export function listWonders(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot<WonderPayload>[] {
+  const player = getPlayerState(json, context);
   if (!player) return [];
   const records = asArray(player.WonderCustomRecords);
   const extras = asArray(player.WonderCustomRecordsExtraData);
@@ -99,11 +102,12 @@ export function listWonders(json: unknown): ExtractedSlot<WonderPayload>[] {
 export function insertWonder(
   mappedJson: unknown,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
   if (!isWonderPayload(payload)) {
     return { ok: false, error: "Payload de wonder inválido (record + extra)." };
   }
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const records = asArray(cloned.player.WonderCustomRecords);
   const extras = asArray(cloned.player.WonderCustomRecordsExtraData);
@@ -132,11 +136,12 @@ export function replaceWonder(
   mappedJson: unknown,
   index: number,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
   if (!isWonderPayload(payload)) {
     return { ok: false, error: "Payload de wonder inválido (record + extra)." };
   }
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const records = asArray(cloned.player.WonderCustomRecords);
   const extras = asArray(cloned.player.WonderCustomRecordsExtraData);
@@ -157,8 +162,9 @@ export function replaceWonder(
 export function clearWonder(
   mappedJson: unknown,
   index: number,
+  context: SaveContext = "main",
 ): InsertResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const records = asArray(cloned.player.WonderCustomRecords);
   const extras = asArray(cloned.player.WonderCustomRecordsExtraData);

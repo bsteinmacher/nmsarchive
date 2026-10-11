@@ -1,3 +1,4 @@
+import type { SaveContext } from "../player";
 import type { Category } from "@/types/nms";
 
 export type ExtractedItem<TPayload = unknown> = {
@@ -48,12 +49,22 @@ export type CategoryAdapter<TPayload = unknown> = {
   category: Category;
   label: string;
   columns: readonly AdapterColumn[];
-  list(json: unknown): ExtractedSlot<TPayload>[];
-  insert(json: unknown, payload: TPayload): InsertResult;
-  replace?(json: unknown, index: number, payload: TPayload): InsertResult;
+  list(json: unknown, context?: SaveContext): ExtractedSlot<TPayload>[];
+  insert(json: unknown, payload: TPayload, context?: SaveContext): InsertResult;
+  replace?(
+    json: unknown,
+    index: number,
+    payload: TPayload,
+    context?: SaveContext,
+  ): InsertResult;
   /** Esvazia o slot no lugar. O array do jogo não encolhe. */
-  clear?(json: unknown, index: number): InsertResult;
-  reorder?(json: unknown, from: number, to: number): WriteResult;
+  clear?(json: unknown, index: number, context?: SaveContext): InsertResult;
+  reorder?(
+    json: unknown,
+    from: number,
+    to: number,
+    context?: SaveContext,
+  ): WriteResult;
   summarize(payload: TPayload): {
     name: string;
     seed: string;

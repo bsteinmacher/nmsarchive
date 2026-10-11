@@ -1,4 +1,4 @@
-import { getPlayerState } from "../player";
+import { getPlayerState, type SaveContext } from "../player";
 import { multitoolTypeFromFilename } from "../multitool-type";
 import {
   asRecord,
@@ -30,8 +30,11 @@ export function multitoolSeedFromPayload(payload: unknown): string {
   return normalizeSeed(resource?.Seed);
 }
 
-export function listMultitools(json: unknown): ExtractedSlot[] {
-  const player = getPlayerState(json);
+export function listMultitools(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  const player = getPlayerState(json, context);
   const tools = player?.Multitools;
   if (!Array.isArray(tools)) return [];
 
@@ -85,26 +88,34 @@ export const multitoolsAdapter: CategoryAdapter = {
     { id: "seed", header: "Seed" },
   ],
   list: listMultitools,
-  insert: (json, payload) =>
+  insert: (json, payload, context) =>
     insertAtFirstEmpty(
       json,
       "Multitools",
       payload,
       isEmptyMultitoolSlot,
       EMPTY_MT,
+      context,
     ),
-  replace: (json, index, payload) =>
-    replaceAtIndex(json, "Multitools", index, payload),
-  clear: (json, index) =>
-    emptySlotAt(json, "Multitools", index, isEmptyMultitoolSlot, {
-      Name: "",
-      Resource: { Filename: "", Seed: [false, "0x0"] },
-      Seed: [false, "0x0"],
-    }),
-  reorder: (json, from, to) =>
+  replace: (json, index, payload, context) =>
+    replaceAtIndex(json, "Multitools", index, payload, context),
+  clear: (json, index, context) =>
+    emptySlotAt(
+      json,
+      "Multitools",
+      index,
+      isEmptyMultitoolSlot,
+      {
+        Name: "",
+        Resource: { Filename: "", Seed: [false, "0x0"] },
+        Seed: [false, "0x0"],
+      },
+      context,
+    ),
+  reorder: (json, from, to, context) =>
     reorderPlayerArray(json, "Multitools", from, to, [], [
       "ActiveMultioolIndex",
-    ]),
+    ], context),
   summarize(payload) {
     const listed = listMultitools({
       BaseContext: { PlayerStateData: { Multitools: [payload] } },

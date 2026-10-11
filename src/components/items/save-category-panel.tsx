@@ -6,6 +6,7 @@ import { GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "cn";
 import { ArchiveItemDialog } from "@/components/items/archive-item-dialog";
+import { SaveContextSwitch } from "@/components/save/save-context-switch";
 import { ListViewToggle } from "@/components/items/list-view-toggle";
 import { SaveItemDetailDialog } from "@/components/items/save-item-detail-dialog";
 import {
@@ -376,8 +377,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
         {liveMessage}
       </p>
       <div className="flex flex-col gap-6">
-        <div className="flex justify-end">
-          <ListViewToggle value={view} onChange={setView} />
+        <div className="flex flex-wrap items-center gap-2">
+          <SaveContextSwitch />
+          <div className="ml-auto">
+            <ListViewToggle value={view} onChange={setView} />
+          </div>
         </div>
         <SlotList
           category={category}

@@ -17,8 +17,11 @@ import {
   type MappingFile,
 } from "@/lib/nms/mapping";
 import {
+  hasExpeditionContext,
+  initialSaveContext,
   summarizePlayer,
   type PlayerSummary,
+  type SaveContext,
 } from "@/lib/nms/player";
 import {
   insertCategoryItem,
@@ -46,6 +49,7 @@ type SessionMeta = {
   formatHint?: string;
   origin?: "directory" | "upload";
   diskModified?: number | null;
+  dirty?: boolean;
 };
 
 type Status = "idle" | "hydrating" | "loading" | "ready" | "error";
@@ -78,6 +82,9 @@ type SaveSessionState = {
   origin: "directory" | "upload" | null;
   diskModified: number | null;
   unknownKeys: string[];
+  saveContext: SaveContext;
+  expeditionAvailable: boolean;
+  dirty: boolean;
   summary: PlayerSummary | null;
   ships: ExtractedShip[];
   items: ItemsByCategory;
@@ -86,6 +93,7 @@ type SaveSessionState = {
     file: File,
     source?: { origin?: "directory" | "upload" },
   ) => Promise<void>;
+  setSaveContext: (context: SaveContext) => void;
   previewFile: (file: File) => Promise<PlayerSummary>;
   noteDiskWrite: (diskModified: number, bytes: Uint8Array) => Promise<void>;
   clear: () => Promise<void>;
@@ -120,15 +128,17 @@ async function fetchMapping(): Promise<MappingFile> {
 
 function applyParsed(
   json: unknown,
+  context: SaveContext,
   extra: Partial<SaveSessionState>,
 ): Partial<SaveSessionState> {
-  const items = listAllCategories(json);
   return {
     status: "ready",
     error: null,
-    summary: summarizePlayer(json),
-    ships: listShips(json),
-    items,
+    saveContext: context,
+    expeditionAvailable: hasExpeditionContext(json),
+    summary: summarizePlayer(json, context),
+    ships: listShips(json, context),
+    items: listAllCategories(json, context),
     ...extra,
   };
 }
@@ -147,6 +157,12 @@ function persistJson() {
   return idbSet(IDB_JSON, mappedJson);
 }
 
+async function rememberDirty(dirty: boolean) {
+  const previous = (await idbGet(IDB_META)) as SessionMeta | undefined;
+  if (!previous) return;
+  await idbSet(IDB_META, { ...previous, dirty });
+}
+
 export const useSaveSession = create<SaveSessionState>((set, get) => ({
   status: "idle",
   hydrated: false,
@@ -158,6 +174,9 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   origin: null,
   diskModified: null,
   unknownKeys: [],
+  saveContext: "main",
+  expeditionAvailable: false,
+  dirty: false,
   summary: null,
   ships: [],
   items: emptyItems(),
@@ -184,7 +203,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
           await idbSet(IDB_META, { ...sessionMeta, sha256, formatHint });
         }
         set(
-          applyParsed(json, {
+          applyParsed(json, initialSaveContext(json), {
             hydrated: true,
             fileName: sessionMeta.fileName,
             unknownKeys: sessionMeta.unknownKeys,
@@ -193,6 +212,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
             formatHint,
             origin: sessionMeta.origin ?? null,
             diskModified: sessionMeta.diskModified ?? null,
+            dirty: sessionMeta.dirty ?? false,
           }),
         );
         return;
@@ -227,6 +247,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
         formatHint,
         origin,
         diskModified: origin === "directory" ? file.lastModified : null,
+        dirty: false,
       };
       await Promise.all([
         idbSet(IDB_JSON, parsed.json),
@@ -235,7 +256,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
         idbSet(IDB_META, meta),
       ]);
       set(
-        applyParsed(parsed.json, {
+        applyParsed(parsed.json, initialSaveContext(parsed.json), {
           fileName: file.name,
           unknownKeys: parsed.unknownKeys,
           mappingVersion: parsed.mappingVersion,
@@ -243,6 +264,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
           formatHint,
           origin: meta.origin ?? null,
           diskModified: meta.diskModified ?? null,
+          dirty: false,
         }),
       );
     } catch (err) {
@@ -273,10 +295,20 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       origin: null,
       diskModified: null,
       unknownKeys: [],
+      saveContext: "main",
+      expeditionAvailable: false,
+      dirty: false,
       summary: null,
       ships: [],
       items: emptyItems(),
     });
+  },
+
+  setSaveContext: (context) => {
+    if (mappedJson == null) return;
+    if (context === "expedition" && !hasExpeditionContext(mappedJson)) return;
+    if (context === get().saveContext) return;
+    set(applyParsed(mappedJson, context, {}));
   },
 
   importItem: async (item) => {
@@ -286,16 +318,19 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     if (!isCategory(item.category)) {
       throw new Error("Categoria desconhecida neste arquivo.");
     }
+    const context = get().saveContext;
     const result = insertCategoryItem(
       mappedJson,
       item.category,
       item.payload,
       item.seed,
+      context,
     );
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
     await persistJson();
-    set(applyParsed(mappedJson, {}));
+    await rememberDirty(true);
+    set(applyParsed(mappedJson, context, { dirty: true }));
     return result.index;
   },
 
@@ -303,11 +338,13 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
 
   clearSlot: async (category, index) => {
     if (mappedJson == null) throw new Error("Nenhum save aberto.");
-    const result = clearCategorySlot(mappedJson, category, index);
+    const context = get().saveContext;
+    const result = clearCategorySlot(mappedJson, category, index, context);
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
     await persistJson();
-    set(applyParsed(mappedJson, {}));
+    await rememberDirty(true);
+    set(applyParsed(mappedJson, context, { dirty: true }));
   },
 
   exportItem: (category, index) => {
@@ -352,22 +389,26 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     if (!adapter.reorder) {
       throw new Error("Esta categoria não reordena.");
     }
-    const result = reorderCategorySlots(mappedJson, category, from, to);
+    const context = get().saveContext;
+    const result = reorderCategorySlots(mappedJson, category, from, to, context);
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
     await persistJson();
-    set(applyParsed(mappedJson, {}));
+    await rememberDirty(true);
+    set(applyParsed(mappedJson, context, { dirty: true }));
   },
 
   reorderShips: async (from, to) => get().reorderSlots("ship", from, to),
 
   updateCurrencies: async (coins) => {
     if (mappedJson == null) throw new Error("Nenhum save aberto.");
-    const result = setPlayerCurrencies(mappedJson, coins);
+    const context = get().saveContext;
+    const result = setPlayerCurrencies(mappedJson, coins, context);
     if (!result.ok) throw new Error(result.error);
     mappedJson = result.json;
     await persistJson();
-    set(applyParsed(mappedJson, {}));
+    await rememberDirty(true);
+    set(applyParsed(mappedJson, context, { dirty: true }));
   },
 
   previewFile: async (file) => {
@@ -376,7 +417,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     if (!mappingFile) mappingFile = mapping;
     const bytes = new Uint8Array(await file.arrayBuffer());
     const parsed = await parseHgClient(bytes, mapping);
-    return summarizePlayer(parsed.json);
+    return summarizePlayer(parsed.json, initialSaveContext(parsed.json));
   },
 
   noteDiskWrite: async (diskModified, bytes) => {
@@ -391,9 +432,10 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
       formatHint: previous?.formatHint ?? get().formatHint ?? undefined,
       origin: "directory",
       diskModified,
+      dirty: false,
     };
     await Promise.all([idbSet(IDB_META, meta), idbSet(IDB_ORIGINAL, bytes)]);
-    set({ diskModified, sha256, origin: "directory" });
+    set({ diskModified, sha256, origin: "directory", dirty: false });
   },
 
   downloadRewritten: async () => {

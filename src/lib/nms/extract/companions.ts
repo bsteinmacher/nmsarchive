@@ -1,4 +1,4 @@
-import { getPlayerState } from "../player";
+import { getPlayerState, type SaveContext } from "../player";
 import { remapSlotIndex, reorderSlots } from "../reorder";
 import { asArray, asNumber, asRecord, asString, normalizeSeed } from "../value";
 import { clonePlayer, emptySlotAt, insertAtFirstEmpty, replaceAtIndex } from "./array";
@@ -75,8 +75,11 @@ function companionName(rec: Record<string, unknown>): string {
   return id || "Companion";
 }
 
-export function listCompanions(json: unknown): ExtractedSlot[] {
-  const player = getPlayerState(json);
+export function listCompanions(
+  json: unknown,
+  context: SaveContext = "main",
+): ExtractedSlot[] {
+  const player = getPlayerState(json, context);
   const pets = player?.Pets;
   if (!Array.isArray(pets)) return [];
 
@@ -147,8 +150,9 @@ export function reorderCompanions(
   mappedJson: unknown,
   from: number,
   to: number,
+  context: SaveContext = "main",
 ): WriteResult {
-  const cloned = clonePlayer(mappedJson);
+  const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   const pets = asArray(cloned.player.Pets);
   if (!pets) {
@@ -190,6 +194,7 @@ const EMPTY_PET =
 export function insertCompanion(
   json: unknown,
   payload: unknown,
+  context: SaveContext = "main",
 ): InsertResult {
   return insertAtFirstEmpty(
     json,
@@ -197,6 +202,7 @@ export function insertCompanion(
     payload,
     isEmptyCompanionSlot,
     EMPTY_PET,
+    context,
   );
 }
 
@@ -211,14 +217,21 @@ export const companionsAdapter: CategoryAdapter = {
   ],
   list: listCompanions,
   insert: insertCompanion,
-  replace: (json, index, payload) =>
-    replaceAtIndex(json, "Pets", index, payload),
-  clear: (json, index) =>
-    emptySlotAt(json, "Pets", index, isEmptyCompanionSlot, {
-      CreatureID: "",
-      CustomName: "",
-      CreatureSeed: [false, "0x0"],
-    }),
+  replace: (json, index, payload, context) =>
+    replaceAtIndex(json, "Pets", index, payload, context),
+  clear: (json, index, context) =>
+    emptySlotAt(
+      json,
+      "Pets",
+      index,
+      isEmptyCompanionSlot,
+      {
+        CreatureID: "",
+        CustomName: "",
+        CreatureSeed: [false, "0x0"],
+      },
+      context,
+    ),
   reorder: reorderCompanions,
   summarize(payload) {
     const listed = listCompanions({
