@@ -39,7 +39,7 @@ function saveWithSlots(slots: unknown[]) {
 }
 
 describe("extract/insert ships", () => {
-  it("lista todos os slots, inclusive vazios, com Ship Type", () => {
+  it("lista todos os slots, inclusive vazios, com o tipo da ship", () => {
     const ships = listShips(saveWithSlots([filled, emptySlot]));
     expect(ships).toHaveLength(2);
     expect(ships[0]).toMatchObject({

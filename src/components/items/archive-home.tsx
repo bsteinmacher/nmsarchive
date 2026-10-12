@@ -219,9 +219,9 @@ function ArchiveHomeInner({
           </CardContent>
         </Card>
       ) : state.view === "table" ? (
-        <ItemTable items={items} onSelect={setSelectedId} />
+        <ItemTable items={items} category={category} onSelect={setSelectedId} />
       ) : (
-        <ItemGrid items={items} onSelect={setSelectedId} />
+        <ItemGrid items={items} category={category} onSelect={setSelectedId} />
       )}
 
       <section className="grid gap-3" aria-labelledby="activity-heading">

@@ -416,7 +416,7 @@ export const shipsAdapter: CategoryAdapter = {
   label: "Ships",
   columns: [
     { id: "className", header: "Class" },
-    { id: "itemType", header: "Ship Type" },
+    { id: "itemType", header: "Type" },
     { id: "seed", header: "Seed" },
   ],
   list: listShips,

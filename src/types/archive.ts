@@ -5,6 +5,11 @@ export type ArchivedItemExtra = {
   biome?: string;
   element?: string;
   level?: string;
+  traits?: string;
+  objects?: string;
+  slots?: string;
+  tech?: string;
+  supercharged?: string;
 };
 
 export type ArchivedItemSummary = {

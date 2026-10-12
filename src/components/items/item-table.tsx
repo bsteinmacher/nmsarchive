@@ -1,8 +1,13 @@
 "use client";
 
-import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
+import { matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
+import {
+  archiveColumnValue,
+  archiveDataColumns,
+  listColumnClass,
+} from "@/lib/list-columns";
 import type { ArchivedItemSummary } from "@/types/archive";
-import { CATEGORY_META, isCategory } from "@/types/nms";
+import type { Category } from "@/types/nms";
 import { useSaveSession } from "@/stores/save-session";
 import {
   Table,
@@ -15,56 +20,44 @@ import {
 
 export function ItemTable({
   items,
+  category,
   onSelect,
 }: {
   items: ArchivedItemSummary[];
+  category?: Category;
   onSelect: (id: string) => void;
 }) {
   const sessionItems = useSaveSession((s) => s.items);
   const saveReady = useSaveSession((s) => s.status === "ready");
-  const showBattle = items.some(
-    (item) => item.extra?.element || item.extra?.biome,
-  );
+  const columns = archiveDataColumns(category);
 
   return (
-    <Table>
+    <Table className="table-fixed">
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
-          <TableHead>Class</TableHead>
-          <TableHead>Type</TableHead>
-          {showBattle ? (
-            <>
-              <TableHead>Element</TableHead>
-              <TableHead>Biome</TableHead>
-            </>
-          ) : null}
-          <TableHead>Tags</TableHead>
+          {columns.map((col) => (
+            <TableHead key={col.id} className={listColumnClass(col.id)}>
+              {col.header}
+            </TableHead>
+          ))}
+          <TableHead className={listColumnClass("tags")}>Tags</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {items.map((item) => {
-          const uiCategory = archiveUiCategory(item);
           const sessionCategory = sessionCategoryForArchived(item);
           const slots =
             saveReady && sessionCategory
-              ? matchingSlotsForArchived(
-                  sessionItems[sessionCategory],
-                  item,
-                )
+              ? matchingSlotsForArchived(sessionItems[sessionCategory], item)
               : [];
-          const typeLabel =
-            item.shipType ||
-            (isCategory(uiCategory)
-              ? CATEGORY_META[uiCategory].label
-              : item.category);
           return (
             <TableRow key={item.id}>
-              <TableCell className="font-medium">
+              <TableCell className="whitespace-normal font-medium">
                 <button
                   type="button"
                   onClick={() => onSelect(item.id)}
-                  className="min-h-8 w-full rounded-md px-1 py-1 text-left hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  className="w-full rounded-md text-left focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
                   <span className="break-words whitespace-normal">{item.name}</span>
                   {slots.length > 0 ? (
@@ -74,18 +67,11 @@ export function ItemTable({
                   ) : null}
                 </button>
               </TableCell>
-              <TableCell>{item.className || "—"}</TableCell>
-              <TableCell className="whitespace-normal">{typeLabel}</TableCell>
-              {showBattle ? (
-                <>
-                  <TableCell className="whitespace-normal">
-                    {item.extra?.element || "—"}
-                  </TableCell>
-                  <TableCell className="whitespace-normal">
-                    {item.extra?.biome || "—"}
-                  </TableCell>
-                </>
-              ) : null}
+              {columns.map((col) => (
+                <TableCell key={col.id} className="whitespace-normal">
+                  {archiveColumnValue(item, col) || "—"}
+                </TableCell>
+              ))}
               <TableCell className="whitespace-normal text-muted-foreground">
                 {item.tags.length
                   ? item.tags.map((t) => t.label).join(" · ")

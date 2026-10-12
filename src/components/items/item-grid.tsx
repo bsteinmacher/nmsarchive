@@ -3,15 +3,21 @@
 import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { screenshotPublicUrl } from "@/lib/screenshots";
 import { cn } from "cn";
+import {
+  archiveColumnValue,
+  dataColumns,
+} from "@/lib/list-columns";
 import type { ArchivedItemSummary } from "@/types/archive";
-import { CATEGORY_META, isCategory } from "@/types/nms";
+import { isCategory, type Category } from "@/types/nms";
 import { useSaveSession } from "@/stores/save-session";
 
 export function ItemGrid({
   items,
+  category,
   onSelect,
 }: {
   items: ArchivedItemSummary[];
+  category?: Category;
   onSelect: (id: string) => void;
 }) {
   const sessionItems = useSaveSession((s) => s.items);
@@ -30,11 +36,14 @@ export function ItemGrid({
               )
             : [];
         const thumb = screenshotPublicUrl(item.screenshotPath);
-        const typeLabel =
-          item.shipType ||
-          (isCategory(uiCategory)
-            ? CATEGORY_META[uiCategory].label
-            : item.category);
+        const columnCategory =
+          category ?? (isCategory(uiCategory) ? uiCategory : undefined);
+        const meta = (columnCategory ? dataColumns(columnCategory) : [])
+          .map((col) => {
+            const value = archiveColumnValue(item, col);
+            return value ? `${col.header} ${value}` : null;
+          })
+          .filter(Boolean);
         return (
           <li key={item.id}>
             <button
@@ -59,35 +68,22 @@ export function ItemGrid({
                   aria-hidden="true"
                 />
               )}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                  {typeLabel}
-                </span>
-                {item.className ? (
-                  <span className="rounded-full border px-2 py-0.5 text-xs">
-                    Class {item.className}
-                  </span>
-                ) : null}
-                {item.extra?.element ? (
-                  <span className="rounded-full border px-2 py-0.5 text-xs">
-                    {item.extra.element}
-                  </span>
-                ) : null}
-                {item.extra?.biome ? (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                    Biome {item.extra.biome}
-                  </span>
-                ) : null}
-                {slots.length > 0 ? (
+              {slots.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
                     No save · slot {slots[0].slotLabel ?? slots[0].index + 1}
                   </span>
-                ) : null}
-              </div>
+                </div>
+              ) : null}
               <div className="min-w-0">
                 <p className="font-heading text-base font-medium break-words">
                   {item.name}
                 </p>
+                {meta.length > 0 ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {meta.join(" · ")}
+                  </p>
+                ) : null}
               </div>
               <p className="line-clamp-2 text-sm text-muted-foreground">
                 {item.description}
