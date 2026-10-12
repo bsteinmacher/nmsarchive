@@ -9,6 +9,7 @@ import {
   nameFromFilename,
   normalizeSeed,
 } from "../value";
+import { mergeApply, SHIP_MERGE, type ApplyDepth } from "./apply-depth";
 import { clonePlayer, inventoryClass } from "./array";
 import { basePersistentType } from "./bases";
 import { emptySlotLabel } from "./names";
@@ -295,6 +296,41 @@ export function replaceShip(
   return { ok: true, index, json: cloned.json };
 }
 
+export function applyShip(
+  mappedJson: unknown,
+  index: number,
+  payload: unknown,
+  depth: ApplyDepth = "full",
+  context: SaveContext = "main",
+): InsertResult {
+  const cloned = clonePlayer(mappedJson, context);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  const ships = asArray(cloned.player.ShipOwnership);
+  if (!ships) {
+    return { ok: false, error: "ShipOwnership ausente neste save." };
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= ships.length) {
+    return { ok: false, error: "Índice de slot fora do array." };
+  }
+  const packed = isPackedShipPayload(payload);
+  const ownership = unpackShipOwnership(payload);
+  const empty = isEmptyShipSlot(ships[index]);
+  if (empty && depth === "full") {
+    ships[index] = structuredClone(ownership);
+  } else {
+    ships[index] = mergeApply(ships[index], ownership, depth, SHIP_MERGE);
+  }
+  applyShipVisuals(
+    cloned.player,
+    index,
+    packed ? payload.customisation : undefined,
+    packed ? payload.hull : undefined,
+  );
+  const legacy = asArray(cloned.player.ShipUsesLegacyColours);
+  if (legacy && index < legacy.length) legacy[index] = false;
+  return { ok: true, index, json: cloned.json };
+}
+
 const SHIP_INDEX_KEYS = ["PrimaryShip", "CorvetteEditAssociatedShipIndex"] as const;
 
 /**
@@ -380,7 +416,7 @@ export const shipsAdapter: CategoryAdapter = {
   label: "Ships",
   columns: [
     { id: "className", header: "Class" },
-    { id: "itemType", header: "Ship Type" },
+    { id: "itemType", header: "Type" },
     { id: "seed", header: "Seed" },
   ],
   list: listShips,

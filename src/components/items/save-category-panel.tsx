@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { archivedScreenshotUrl } from "@/lib/archive-match";
+import { listColumnClass } from "@/lib/list-columns";
 import type { ArchiveView } from "@/lib/archive-url";
 import {
   FLEET_FRIGATE_LIMIT,
@@ -102,14 +103,17 @@ function SlotTable({
     );
   }
 
+  const visibleColumns = columns.filter((col) => col.id !== "seed");
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{caption}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
+    <section className="grid gap-3">
+      <div className="grid gap-1">
+        <h2 className="font-heading text-base leading-snug font-medium">
+          {caption}
+        </h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <Table className="table-fixed">
           <TableHeader>
             <TableRow>
               {reorderable ? (
@@ -117,12 +121,16 @@ function SlotTable({
                   <span className="sr-only">Reordenar</span>
                 </TableHead>
               ) : null}
-              <TableHead>Slot</TableHead>
-              <TableHead>Nome</TableHead>
-              {columns.map((col) => (
-                <TableHead key={col.id}>{col.header}</TableHead>
+              <TableHead className={listColumnClass("slot")}>Slot</TableHead>
+              <TableHead>Name</TableHead>
+              {visibleColumns.map((col) => (
+                <TableHead key={col.id} className={listColumnClass(col.id)}>
+                  {col.header}
+                </TableHead>
               ))}
-              <TableHead className="text-right">Ações</TableHead>
+              <TableHead className={cn(listColumnClass("actions"), "text-right")}>
+                Ações
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -193,7 +201,12 @@ function SlotTable({
                     </TableCell>
                   ) : null}
                   <TableCell className="tabular-nums">{slot}</TableCell>
-                  <TableCell className={cn(!item.empty && "font-medium")}>
+                  <TableCell
+                    className={cn(
+                      "whitespace-normal",
+                      !item.empty && "font-medium",
+                    )}
+                  >
                     <span className="break-words">{item.name}</span>
                     {item.warning ? (
                       <span className="mt-1 block text-xs font-normal text-muted-foreground">
@@ -201,11 +214,8 @@ function SlotTable({
                       </span>
                     ) : null}
                   </TableCell>
-                  {columns.map((col) => (
-                    <TableCell
-                      key={col.id}
-                      className={cn(col.id === "seed" && "font-mono text-xs")}
-                    >
+                  {visibleColumns.map((col) => (
+                    <TableCell key={col.id}>
                       {dash(columnValue(item, col))}
                     </TableCell>
                   ))}
@@ -221,9 +231,8 @@ function SlotTable({
               );
             })}
           </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+      </Table>
+    </section>
   );
 }
 

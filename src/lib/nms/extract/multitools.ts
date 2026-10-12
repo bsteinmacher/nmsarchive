@@ -1,20 +1,23 @@
 import { getPlayerState, type SaveContext } from "../player";
 import { multitoolTypeFromFilename } from "../multitool-type";
 import {
+  asArray,
   asRecord,
   asString,
   nameFromFilename,
   normalizeSeed,
 } from "../value";
+import { mergeApply, MULTITOOL_MERGE, type ApplyDepth } from "./apply-depth";
 import {
   insertAtFirstEmpty,
   emptySlotAt,
   inventoryClass,
   reorderPlayerArray,
   replaceAtIndex,
+  clonePlayer,
 } from "./array";
 import { emptySlotLabel } from "./names";
-import type { CategoryAdapter, ExtractedSlot } from "./types";
+import type { CategoryAdapter, ExtractedSlot, InsertResult } from "./types";
 
 export function isEmptyMultitoolSlot(slot: unknown): boolean {
   const rec = asRecord(slot);
@@ -78,6 +81,32 @@ export function listMultitools(
 
 const EMPTY_MT =
   "Não há slot vazio de multi-tool. O jogo limita o array; o arquivo não expande Multitools.";
+
+export function applyMultitool(
+  mappedJson: unknown,
+  index: number,
+  payload: unknown,
+  depth: ApplyDepth = "full",
+  context: SaveContext = "main",
+): InsertResult {
+  const cloned = clonePlayer(mappedJson, context);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  const tools = asArray(cloned.player.Multitools);
+  if (!tools) {
+    return { ok: false, error: "Multitools ausente neste save." };
+  }
+  if (!Number.isInteger(index) || index < 0 || index >= tools.length) {
+    return { ok: false, error: "Índice de slot fora do array." };
+  }
+  const source = asRecord(payload);
+  if (!source) return { ok: false, error: "Payload de multi-tool inválido." };
+  const empty = isEmptyMultitoolSlot(tools[index]);
+  tools[index] =
+    empty && depth === "full"
+      ? structuredClone(source)
+      : mergeApply(tools[index], source, depth, MULTITOOL_MERGE);
+  return { ok: true, index, json: cloned.json };
+}
 
 export const multitoolsAdapter: CategoryAdapter = {
   category: "multitool",

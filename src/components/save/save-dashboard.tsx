@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { downloadBytes } from "@/lib/download";
 import { formatPlayTime } from "@/lib/nms/player";
-import { gameVersionMismatch, parseNmsItem } from "@/lib/nmsitem";
+import { gameVersionMismatch, parseNmsItem, type NmsItemFile } from "@/lib/nmsitem";
 import { downloadNmsItemZip } from "@/lib/nmsitem-zip";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { CurrencyEditDialog, type CurrencyField } from "./currencies-dialog";
@@ -90,9 +90,7 @@ export function SaveDashboard() {
   const downloadOriginal = useSaveSession((s) => s.downloadOriginal);
   const dirty = useSaveSession((s) => s.dirty);
   const importRef = useRef<HTMLInputElement>(null);
-  const [pendingItem, setPendingItem] = useState<ReturnType<
-    typeof parseNmsItem
-  > | null>(null);
+  const [pendingItem, setPendingItem] = useState<NmsItemFile | null>(null);
   const [versionWarning, setVersionWarning] = useState<string | null>(null);
   const [editingCurrency, setEditingCurrency] = useState<CurrencyField | null>(
     null,
@@ -120,7 +118,7 @@ export function SaveDashboard() {
     void closeSave();
   }
 
-  async function commitImport(item: ReturnType<typeof parseNmsItem>) {
+  async function commitImport(item: NmsItemFile) {
     try {
       const index = await importItem(item);
       toast.success(`Item importado no slot ${index + 1}`);
@@ -134,18 +132,25 @@ export function SaveDashboard() {
 
   async function onImportFile(file: File | undefined) {
     if (!file) return;
+    let item: NmsItemFile;
     try {
-      const item = parseNmsItem(await file.text());
-      const json = getMappedJson();
-      const warning = json ? gameVersionMismatch(item, json) : null;
-      if (warning) {
-        setPendingItem(item);
-        setVersionWarning(warning);
-        return;
-      }
-      await commitImport(item);
+      item = parseNmsItem(await file.text());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Arquivo inválido");
+      return;
+    }
+    const json = getMappedJson();
+    const warning = json ? gameVersionMismatch(item, json) : null;
+    if (warning) {
+      setPendingItem(item);
+      setVersionWarning(warning);
+      return;
+    }
+    try {
+      const index = await importItem(item);
+      toast.success(`Item importado no slot ${index + 1}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha no import");
     }
   }
 

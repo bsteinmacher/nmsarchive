@@ -9,6 +9,7 @@ import { archiveUiCategory } from "@/lib/archive-match";
 import { companionBattleFromArchived } from "@/lib/nms/extract/companion-battle";
 import { seedFromPayload } from "@/lib/nms/extract";
 import { asNumber, asRecord, asString } from "@/lib/nms/value";
+import { pickListExtra } from "@/lib/list-columns";
 import {
   archivedMetadataSchema,
   slugifyTag,
@@ -55,7 +56,6 @@ function metadataSummary(
 } {
   const rec = asRecord(metadata) ?? {};
   const extraRec = asRecord(rec.extra);
-  const baseType = asString(extraRec?.baseType);
   const battle =
     category === "companion"
       ? companionBattleFromArchived({
@@ -67,8 +67,7 @@ function metadataSummary(
           element: asString(extraRec?.element) ?? "",
           level: asString(extraRec?.level) ?? "",
         };
-  const extra: ArchivedItemExtra = {};
-  if (baseType) extra.baseType = baseType;
+  const extra = pickListExtra(extraRec);
   if (battle.biome) extra.biome = battle.biome;
   if (battle.element) extra.element = battle.element;
   if (battle.level) extra.level = battle.level;

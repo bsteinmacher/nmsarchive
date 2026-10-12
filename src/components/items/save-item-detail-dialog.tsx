@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import { trpc } from "@/lib/trpc";
 import { useSaveSession } from "@/stores/save-session";
 import type { Category } from "@/types/nms";
 import { ItemCompare } from "./item-compare";
+import { ImportModelDialog } from "./import-model-dialog";
 import { JsonTree } from "./json-tree";
 
 export function SaveItemDetailDialog({
@@ -37,6 +38,7 @@ export function SaveItemDetailDialog({
   const clearSlot = useSaveSession((s) => s.clearSlot);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [importModel, setImportModel] = useState(false);
   const actionCategory = item?.category ?? category;
   const adapter = getAdapter(actionCategory);
   const slot = item?.slotLabel ?? (item ? String(item.index + 1) : "—");
@@ -49,6 +51,13 @@ export function SaveItemDetailDialog({
     item?.itemType || null,
     item?.seed || null,
   ].filter(Boolean);
+  const canImportModel =
+    item != null &&
+    !item.empty &&
+    !item.readonly &&
+    (actionCategory === "ship" ||
+      actionCategory === "multitool" ||
+      actionCategory === "freighter");
   const canClear =
     item != null &&
     !item.empty &&
@@ -76,9 +85,10 @@ export function SaveItemDetailDialog({
     { enabled: open && archivedHit != null },
   );
 
-  useEffect(() => {
-    if (!open) setConfirmDelete(false);
-  }, [open, item?.index, actionCategory]);
+  if (!open && (confirmDelete || importModel)) {
+    setConfirmDelete(false);
+    setImportModel(false);
+  }
 
   async function onClear() {
     if (!item) return;
@@ -96,6 +106,7 @@ export function SaveItemDetailDialog({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
@@ -179,6 +190,11 @@ export function SaveItemDetailDialog({
               Arquivar
             </Button>
           ) : null}
+          {canImportModel ? (
+            <Button type="button" variant="outline" onClick={() => setImportModel(true)}>
+              Importar modelo
+            </Button>
+          ) : null}
           {item && !item.readonly && !item.empty ? (
             <Button
               type="button"
@@ -200,6 +216,12 @@ export function SaveItemDetailDialog({
           ) : null}
         </DialogFooter>
       </DialogContent>
+      <ImportModelDialog
+        item={canImportModel ? item : null}
+        open={importModel && canImportModel}
+        onOpenChange={setImportModel}
+      />
     </Dialog>
+    </>
   );
 }
