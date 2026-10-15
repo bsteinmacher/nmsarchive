@@ -64,7 +64,7 @@ export const SHIP_MERGE: ApplyMergeSpec = {
 };
 
 export const MULTITOOL_MERGE: ApplyMergeSpec = {
-  visual: ["Resource", "Seed"],
+  visual: ["Resource", "Seed", "CustomisationData", "IsLarge", "ScreenData"],
   grids: ["Store"],
   keep: ["Name"],
 };

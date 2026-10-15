@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyItem } from "@/lib/nms/extract";
+import { applyItem, reorderCategory } from "@/lib/nms/extract";
 import { applyShip } from "@/lib/nms/extract/ships";
 import { getPlayerState } from "@/lib/nms/player";
 import { asArray, asRecord, asString } from "@/lib/nms/value";
@@ -259,6 +259,149 @@ describe("apply multitool and freighter", () => {
     expect(asString(asRecord(store?.Class)?.InventoryClass)).toBe("S");
     expect(store?.Slots).toEqual([product("KEEP", 0, 0)]);
     expect(store?.SpecialSlots).toEqual([special(0, 0)]);
+  });
+
+  it("importar modelo copia as peças da staff e a arma na mão, e mantém nome e tech", () => {
+    const parts = {
+      DescriptorGroups: ["^STAFF_HEAD_1", "^STAFF_CORE_1", "^STAFF_POLE_1"],
+      Colours: [{ Colour: [0.41, 0.12, 0.05, 1] }],
+    };
+    const screen = {
+      ScreenScale: 0.03,
+      ScreenOffset: [0.02, 0.12, -0.1],
+      ScreenRotation: [0, 1, 0, 1.92],
+    };
+    const held = {
+      Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/MULTITOOL.SCENE.MBIN",
+      GenerationSeed: [true, "0x55907B79D95B675B"],
+    };
+    const save = {
+      BaseContext: {
+        PlayerStateData: {
+          ActiveMultioolIndex: 0,
+          CurrentWeapon: structuredClone(held),
+          Multitools: [
+            {
+              Name: "Minha MT",
+              Seed: [true, "0x1"],
+              IsLarge: false,
+              PrimaryMode: 5,
+              SecondaryMode: 17,
+              ScreenData: { ScreenScale: 1 },
+              CustomisationData: { DescriptorGroups: [] },
+              Resource: {
+                Filename: "MODELS/ROYALMULTITOOL.SCENE.MBIN",
+                Seed: [true, "0x1"],
+              },
+              Store: {
+                Class: { InventoryClass: "C" },
+                Slots: [product("KEEP", 0, 0)],
+                SpecialSlots: [special(0, 0)],
+              },
+            },
+            {
+              Name: "Outra",
+              Seed: [true, "0x2"],
+              Resource: {
+                Filename: "MODELS/MULTITOOL.SCENE.MBIN",
+                Seed: [true, "0x2"],
+              },
+              Store: { Class: { InventoryClass: "A" }, Slots: [] },
+            },
+          ],
+        },
+      },
+    };
+    const staff = {
+      Name: "Arquivada",
+      Seed: [true, "0xD9CD93CC260E592E"],
+      IsLarge: true,
+      PrimaryMode: 2,
+      SecondaryMode: 8,
+      ScreenData: screen,
+      CustomisationData: parts,
+      Resource: {
+        Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/STAFFMULTITOOL.SCENE.MBIN",
+        Seed: [false, "0x0"],
+      },
+      Store: {
+        Class: { InventoryClass: "S" },
+        Slots: [product("NEW", 1, 1)],
+        SpecialSlots: [special(4, 0)],
+      },
+    };
+    const result = applyItem(save, "multitool", staff, "0xd9cd93cc260e592e", "main", {
+      index: 0,
+      depth: "supercharged",
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const player = getPlayerState(result.json);
+    const tool = asRecord(asArray(player?.Multitools)?.[0]);
+    const store = asRecord(tool?.Store);
+    expect(tool?.Name).toBe("Minha MT");
+    expect(tool?.PrimaryMode).toBe(5);
+    expect(tool?.SecondaryMode).toBe(17);
+    expect(tool?.IsLarge).toBe(true);
+    expect(tool?.CustomisationData).toEqual(parts);
+    expect(tool?.ScreenData).toEqual(screen);
+    expect(store?.Slots).toEqual([product("KEEP", 0, 0)]);
+    expect(store?.SpecialSlots).toEqual([special(4, 0)]);
+    expect(player?.CurrentWeapon).toEqual({
+      Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/STAFFMULTITOOL.SCENE.MBIN",
+      GenerationSeed: [true, "0xD9CD93CC260E592E"],
+    });
+
+    const inactive = applyItem(save, "multitool", staff, "0xd9cd93cc260e592e", "main", {
+      index: 1,
+      depth: "supercharged",
+    });
+    expect(inactive.ok).toBe(true);
+    if (!inactive.ok) return;
+    expect(getPlayerState(inactive.json)?.CurrentWeapon).toEqual(held);
+  });
+
+  it("reordenar o slot ativo leva a arma na mão junto", () => {
+    const staffSeed = [true, "0xD9CD93CC260E592E"];
+    const rifleSeed = [true, "0x55907B79D95B675B"];
+    const save = {
+      BaseContext: {
+        PlayerStateData: {
+          ActiveMultioolIndex: 0,
+          CurrentWeapon: {
+            Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/STAFFMULTITOOL.SCENE.MBIN",
+            GenerationSeed: staffSeed,
+          },
+          Multitools: [
+            {
+              Name: "Staff",
+              Seed: staffSeed,
+              Resource: {
+                Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/STAFFMULTITOOL.SCENE.MBIN",
+                Seed: [false, "0x0"],
+              },
+            },
+            {
+              Name: "Rifle",
+              Seed: rifleSeed,
+              Resource: {
+                Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/MULTITOOL.SCENE.MBIN",
+                Seed: rifleSeed,
+              },
+            },
+          ],
+        },
+      },
+    };
+    const result = reorderCategory(save, "multitool", 0, 1);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const player = getPlayerState(result.json);
+    expect(player?.ActiveMultioolIndex).toBe(1);
+    expect(player?.CurrentWeapon).toEqual({
+      Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/STAFFMULTITOOL.SCENE.MBIN",
+      GenerationSeed: staffSeed,
+    });
   });
 
   it("modelo da cargueira atual troca o resource e mantém nome, sistema e carga", () => {
