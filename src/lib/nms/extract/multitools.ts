@@ -2,6 +2,7 @@ import { getPlayerState, type SaveContext } from "../player";
 import { multitoolTypeFromFilename } from "../multitool-type";
 import {
   asArray,
+  asNumber,
   asRecord,
   asString,
   nameFromFilename,
@@ -17,7 +18,12 @@ import {
   clonePlayer,
 } from "./array";
 import { emptySlotLabel } from "./names";
-import type { CategoryAdapter, ExtractedSlot, InsertResult } from "./types";
+import type {
+  CategoryAdapter,
+  ExtractedSlot,
+  InsertResult,
+  WriteResult,
+} from "./types";
 
 export function isEmptyMultitoolSlot(slot: unknown): boolean {
   const rec = asRecord(slot);
@@ -82,6 +88,52 @@ export function listMultitools(
 const EMPTY_MT =
   "Não há slot vazio de multi-tool. O jogo limita o array; o arquivo não expande Multitools.";
 
+const EMPTY_WEAPON_SEED: [boolean, string] = [false, "0x0"];
+
+/** A arma na mão segue o slot ativo. Outro slot não altera CurrentWeapon. */
+function syncCurrentWeapon(player: Record<string, unknown>, index: number) {
+  if (asNumber(player.ActiveMultioolIndex) !== index) return;
+  const tool = asRecord(asArray(player.Multitools)?.[index]);
+  const filename = asString(asRecord(tool?.Resource)?.Filename) ?? "";
+  const generationSeed = filename
+    ? structuredClone(tool?.Seed ?? EMPTY_WEAPON_SEED)
+    : [...EMPTY_WEAPON_SEED];
+  const current = asRecord(player.CurrentWeapon) ?? {};
+  player.CurrentWeapon = {
+    ...current,
+    Filename: filename,
+    GenerationSeed: generationSeed,
+  };
+}
+
+function syncInserted(result: InsertResult, context?: SaveContext): InsertResult {
+  if (!result.ok) return result;
+  const player = getPlayerState(result.json, context ?? "main");
+  if (player) syncCurrentWeapon(player, result.index);
+  return result;
+}
+
+function syncReorderedMultitool(
+  json: unknown,
+  from: number,
+  to: number,
+  context?: SaveContext,
+): WriteResult {
+  const saveContext = context ?? "main";
+  const activeBefore = asNumber(
+    getPlayerState(json, saveContext)?.ActiveMultioolIndex,
+  );
+  const result = reorderPlayerArray(json, "Multitools", from, to, [], [
+    "ActiveMultioolIndex",
+  ], saveContext);
+  if (!result.ok) return result;
+  if (activeBefore !== from && activeBefore !== to) return result;
+  const player = getPlayerState(result.json, saveContext);
+  const active = asNumber(player?.ActiveMultioolIndex);
+  if (player && active != null) syncCurrentWeapon(player, active);
+  return result;
+}
+
 export function applyMultitool(
   mappedJson: unknown,
   index: number,
@@ -105,6 +157,7 @@ export function applyMultitool(
     empty && depth === "full"
       ? structuredClone(source)
       : mergeApply(tools[index], source, depth, MULTITOOL_MERGE);
+  syncCurrentWeapon(cloned.player, index);
   return { ok: true, index, json: cloned.json };
 }
 
@@ -118,33 +171,40 @@ export const multitoolsAdapter: CategoryAdapter = {
   ],
   list: listMultitools,
   insert: (json, payload, context) =>
-    insertAtFirstEmpty(
-      json,
-      "Multitools",
-      payload,
-      isEmptyMultitoolSlot,
-      EMPTY_MT,
+    syncInserted(
+      insertAtFirstEmpty(
+        json,
+        "Multitools",
+        payload,
+        isEmptyMultitoolSlot,
+        EMPTY_MT,
+        context,
+      ),
       context,
     ),
   replace: (json, index, payload, context) =>
-    replaceAtIndex(json, "Multitools", index, payload, context),
+    syncInserted(
+      replaceAtIndex(json, "Multitools", index, payload, context),
+      context,
+    ),
   clear: (json, index, context) =>
-    emptySlotAt(
-      json,
-      "Multitools",
-      index,
-      isEmptyMultitoolSlot,
-      {
-        Name: "",
-        Resource: { Filename: "", Seed: [false, "0x0"] },
-        Seed: [false, "0x0"],
-      },
+    syncInserted(
+      emptySlotAt(
+        json,
+        "Multitools",
+        index,
+        isEmptyMultitoolSlot,
+        {
+          Name: "",
+          Resource: { Filename: "", Seed: [false, "0x0"] },
+          Seed: [false, "0x0"],
+        },
+        context,
+      ),
       context,
     ),
   reorder: (json, from, to, context) =>
-    reorderPlayerArray(json, "Multitools", from, to, [], [
-      "ActiveMultioolIndex",
-    ], context),
+    syncReorderedMultitool(json, from, to, context),
   summarize(payload) {
     const listed = listMultitools({
       BaseContext: { PlayerStateData: { Multitools: [payload] } },
