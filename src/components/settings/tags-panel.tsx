@@ -3,14 +3,8 @@
 import { useMemo, useState } from "react";
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { CollapsibleCard } from "@/components/layout/collapsible-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogBody,
@@ -133,15 +127,13 @@ export function TagsPanel() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>Tags</CardTitle>
-          <CardDescription>
-            Criar, renomear ou excluir tags do arquivo. Excluir tira a tag de
-            todos os itens.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
+      <CollapsibleCard
+        title="Tags"
+        description="Criar, renomear ou excluir tags do arquivo. Excluir tira a tag de todos os itens."
+        expandLabel="Abrir tags"
+        collapseLabel="Recolher tags"
+        contentClassName="grid gap-4"
+      >
           <form
             className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end"
             onSubmit={(event) => {
@@ -279,8 +271,7 @@ export function TagsPanel() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </CollapsibleCard>
 
       <Dialog
         open={pendingDelete != null}

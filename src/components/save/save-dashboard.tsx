@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Download, FileJson, Pencil, Trash2 } from "lucide-react";
+import { Download, FileJson, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,7 @@ import { formatPlayTime } from "@/lib/nms/player";
 import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
 import { gameVersionMismatch, parseNmsItem, type NmsItemFile } from "@/lib/nmsitem";
 import { ApplyToSaveDialog } from "@/components/items/apply-to-save-dialog";
+import { CollapsibleCard } from "@/components/layout/collapsible-card";
 import { downloadNmsItemZip } from "@/lib/nmsitem-zip";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { pushSessionActivity } from "@/stores/session-activity";
@@ -307,86 +308,70 @@ export function SaveDashboard() {
         onToggle={() => toggleSource("folder")}
       />
 
-      <Card>
-        <CardHeader className={sourcePanel === "loose" ? "border-b" : undefined}>
-          <CardTitle>Arquivo avulso</CardTitle>
-          {sourcePanel === "loose" ? (
-            <CardDescription>
-              Sem a pasta, a gravação volta a ser download. O app não lê nem
-              regenera <code>mf_save</code>.
-            </CardDescription>
-          ) : null}
-          <CardAction>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-expanded={sourcePanel === "loose"}
-              aria-label={
-                sourcePanel === "loose"
-                  ? "Recolher arquivo avulso"
-                  : "Abrir arquivo avulso"
-              }
-              onClick={() => toggleSource("loose")}
-            >
-              {sourcePanel === "loose" ? <ChevronUp /> : <ChevronDown />}
-            </Button>
-          </CardAction>
-        </CardHeader>
-        {sourcePanel === "loose" ? (
-          <CardContent className="space-y-3">
-            <UploadDropzone />
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
-            {status === "ready" && summary ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="outline" />}>
-                  <Download />
-                  Baixar cópia
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      void (async () => {
-                        try {
-                          const bytes = await downloadRewritten();
-                          const name = (fileName ?? "save.hg").replace(
-                            /(\.hg)?$/i,
-                            "-edited.hg",
-                          );
-                          downloadBytes(name, bytes);
-                        } catch (err) {
-                          toast.error(
-                            err instanceof Error
-                              ? err.message
-                              : "Falha ao recomprimir",
-                          );
-                        }
-                      })();
-                    }}
-                  >
-                    Arquivo editado
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => {
-                      try {
-                        downloadBytes(fileName ?? "save.hg", downloadOriginal());
-                      } catch (err) {
-                        toast.error(
-                          err instanceof Error ? err.message : "Sem original",
-                        );
-                      }
-                    }}
-                  >
-                    Arquivo original
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-          </CardContent>
+      <CollapsibleCard
+        title="Arquivo avulso"
+        description={
+          <>
+            Sem a pasta, a gravação volta a ser download. O app não lê nem
+            regenera <code>mf_save</code>.
+          </>
+        }
+        expandLabel="Abrir arquivo avulso"
+        collapseLabel="Recolher arquivo avulso"
+        expanded={sourcePanel === "loose"}
+        onExpandedChange={() => toggleSource("loose")}
+        contentClassName="space-y-3"
+      >
+        <UploadDropzone />
+        {error ? (
+          <p className="text-sm text-destructive">{error}</p>
         ) : null}
-      </Card>
+        {status === "ready" && summary ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="outline" />}>
+              <Download />
+              Baixar cópia
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      const bytes = await downloadRewritten();
+                      const name = (fileName ?? "save.hg").replace(
+                        /(\.hg)?$/i,
+                        "-edited.hg",
+                      );
+                      downloadBytes(name, bytes);
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Falha ao recomprimir",
+                      );
+                    }
+                  })();
+                }}
+              >
+                Arquivo editado
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  try {
+                    downloadBytes(fileName ?? "save.hg", downloadOriginal());
+                  } catch (err) {
+                    toast.error(
+                      err instanceof Error ? err.message : "Sem original",
+                    );
+                  }
+                }}
+              >
+                Arquivo original
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : null}
+      </CollapsibleCard>
 
       <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
         <DialogContent className="sm:max-w-md">
