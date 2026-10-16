@@ -34,6 +34,7 @@ import { gameVersionMismatch, parseNmsItem, type NmsItemFile } from "@/lib/nmsit
 import { ApplyToSaveDialog } from "@/components/items/apply-to-save-dialog";
 import { downloadNmsItemZip } from "@/lib/nmsitem-zip";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
+import { pushSessionActivity } from "@/stores/session-activity";
 import { CurrencyEditDialog, type CurrencyField } from "./currencies-dialog";
 import { SaveContextSwitch } from "./save-context-switch";
 import { SaveLocationPanel } from "./save-location-panel";
@@ -109,6 +110,12 @@ export function SaveDashboard() {
 
   async function closeSave() {
     setConfirmDiscard(false);
+    if (dirty) {
+      pushSessionActivity("cancel", {
+        fileName,
+        saveName: summary?.saveName,
+      });
+    }
     await clear();
     toast.message("Sessão do save encerrada.");
   }
@@ -386,8 +393,8 @@ export function SaveDashboard() {
           <DialogHeader>
             <DialogTitle>Alterações não salvas</DialogTitle>
             <DialogDescription>
-              As alterações feitas não foram salvas. Use Salvar neste arquivo,
-              ou Baixar cópia e escolha Arquivo editado.
+              As alterações feitas não foram salvas. Use Salvar neste arquivo
+              ou Baixar arquivo editado.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

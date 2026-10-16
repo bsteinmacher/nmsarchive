@@ -36,6 +36,10 @@ import {
   type NmsItemFile,
 } from "@/lib/nmsitem";
 import { isCategory, type Category } from "@/types/nms";
+import {
+  openActivityRail,
+  pushSessionActivity,
+} from "@/stores/session-activity";
 
 const IDB_JSON = "nmsarchive:v1:mapped-json";
 const IDB_ORIGINAL = "nmsarchive:v1:original-hg";
@@ -159,9 +163,17 @@ function persistJson() {
 }
 
 async function rememberDirty(dirty: boolean) {
+  if (dirty) openActivityRail();
   const previous = (await idbGet(IDB_META)) as SessionMeta | undefined;
   if (!previous) return;
   await idbSet(IDB_META, { ...previous, dirty });
+}
+
+function sessionNames(state: {
+  fileName: string | null;
+  summary: PlayerSummary | null;
+}) {
+  return { fileName: state.fileName, saveName: state.summary?.saveName };
 }
 
 export const useSaveSession = create<SaveSessionState>((set, get) => ({
@@ -237,6 +249,10 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
           dirty: false,
         }),
       );
+      pushSessionActivity("open", {
+        fileName: file.name,
+        saveName: get().summary?.saveName,
+      });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Falha ao ler o save.";
@@ -302,6 +318,10 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     await persistJson();
     await rememberDirty(true);
     set(applyParsed(mappedJson, context, { dirty: true }));
+    pushSessionActivity("change", {
+      ...sessionNames(get()),
+      label: `Aplicou ${item.name}`,
+    });
     return result.index;
   },
 
@@ -316,6 +336,10 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     await persistJson();
     await rememberDirty(true);
     set(applyParsed(mappedJson, context, { dirty: true }));
+    pushSessionActivity("change", {
+      ...sessionNames(get()),
+      label: `Esvaziou o slot ${index + 1}`,
+    });
   },
 
   exportItem: (category, index) => {
@@ -367,6 +391,10 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     await persistJson();
     await rememberDirty(true);
     set(applyParsed(mappedJson, context, { dirty: true }));
+    pushSessionActivity("change", {
+      ...sessionNames(get()),
+      label: "Reordenou",
+    });
   },
 
   reorderShips: async (from, to) => get().reorderSlots("ship", from, to),
@@ -380,6 +408,10 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     await persistJson();
     await rememberDirty(true);
     set(applyParsed(mappedJson, context, { dirty: true }));
+    pushSessionActivity("change", {
+      ...sessionNames(get()),
+      label: "Editou moedas",
+    });
   },
 
   previewFile: async (file) => {

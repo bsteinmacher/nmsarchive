@@ -81,7 +81,7 @@ export function CurrencyEditDialog({
     try {
       await updateCurrencies({ [field]: parsedValue });
       toast.success(
-        `${meta.label} atualizado neste save. Para levar ao jogo, use Salvar neste arquivo ou Baixar cópia e escolha Arquivo editado.`,
+        `${meta.label} atualizado neste save. Para levar ao jogo, use Salvar neste arquivo ou Baixar arquivo editado.`,
       );
       onClose();
     } catch (err) {
