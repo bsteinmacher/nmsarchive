@@ -21,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { formatOperationLabel } from "@/lib/operation-labels";
 import {
   archiveSearchHref,
   parseArchiveSearch,
@@ -40,15 +39,6 @@ import {
   CATEGORY_META,
   type Category,
 } from "@/types/nms";
-
-function formatWhen(date: Date) {
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 function ArchiveHomeInner({
   category,
@@ -129,7 +119,6 @@ function ArchiveHomeInner({
       ])
     : (ownOptions.data ?? EMPTY_FILTER_OPTIONS);
   const counts = trpc.items.counts.useQuery();
-  const logs = trpc.logs.list.useQuery({ limit: 8 });
   const items = list.data?.items ?? [];
   const freightSplit = splitFreighterArchive(
     groupedFreighters.data?.items ?? [],
@@ -319,62 +308,6 @@ function ArchiveHomeInner({
       ) : (
         <ItemGrid items={items} category={category} onSelect={setSelectedId} />
       )}
-
-      <section className="grid gap-3" aria-labelledby="activity-heading">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2
-            id="activity-heading"
-            className="font-heading text-sm font-medium"
-          >
-            Atividade recente
-          </h2>
-          <Link
-            href="/settings"
-            className={cn(
-              buttonVariants({ variant: "link", size: "sm" }),
-              "h-auto p-0",
-            )}
-          >
-            Ver em Settings
-          </Link>
-        </div>
-        {logs.isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando log…</p>
-        ) : !logs.data?.length ? (
-          <p className="text-sm text-muted-foreground">
-            Ainda não há operações no banco.
-          </p>
-        ) : (
-          <ol className="grid gap-2">
-            {logs.data.map((row) => (
-              <li
-                key={row.id}
-                className="flex flex-wrap items-baseline justify-between gap-2 rounded-lg border bg-muted/20 px-3 py-2 text-sm"
-              >
-                <span>
-                  <span className="font-medium">
-                    {formatOperationLabel(row.action)}
-                  </span>
-                  {row.item?.name ? ` · ${row.item.name}` : null}
-                  {!row.item?.name &&
-                  row.detail &&
-                  typeof row.detail === "object" &&
-                  "fileName" in row.detail &&
-                  typeof row.detail.fileName === "string"
-                    ? ` · ${row.detail.fileName}`
-                    : null}
-                </span>
-                <time
-                  className="text-xs text-muted-foreground"
-                  dateTime={row.createdAt.toISOString()}
-                >
-                  {formatWhen(row.createdAt)}
-                </time>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
 
       <ItemDetailDialog
         itemId={selectedId}

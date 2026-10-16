@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
+import {
+  ActivityRail,
+  ActivityRailTrigger,
+} from "@/components/layout/activity-rail";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { SaveDirtyButton } from "@/components/save/save-dirty-button";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -14,19 +17,25 @@ export function AppShell({ children }: { children: ReactNode }) {
         Ir ao conteúdo
       </a>
       <AppSidebar />
-      <SidebarInset>
+      <SidebarInset className="h-svh max-h-svh overflow-hidden">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
           <span className="text-sm text-muted-foreground">
             Personal Archive
           </span>
-          <SaveDirtyButton />
+          <div className="ml-auto md:hidden">
+            <ActivityRailTrigger />
+          </div>
         </header>
-        <main id="conteudo" className="flex flex-1 flex-col p-6">
+        <main
+          id="conteudo"
+          className="flex min-w-0 flex-1 flex-col overflow-y-auto p-6"
+        >
           {children}
         </main>
       </SidebarInset>
+      <ActivityRail />
     </>
   );
 }

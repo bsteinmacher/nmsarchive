@@ -20,23 +20,8 @@ import {
 } from "@/components/ui/table";
 import { SaveFolderSettings } from "@/components/save/save-location-panel";
 import { TagsPanel } from "@/components/settings/tags-panel";
-import { formatOperationLabel } from "@/lib/operation-labels";
+import { formatOperationLabel, logSubject } from "@/lib/operation-labels";
 import { trpc } from "@/lib/trpc";
-
-function logSubject(row: {
-  item?: { name: string } | null;
-  detail: unknown;
-}) {
-  if (row.item?.name) return row.item.name;
-  if (!row.detail || typeof row.detail !== "object") return "—";
-  if ("fileName" in row.detail && typeof row.detail.fileName === "string") {
-    return row.detail.fileName;
-  }
-  if ("label" in row.detail && typeof row.detail.label === "string") {
-    return row.detail.label;
-  }
-  return "—";
-}
 
 function formatBytes(size: number) {
   if (size < 1024) return `${size} B`;
@@ -309,7 +294,7 @@ export default function SettingsPage() {
                   <TableRow key={row.id}>
                     <TableCell>{formatOperationLabel(row.action)}</TableCell>
                     <TableCell className="max-w-[16rem] truncate">
-                      {logSubject(row)}
+                      {logSubject(row) ?? "—"}
                     </TableCell>
                     <TableCell>{formatWhen(row.createdAt)}</TableCell>
                   </TableRow>
