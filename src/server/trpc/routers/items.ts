@@ -99,6 +99,7 @@ export const itemsRouter = createTRPCRouter({
     .mutation(async ({ input }) => {
       if (
         input.description == null &&
+        input.notes == null &&
         !input.tags &&
         input.screenshotPath === undefined &&
         input.className === undefined &&
@@ -107,7 +108,7 @@ export const itemsRouter = createTRPCRouter({
       ) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: "Informe descrição, tags, screenshot ou rank para atualizar.",
+          message: "Informe título, descrição, tags, screenshot ou rank para atualizar.",
         });
       }
       return withWritableSqlite(() => updateItem(prisma, input));

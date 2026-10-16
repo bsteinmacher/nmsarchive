@@ -44,6 +44,9 @@ describe("matchesArchiveFilters", () => {
     expect(matchesArchiveFilters(fighterA, { galaxy: 0 })).toBe(false);
     expect(matchesArchiveFilters(exoticS, { q: "golden" })).toBe(true);
     expect(matchesArchiveFilters(exoticS, { q: "euclid" })).toBe(true);
+    expect(
+      matchesArchiveFilters({ ...exoticS, notes: "Achei no portal" }, { q: "portal" }),
+    ).toBe(true);
     expect(matchesArchiveFilters(exoticS, { q: "hauler" })).toBe(false);
     expect(matchesArchiveFilters(exoticS, { seed: "0xABC" })).toBe(true);
     expect(

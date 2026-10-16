@@ -34,6 +34,7 @@ function archived(
     name: "Item",
     seed: "0x1",
     description: "desc",
+    notes: "",
     galaxy: 0,
     coordinates: null,
     gameVersion: 1,

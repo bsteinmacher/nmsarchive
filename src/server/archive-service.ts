@@ -119,6 +119,7 @@ function toSummary(row: {
     name: row.name,
     seed: row.seed,
     description: row.description,
+    notes: asString(asRecord(row.metadata)?.notes) ?? "",
     galaxy: row.galaxy,
     coordinates: row.coordinates,
     screenshotPath: row.screenshotPath,
@@ -551,6 +552,7 @@ export async function updateItem(
   input: {
     id: string;
     description?: string;
+    notes?: string;
     tags?: string[];
     screenshotPath?: string | null;
     className?: string | null;
@@ -587,6 +589,7 @@ export async function updateItem(
     }
   }
   if (
+    input.notes !== undefined ||
     input.className !== undefined ||
     input.shipType !== undefined ||
     input.extra
@@ -602,6 +605,8 @@ export async function updateItem(
             ),
           )
         : undefined;
+    const notes =
+      input.notes !== undefined ? input.notes.trim() : asString(rec.notes);
     const metadata = {
       ...rec,
       className:
@@ -613,7 +618,9 @@ export async function updateItem(
           ? rec.shipType
           : input.shipType || undefined,
       extra,
+      ...(notes ? { notes } : {}),
     };
+    if (!notes) delete (metadata as { notes?: string }).notes;
     await prisma.archivedItem.update({
       where: { id: input.id },
       data: { metadata: metadata as Prisma.InputJsonValue },
@@ -628,6 +635,7 @@ export async function updateItem(
       name: existing.name,
       seed: existing.seed,
       description: input.description != null,
+      notes: input.notes != null,
       tags: input.tags != null,
       screenshot: input.screenshotPath !== undefined,
       rank: input.className !== undefined || input.extra != null,

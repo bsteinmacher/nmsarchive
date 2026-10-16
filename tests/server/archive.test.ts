@@ -83,9 +83,11 @@ describe("archive-service", () => {
     const updated = await updateItem(prisma, {
       id: archived.id,
       description: "Atualizada.",
+      notes: "Comprada em Euclid.",
       tags: ["exotic"],
     });
     expect(updated.description).toBe("Atualizada.");
+    expect(updated.notes).toBe("Comprada em Euclid.");
     expect(updated.tags.map((t) => t.slug)).toEqual(["exotic"]);
 
     await deleteItem(prisma, archived.id);

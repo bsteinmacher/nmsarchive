@@ -59,7 +59,7 @@ export function ArchiveFilters({
             id={qId}
             type="search"
             value={state.q ?? ""}
-            placeholder="Nome ou descrição"
+            placeholder="Título ou descrição"
             autoComplete="off"
             onChange={(e) =>
               onChange({

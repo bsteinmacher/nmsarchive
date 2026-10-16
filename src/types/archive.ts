@@ -21,6 +21,7 @@ export type ArchivedItemSummary = {
   name: string;
   seed: string;
   description: string;
+  notes: string;
   galaxy: number | null;
   coordinates: string | null;
   gameVersion: number | null;

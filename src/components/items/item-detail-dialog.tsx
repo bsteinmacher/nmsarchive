@@ -43,6 +43,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "cn";
@@ -75,12 +76,14 @@ export function ItemDetailDialog({
   const sessionItems = useSaveSession((s) => s.items);
   const saveStatus = useSaveSession((s) => s.status);
   const importItem = useSaveSession((s) => s.importItem);
-  const descriptionId = useId();
+  const titleId = useId();
+  const notesId = useId();
   const tagsId = useId();
   const errorId = useId();
   const [draftId, setDraftId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
   const [rank, setRank] = useState<CompanionRank>(emptyCompanionRank);
@@ -94,6 +97,7 @@ export function ItemDetailDialog({
   function loadDraft() {
     if (!item) return;
     setDescription(item.description);
+    setNotes(item.notes);
     setTags(item.tags.map((t) => t.label));
     setScreenshotPath(item.screenshotPath);
     setRank(
@@ -115,6 +119,7 @@ export function ItemDetailDialog({
     setEditing(false);
     setConfirmDelete(false);
     setDescription(item.description);
+    setNotes(item.notes);
     setTags(item.tags.map((t) => t.label));
     setScreenshotPath(item.screenshotPath);
     setRank(
@@ -233,8 +238,8 @@ export function ItemDetailDialog({
     if (!item) return;
     const trimmed = description.trim();
     if (!trimmed) {
-      setError("A descrição não pode ficar vazia.");
-      document.getElementById(descriptionId)?.focus();
+      setError("O título não pode ficar vazio.");
+      document.getElementById(titleId)?.focus();
       return;
     }
     const className = companionClassFromRank(rank);
@@ -252,6 +257,7 @@ export function ItemDetailDialog({
       await update.mutateAsync({
         id: item.id,
         description: trimmed,
+        notes: notes.trim(),
         tags: nextTags,
         screenshotPath,
         ...(item.category === "companion"
@@ -407,9 +413,9 @@ export function ItemDetailDialog({
                 {editing ? (
                   <>
                     <div className="grid gap-2">
-                      <Label htmlFor={descriptionId}>Descrição</Label>
-                      <Textarea
-                        id={descriptionId}
+                      <Label htmlFor={titleId}>Título</Label>
+                      <Input
+                        id={titleId}
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
                         aria-invalid={error ? true : undefined}
@@ -420,6 +426,14 @@ export function ItemDetailDialog({
                           {error}
                         </p>
                       ) : null}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor={notesId}>Descrição</Label>
+                      <Textarea
+                        id={notesId}
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                      />
                     </div>
                     {item.category === "multitool" ? (
                       <MultitoolTypeField
@@ -461,7 +475,9 @@ export function ItemDetailDialog({
                   </>
                 ) : (
                   <>
-                    <p className="text-sm whitespace-pre-wrap">{item.description}</p>
+                    {item.notes.trim() ? (
+                      <p className="text-sm whitespace-pre-wrap">{item.notes}</p>
+                    ) : null}
                     <ItemTags tags={item.tags.map((t) => t.label)} />
                     {item.category === "companion" && formatCompanionRank(rank) ? (
                       <p className="text-sm text-muted-foreground">

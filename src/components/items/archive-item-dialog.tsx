@@ -54,10 +54,12 @@ export function ArchiveItemDialog({
   const utils = trpc.useUtils();
   const createMeta = trpc.saves.createMetadata.useMutation();
   const archive = trpc.items.archive.useMutation();
-  const descriptionId = useId();
+  const titleId = useId();
+  const notesId = useId();
   const tagsId = useId();
   const errorId = useId();
   const [description, setDescription] = useState("");
+  const [notes, setNotes] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
   const [rank, setRank] = useState<CompanionRank>(emptyCompanionRank);
@@ -69,7 +71,8 @@ export function ArchiveItemDialog({
   const itemKey = open && item ? `${item.category}:${item.index}` : "";
 
   function applyDefaults(slot: ExtractedSlot | null) {
-    setDescription("");
+    setDescription(slot?.name ?? "");
+    setNotes("");
     setScreenshotPath(null);
     setRank(emptyCompanionRank());
     const nextType =
@@ -100,8 +103,8 @@ export function ArchiveItemDialog({
     if (!item || item.empty || item.readonly) return;
     const trimmed = description.trim();
     if (!trimmed) {
-      setError("Escreva uma descrição. Ela aparece no arquivo pessoal.");
-      document.getElementById(descriptionId)?.focus();
+      setError("Escreva um título. Ele aparece no arquivo pessoal.");
+      document.getElementById(titleId)?.focus();
       return;
     }
     if (!summary || !sha256) {
@@ -146,6 +149,7 @@ export function ArchiveItemDialog({
             category === "companion"
               ? companionRankExtra(item.extra, rank)
               : item.extra,
+          notes: notes.trim() || undefined,
           payload: item.payload,
         },
         galaxy: summary.galaxy,
@@ -224,15 +228,14 @@ export function ArchiveItemDialog({
             </p>
           ) : null}
           <div className="grid gap-2">
-            <Label htmlFor={descriptionId}>Descrição</Label>
-            <Textarea
-              id={descriptionId}
-              name="description"
+            <Label htmlFor={titleId}>Título</Label>
+            <Input
+              id={titleId}
+              name="title"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               aria-invalid={error ? true : undefined}
               aria-describedby={error ? errorId : undefined}
-              placeholder="S-class em Euclid"
             />
             {error ? (
               <p id={errorId} className="text-sm text-destructive">
@@ -240,9 +243,19 @@ export function ArchiveItemDialog({
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Obrigatória. Serve para achar o item depois, sem abrir o save.
+                Obrigatório. Aparece no arquivo pessoal.
               </p>
             )}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor={notesId}>Descrição</Label>
+            <Textarea
+              id={notesId}
+              name="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Onde encontrou, o que quiser lembrar."
+            />
           </div>
           {category === "ship" ? (
             <div className="grid gap-2">
