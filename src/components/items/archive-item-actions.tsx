@@ -4,11 +4,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { archivedToNmsItem } from "@/lib/archive-export";
+import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
 import { gameVersionMismatch, type NmsItemFile } from "@/lib/nmsitem";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { trpc } from "@/lib/trpc";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import type { ArchivedItemSummary } from "@/types/archive";
+import { ApplyToSaveDialog } from "./apply-to-save-dialog";
 import { ExportMenu } from "./export-menu";
 import { VersionMismatchDialog } from "./version-mismatch-dialog";
 
@@ -24,12 +26,13 @@ export function ArchiveItemActions({
   const saveReady = useSaveSession((s) => s.status === "ready");
   const [pending, setPending] = useState<NmsItemFile | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [choiceFile, setChoiceFile] = useState<NmsItemFile | null>(null);
 
   async function loadDetail() {
     return utils.items.get.fetch({ id: item.id });
   }
 
-  async function applyFile(file: NmsItemFile) {
+  async function commitApply(file: NmsItemFile) {
     try {
       const index = await importItem(file);
       toast.success(`Aplicado no slot ${index + 1} do save aberto.`);
@@ -50,6 +53,10 @@ export function ArchiveItemActions({
         toast.error("Abra um save para aplicar este item num slot.");
         return;
       }
+      if (usesApplyDepth(file.category)) {
+        setChoiceFile(file);
+        return;
+      }
       const json = getMappedJson();
       const mismatch = json ? gameVersionMismatch(file, json) : null;
       if (mismatch) {
@@ -57,7 +64,7 @@ export function ArchiveItemActions({
         setWarning(mismatch);
         return;
       }
-      await applyFile(file);
+      await commitApply(file);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao aplicar");
     }
@@ -99,8 +106,15 @@ export function ArchiveItemActions({
           setWarning(null);
         }}
         onConfirm={() => {
-          if (pending) void applyFile(pending);
+          if (pending) void commitApply(pending);
         }}
+      />
+      <ApplyToSaveDialog
+        open={choiceFile != null}
+        onOpenChange={(next) => {
+          if (!next) setChoiceFile(null);
+        }}
+        sourceFile={choiceFile}
       />
     </>
   );

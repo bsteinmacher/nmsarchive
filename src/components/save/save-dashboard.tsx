@@ -29,7 +29,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { downloadBytes } from "@/lib/download";
 import { formatPlayTime } from "@/lib/nms/player";
+import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
 import { gameVersionMismatch, parseNmsItem, type NmsItemFile } from "@/lib/nmsitem";
+import { ApplyToSaveDialog } from "@/components/items/apply-to-save-dialog";
 import { downloadNmsItemZip } from "@/lib/nmsitem-zip";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { CurrencyEditDialog, type CurrencyField } from "./currencies-dialog";
@@ -92,6 +94,7 @@ export function SaveDashboard() {
   const importRef = useRef<HTMLInputElement>(null);
   const [pendingItem, setPendingItem] = useState<NmsItemFile | null>(null);
   const [versionWarning, setVersionWarning] = useState<string | null>(null);
+  const [choiceFile, setChoiceFile] = useState<NmsItemFile | null>(null);
   const [editingCurrency, setEditingCurrency] = useState<CurrencyField | null>(
     null,
   );
@@ -137,6 +140,10 @@ export function SaveDashboard() {
       item = parseNmsItem(await file.text());
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Arquivo inválido");
+      return;
+    }
+    if (usesApplyDepth(item.category)) {
+      setChoiceFile(item);
       return;
     }
     const json = getMappedJson();
@@ -391,6 +398,14 @@ export function SaveDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ApplyToSaveDialog
+        open={choiceFile != null}
+        onOpenChange={(next) => {
+          if (!next) setChoiceFile(null);
+        }}
+        sourceFile={choiceFile}
+      />
 
       <CurrencyEditDialog
         field={editingCurrency}

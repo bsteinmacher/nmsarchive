@@ -28,8 +28,10 @@ import { ScreenshotField } from "@/components/items/screenshot-field";
 import { TagInput } from "@/components/items/tag-input";
 import { CompanionRankField } from "@/components/items/companion-rank-field";
 import { MultitoolTypeField } from "@/components/items/multitool-type-field";
+import { ApplyToSaveDialog } from "@/components/items/apply-to-save-dialog";
 import { ConfirmDeleteDialog } from "@/components/items/confirm-delete-dialog";
 import { VersionMismatchDialog } from "@/components/items/version-mismatch-dialog";
+import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { CATEGORY_META, isCategory } from "@/types/nms";
 import {
@@ -87,6 +89,7 @@ export function ItemDetailDialog({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingItem, setPendingItem] = useState<NmsItemFile | null>(null);
   const [versionWarning, setVersionWarning] = useState<string | null>(null);
+  const [applyOpen, setApplyOpen] = useState(false);
 
   function loadDraft() {
     if (!item) return;
@@ -131,9 +134,10 @@ export function ItemDetailDialog({
     setDraftId(null);
     setEditing(false);
   }
-  if (!open && (editing || confirmDelete)) {
+  if (!open && (editing || confirmDelete || applyOpen)) {
     setEditing(false);
     setConfirmDelete(false);
+    setApplyOpen(false);
   }
 
   const sessionCategory = item
@@ -184,6 +188,10 @@ export function ItemDetailDialog({
     if (!file) return;
     if (!saveReady) {
       toast.error("Abra um save para aplicar este item num slot.");
+      return;
+    }
+    if (usesApplyDepth(file.category)) {
+      setApplyOpen(true);
       return;
     }
     const json = getMappedJson();
@@ -352,7 +360,9 @@ export function ItemDetailDialog({
                         ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim — e recusa se já houver 20 Space Stations."
                         : uiCategory === "deepspace"
                           ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim do array de bases."
-                          : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
+                          : item && usesApplyDepth(item.category)
+                            ? "Não há item com este seed no save aberto. Aplicar pergunta se cria num slot vazio ou se coloca em cima de uma existente."
+                            : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
                   </p>
                 ) : (
                   <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
@@ -546,6 +556,12 @@ export function ItemDetailDialog({
         onConfirm={() => {
           if (pendingItem) void applyItem(pendingItem);
         }}
+      />
+      <ApplyToSaveDialog
+        open={applyOpen}
+        onOpenChange={setApplyOpen}
+        sourceFile={applyOpen ? toNmsItem() : null}
+        onApplied={() => onOpenChange(false)}
       />
     </>
   );

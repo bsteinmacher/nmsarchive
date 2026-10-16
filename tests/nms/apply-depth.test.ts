@@ -123,51 +123,31 @@ describe("apply ship depths", () => {
     );
   });
 
-  it("supercharged troca a ordem e mantém a tech do destino", () => {
-    const result = applyShip(saveWith(destShip, false), 0, sourceShip, "supercharged");
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const inventory = asRecord(ownershipAt(result.json)?.Inventory);
-    expect(inventory?.SpecialSlots).toEqual([special(3, 2)]);
-    expect(ownershipAt(result.json)?.InventoryLayout).toEqual(
-      sourceShip.InventoryLayout,
-    );
-    expect(inventory?.Slots).toEqual(destShip.Inventory.Slots);
-    expect(inventory?.ValidSlotIndices).toEqual([0, 1]);
-  });
-
-  it("slots e tech levam índices e tecnologia, e a carga fica", () => {
+  it("trocar leva slots e tech da origem e esvazia a carga", () => {
     const result = applyShip(saveWith(destShip, false), 0, sourceShip, "tech");
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    const inventory = asRecord(ownershipAt(result.json)?.Inventory);
-    expect(inventory?.ValidSlotIndices).toEqual([0, 1, 2, 3]);
-    expect(inventory?.Width).toBe(8);
-    expect(inventory?.BaseStatValues).toEqual(sourceShip.Inventory.BaseStatValues);
-    expect(inventory?.Slots).toEqual([
-      product("DEST_CARGO", 1, 0),
-      tech("SRC_TECH", 2, 1),
-    ]);
-    expect(inventory?.Name).toBe("grid-dest");
-  });
-
-  it("tudo leva o inventário e mantém nome e posição", () => {
-    const result = applyShip(saveWith(destShip, false), 0, sourceShip, "full");
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const ship = ownershipAt(result.json);
     const inventory = asRecord(ship?.Inventory);
-    expect(inventory?.Slots).toEqual(sourceShip.Inventory.Slots);
+    expect(inventory?.ValidSlotIndices).toEqual([0, 1, 2, 3]);
+    expect(inventory?.Width).toBe(8);
+    expect(inventory?.SpecialSlots).toEqual([special(3, 2)]);
+    expect(inventory?.BaseStatValues).toEqual(sourceShip.Inventory.BaseStatValues);
+    expect(inventory?.Slots).toEqual([tech("SRC_TECH", 2, 1)]);
+    expect(inventory?.Name).toBe("grid-dest");
     expect(ship?.Name).toBe("Minha nave");
     expect(ship?.Position).toEqual([1, 2, 3, 4]);
-    expect(inventory?.Name).toBe("grid-dest");
+    expect(ship?.InventoryLayout).toEqual(sourceShip.InventoryLayout);
   });
 
-  it("slot vazio com tudo copia o item inteiro, inclusive o nome", () => {
-    const result = applyShip(saveWith(destShip), 1, sourceShip, "full");
+  it("criar no slot vazio copia o item e deixa o inventário só com tech", () => {
+    const result = applyItem(saveWith(destShip), "ship", sourceShip);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(ownershipAt(result.json, 1)?.Name).toBe("Fighter arquivada");
+    expect(result.index).toBe(1);
+    const ship = ownershipAt(result.json, 1);
+    expect(ship?.Name).toBe("Fighter arquivada");
+    expect(asRecord(ship?.Inventory)?.Slots).toEqual([tech("SRC_TECH", 2, 1)]);
   });
 });
 
@@ -332,7 +312,7 @@ describe("apply multitool and freighter", () => {
     };
     const result = applyItem(save, "multitool", staff, "0xd9cd93cc260e592e", "main", {
       index: 0,
-      depth: "supercharged",
+      depth: "model",
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -346,7 +326,7 @@ describe("apply multitool and freighter", () => {
     expect(tool?.CustomisationData).toEqual(parts);
     expect(tool?.ScreenData).toEqual(screen);
     expect(store?.Slots).toEqual([product("KEEP", 0, 0)]);
-    expect(store?.SpecialSlots).toEqual([special(4, 0)]);
+    expect(store?.SpecialSlots).toEqual([special(0, 0)]);
     expect(player?.CurrentWeapon).toEqual({
       Filename: "MODELS/COMMON/WEAPONS/MULTITOOL/STAFFMULTITOOL.SCENE.MBIN",
       GenerationSeed: [true, "0xD9CD93CC260E592E"],
@@ -354,7 +334,7 @@ describe("apply multitool and freighter", () => {
 
     const inactive = applyItem(save, "multitool", staff, "0xd9cd93cc260e592e", "main", {
       index: 1,
-      depth: "supercharged",
+      depth: "model",
     });
     expect(inactive.ok).toBe(true);
     if (!inactive.ok) return;
@@ -458,5 +438,129 @@ describe("apply multitool and freighter", () => {
     const inventory = asRecord(player?.FreighterInventory);
     expect(asString(asRecord(inventory?.Class)?.InventoryClass)).toBe("S");
     expect(inventory?.Slots).toEqual([product("KEEP", 0, 0)]);
+  });
+
+  it("trocar a multi-tool leva tech da origem e esvazia o store", () => {
+    const save = {
+      BaseContext: {
+        PlayerStateData: {
+          Multitools: [
+            {
+              Name: "Minha MT",
+              Seed: [true, "0x1"],
+              Resource: {
+                Filename: "MODELS/ROYALMULTITOOL.SCENE.MBIN",
+                Seed: [true, "0x1"],
+              },
+              Store: {
+                Class: { InventoryClass: "C" },
+                Width: 4,
+                Slots: [product("KEEP", 0, 0), tech("DEST_TECH", 1, 0)],
+              },
+            },
+          ],
+        },
+      },
+    };
+    const result = applyItem(
+      save,
+      "multitool",
+      {
+        Name: "Arquivada",
+        Seed: [true, "0x9"],
+        Resource: {
+          Filename: "MODELS/STAFFMULTITOOL.SCENE.MBIN",
+          Seed: [true, "0x9"],
+        },
+        Store: {
+          Class: { InventoryClass: "S" },
+          Width: 8,
+          Slots: [product("NEW", 1, 1), tech("SRC_TECH", 2, 1)],
+        },
+      },
+      "0x9",
+      "main",
+      { index: 0, depth: "tech" },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const tool = asRecord(asArray(getPlayerState(result.json)?.Multitools)?.[0]);
+    const store = asRecord(tool?.Store);
+    expect(tool?.Name).toBe("Minha MT");
+    expect(store?.Width).toBe(8);
+    expect(store?.Slots).toEqual([tech("SRC_TECH", 2, 1)]);
+  });
+
+  it("trocar a cargueira atual leva tech e esvazia a carga", () => {
+    const save = {
+      BaseContext: {
+        PlayerStateData: {
+          PlayerFreighterName: "Meu freighter",
+          CurrentFreighterHomeSystemSeed: [true, "0xHOME"],
+          CurrentFreighter: {
+            Filename: "MODELS/PIRATEFREIGHTER.SCENE.MBIN",
+            Seed: [true, "0x1"],
+          },
+          FreighterInventory: {
+            Class: { InventoryClass: "C" },
+            Slots: [product("KEEP", 0, 0), tech("DEST_TECH", 0, 1)],
+            Name: "inv",
+          },
+          FreighterInventory_TechOnly: {
+            Class: { InventoryClass: "C" },
+            Slots: [tech("DEST_ONLY", 0, 0)],
+          },
+          FreighterInventory_Cargo: {
+            Class: { InventoryClass: "C" },
+            Slots: [product("DEST_CARGO", 0, 0)],
+          },
+          FreighterLayout: { Slots: 10 },
+        },
+      },
+    };
+    const result = applyItem(
+      save,
+      "freighter",
+      {
+        kind: "current",
+        Resource: {
+          Filename: "MODELS/CAPITALFREIGHTER.SCENE.MBIN",
+          Seed: [true, "0x2"],
+        },
+        Inventory: {
+          Class: { InventoryClass: "S" },
+          Slots: [product("NEW", 1, 1), tech("SRC_TECH", 2, 1)],
+          Name: "other",
+        },
+        Inventory_TechOnly: {
+          Class: { InventoryClass: "S" },
+          Slots: [tech("SRC_ONLY", 0, 0)],
+        },
+        Inventory_Cargo: {
+          Class: { InventoryClass: "S" },
+          Slots: [product("SRC_CARGO", 0, 0)],
+        },
+        PlayerFreighterName: "Arquivado",
+        FreighterLayout: { Slots: 40 },
+        CurrentFreighterHomeSystemSeed: [true, "0xOTHER"],
+      },
+      "0x2",
+      "main",
+      { index: 0, depth: "tech" },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const player = getPlayerState(result.json);
+    expect(player?.PlayerFreighterName).toBe("Meu freighter");
+    expect(player?.CurrentFreighterHomeSystemSeed).toEqual([true, "0xHOME"]);
+    expect(player?.FreighterLayout).toEqual({ Slots: 40 });
+    expect(asRecord(player?.FreighterInventory)?.Slots).toEqual([
+      tech("SRC_TECH", 2, 1),
+    ]);
+    expect(asRecord(player?.FreighterInventory_TechOnly)?.Slots).toEqual([
+      tech("SRC_ONLY", 0, 0),
+    ]);
+    expect(asRecord(player?.FreighterInventory_Cargo)?.Slots).toEqual([]);
+    expect(asRecord(player?.FreighterInventory)?.Name).toBe("inv");
   });
 });

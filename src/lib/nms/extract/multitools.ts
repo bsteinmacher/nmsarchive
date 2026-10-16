@@ -8,7 +8,12 @@ import {
   nameFromFilename,
   normalizeSeed,
 } from "../value";
-import { mergeApply, MULTITOOL_MERGE, type ApplyDepth } from "./apply-depth";
+import {
+  mergeApply,
+  MULTITOOL_MERGE,
+  stripSpecGrids,
+  type ApplyDepth,
+} from "./apply-depth";
 import {
   insertAtFirstEmpty,
   emptySlotAt,
@@ -138,7 +143,7 @@ export function applyMultitool(
   mappedJson: unknown,
   index: number,
   payload: unknown,
-  depth: ApplyDepth = "full",
+  depth: ApplyDepth = "model",
   context: SaveContext = "main",
 ): InsertResult {
   const cloned = clonePlayer(mappedJson, context);
@@ -152,11 +157,9 @@ export function applyMultitool(
   }
   const source = asRecord(payload);
   if (!source) return { ok: false, error: "Payload de multi-tool inválido." };
-  const empty = isEmptyMultitoolSlot(tools[index]);
-  tools[index] =
-    empty && depth === "full"
-      ? structuredClone(source)
-      : mergeApply(tools[index], source, depth, MULTITOOL_MERGE);
+  tools[index] = isEmptyMultitoolSlot(tools[index])
+    ? stripSpecGrids(structuredClone(source), MULTITOOL_MERGE)
+    : mergeApply(tools[index], source, depth, MULTITOOL_MERGE);
   syncCurrentWeapon(cloned.player, index);
   return { ok: true, index, json: cloned.json };
 }
@@ -170,18 +173,23 @@ export const multitoolsAdapter: CategoryAdapter = {
     { id: "seed", header: "Seed" },
   ],
   list: listMultitools,
-  insert: (json, payload, context) =>
-    syncInserted(
+  insert: (json, payload, context) => {
+    const rec = asRecord(payload);
+    const cleaned = rec
+      ? stripSpecGrids(rec, MULTITOOL_MERGE)
+      : payload;
+    return syncInserted(
       insertAtFirstEmpty(
         json,
         "Multitools",
-        payload,
+        cleaned,
         isEmptyMultitoolSlot,
         EMPTY_MT,
         context,
       ),
       context,
-    ),
+    );
+  },
   replace: (json, index, payload, context) =>
     syncInserted(
       replaceAtIndex(json, "Multitools", index, payload, context),

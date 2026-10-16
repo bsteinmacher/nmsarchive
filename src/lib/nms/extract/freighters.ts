@@ -11,6 +11,8 @@ import {
   FREIGHTER_MERGE,
   mergeApply,
   mergeGrid,
+  stripGridCargo,
+  stripSpecGrids,
   type ApplyDepth,
 } from "./apply-depth";
 import { clonePlayer, inventoryClass } from "./array";
@@ -122,7 +124,9 @@ export function listFreighters(
       filename: fn,
       empty,
       slotLabel: `Frota ${fleetIndex + 1}`,
-      extra: empty ? {} : { class: cls, itemType: type, filename: fn, role: "fleet" },
+      extra: empty
+        ? { role: "fleet" }
+        : { class: cls, itemType: type, filename: fn, role: "fleet" },
       payload: rec,
     });
   });
@@ -138,11 +142,11 @@ function applyCurrent(
   const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   cloned.player.CurrentFreighter = structuredClone(payload.Resource);
-  cloned.player.FreighterInventory = structuredClone(payload.Inventory);
-  cloned.player.FreighterInventory_TechOnly = structuredClone(
+  cloned.player.FreighterInventory = stripGridCargo(payload.Inventory);
+  cloned.player.FreighterInventory_TechOnly = stripGridCargo(
     payload.Inventory_TechOnly,
   );
-  cloned.player.FreighterInventory_Cargo = structuredClone(
+  cloned.player.FreighterInventory_Cargo = stripGridCargo(
     payload.Inventory_Cargo,
   );
   if ("PlayerFreighterName" in payload) {
@@ -186,6 +190,16 @@ function applyCurrentMerged(
   const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
   cloned.player.CurrentFreighter = structuredClone(payload.Resource);
+  if (depth === "tech") {
+    if ("FreighterLayout" in payload) {
+      cloned.player.FreighterLayout = structuredClone(payload.FreighterLayout);
+    }
+    if ("FreighterCargoLayout" in payload) {
+      cloned.player.FreighterCargoLayout = structuredClone(
+        payload.FreighterCargoLayout,
+      );
+    }
+  }
   for (const [playerKey, payloadKey] of FREIGHTER_GRIDS) {
     const source = payload[payloadKey];
     if (source == null && cloned.player[playerKey] == null) continue;
@@ -210,7 +224,7 @@ export function applyFreighter(
   mappedJson: unknown,
   index: number,
   payload: unknown,
-  depth: ApplyDepth = "full",
+  depth: ApplyDepth = "model",
   context: SaveContext = "main",
 ): InsertResult {
   if (index === 0 || isCurrentPayload(payload)) {
@@ -237,10 +251,9 @@ export function applyFreighter(
   const source = fleetBody(payload);
   if (!source) return { ok: false, error: "Payload de cargueira inválido." };
   const empty = isEmptyFreighterResource(asRecord(fleet[fleetIndex])?.Resource);
-  fleet[fleetIndex] =
-    empty && depth === "full"
-      ? structuredClone(source)
-      : mergeApply(fleet[fleetIndex], source, depth, FREIGHTER_MERGE);
+  fleet[fleetIndex] = empty
+    ? stripSpecGrids(structuredClone(source), FREIGHTER_MERGE)
+    : mergeApply(fleet[fleetIndex], source, depth, FREIGHTER_MERGE);
   return { ok: true, json: cloned.json, index };
 }
 
@@ -277,7 +290,7 @@ export function insertFreighter(
   }
   const rec = asRecord(payload) ?? {};
   const { kind: _kind, ...rest } = rec;
-  fleet[fleetIndex] = structuredClone(rest);
+  fleet[fleetIndex] = stripSpecGrids(structuredClone(rest), FREIGHTER_MERGE);
   return { ok: true, json: cloned.json, index: fleetIndex + 1 };
 }
 

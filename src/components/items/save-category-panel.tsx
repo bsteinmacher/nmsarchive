@@ -9,7 +9,6 @@ import { ArchiveItemDialog } from "@/components/items/archive-item-dialog";
 import { SaveContextSwitch } from "@/components/save/save-context-switch";
 import { ListViewToggle } from "@/components/items/list-view-toggle";
 import { SaveItemDetailDialog } from "@/components/items/save-item-detail-dialog";
-import { FrigateCalculator } from "@/components/items/frigate-calculator";
 import {
   SaveSlotActions,
   SaveSlotGrid,
@@ -268,7 +267,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const primary = items.filter((item) => {
     if (item.group === "automatic") return false;
     if (category === "base" && isHiddenFromBasesMenu(item)) return false;
-    if (category === "freighter" && item.extra.role === "fleet") return false;
+    if (category === "freighter" && item.index !== 0) return false;
     return true;
   });
   const automatic = items.filter((item) => item.group === "automatic");
@@ -370,7 +369,9 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const caption =
     category === "exosuit"
       ? "Exosuit layout"
-      : `${adapter.label} no save (${filled} preenchida${filled === 1 ? "" : "s"} / ${slotCount} slots)`;
+      : category === "freighter"
+        ? "Freighter atual"
+        : `${adapter.label} no save (${filled} preenchida${filled === 1 ? "" : "s"} / ${slotCount} slot${slotCount === 1 ? "" : "s"})`;
 
   const description =
     category === "frigate"
@@ -497,7 +498,6 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             onArchive={setArchiving}
             onExport={onExport}
           />
-          <FrigateCalculator items={fleetFrigates} />
           </div>
           {squadronPilots.length > 0 ? (
             <div id="squadron">
