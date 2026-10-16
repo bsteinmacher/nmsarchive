@@ -3,25 +3,38 @@
 import { useId, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { archiveEnvelopeCategory, archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
-import { formatGalaxy } from "@/lib/nms/galaxies";
-import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import {
-  buildNmsItem,
-  gameVersionMismatch,
-  type NmsItemFile,
-} from "@/lib/nmsitem";
+  archiveUiCategory,
+  matchingSlotsForArchived,
+  sessionCategoryForArchived,
+} from "@/lib/archive-match";
+import { archivedToNmsItem } from "@/lib/archive-export";
+import {
+  autoTagsFromArchived,
+  mergeAutoTags,
+  replaceClassTag,
+  replaceMultitoolTypeTag,
+} from "@/lib/auto-tags";
+import { formatGalaxy } from "@/lib/nms/galaxies";
+import { archiveMultitoolType } from "@/lib/nms/multitool-type";
+import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
+import { gameVersionMismatch, type NmsItemFile } from "@/lib/nmsitem";
 import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import { trpc } from "@/lib/trpc";
 import { ItemCompare } from "@/components/items/item-compare";
+import { ItemTags } from "@/components/items/item-tags";
 import { JsonTree } from "@/components/items/json-tree";
 import { ScreenshotField } from "@/components/items/screenshot-field";
 import { TagInput } from "@/components/items/tag-input";
 import { CompanionRankField } from "@/components/items/companion-rank-field";
+import { MultitoolTypeField } from "@/components/items/multitool-type-field";
+import { ConfirmDeleteDialog } from "@/components/items/confirm-delete-dialog";
+import { VersionMismatchDialog } from "@/components/items/version-mismatch-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { CATEGORY_META, isCategory } from "@/types/nms";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -32,6 +45,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "cn";
 import {
+  companionClassFromRank,
   companionRankExtra,
   companionRankFromMetadata,
   emptyCompanionRank,
@@ -63,17 +77,19 @@ export function ItemDetailDialog({
   const tagsId = useId();
   const errorId = useId();
   const [draftId, setDraftId] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
   const [rank, setRank] = useState<CompanionRank>(emptyCompanionRank);
+  const [toolType, setToolType] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pendingItem, setPendingItem] = useState<NmsItemFile | null>(null);
   const [versionWarning, setVersionWarning] = useState<string | null>(null);
 
-  if (item && item.id !== draftId) {
-    setDraftId(item.id);
+  function loadDraft() {
+    if (!item) return;
     setDescription(item.description);
     setTags(item.tags.map((t) => t.label));
     setScreenshotPath(item.screenshotPath);
@@ -83,11 +99,41 @@ export function ItemDetailDialog({
         extra: item.metadata.extra,
       }),
     );
+    setToolType(
+      item.category === "multitool"
+        ? archiveMultitoolType(item.shipType)
+        : item.shipType,
+    );
     setError(null);
+  }
+
+  if (item && item.id !== draftId) {
+    setDraftId(item.id);
+    setEditing(false);
     setConfirmDelete(false);
+    setDescription(item.description);
+    setTags(item.tags.map((t) => t.label));
+    setScreenshotPath(item.screenshotPath);
+    setRank(
+      companionRankFromMetadata({
+        className: item.className,
+        extra: item.metadata.extra,
+      }),
+    );
+    setToolType(
+      item.category === "multitool"
+        ? archiveMultitoolType(item.shipType)
+        : item.shipType,
+    );
+    setError(null);
   }
   if (!item && draftId != null) {
     setDraftId(null);
+    setEditing(false);
+  }
+  if (!open && (editing || confirmDelete)) {
+    setEditing(false);
+    setConfirmDelete(false);
   }
 
   const sessionCategory = item
@@ -117,25 +163,7 @@ export function ItemDetailDialog({
 
   function toNmsItem(): NmsItemFile | null {
     if (!item) return null;
-    const envelope = archiveEnvelopeCategory({
-      category: item.category,
-      shipType: item.shipType,
-      extra: item.metadata.extra,
-    });
-    if (!envelope) {
-      toast.error("Categoria desconhecida neste arquivo.");
-      return null;
-    }
-    return buildNmsItem({
-      category: envelope,
-      name: item.name,
-      seed: item.seed,
-      payload: item.payload,
-      gameVersion: item.gameVersion ?? 0,
-      description: item.description,
-      galaxy: item.galaxy ?? undefined,
-      tags: item.tags.map((t) => t.label),
-    });
+    return archivedToNmsItem(item);
   }
 
   async function applyItem(file: NmsItemFile) {
@@ -168,8 +196,32 @@ export function ItemDetailDialog({
     void applyItem(file);
   }
 
-  async function onSaveEdits(event: FormEvent) {
-    event.preventDefault();
+  function startEdit() {
+    if (!item) return;
+    setEditing(true);
+    setConfirmDelete(false);
+    const nextType =
+      item.category === "multitool"
+        ? archiveMultitoolType(item.shipType)
+        : item.shipType;
+    setToolType(nextType);
+    const merged = mergeAutoTags(
+      item.tags.map((t) => t.label),
+      autoTagsFromArchived(item),
+    );
+    setTags(
+      item.category === "multitool"
+        ? replaceMultitoolTypeTag(merged, nextType)
+        : merged,
+    );
+  }
+
+  function cancelEdit() {
+    loadDraft();
+    setEditing(false);
+  }
+
+  async function commitEdits() {
     if (!item) return;
     const trimmed = description.trim();
     if (!trimmed) {
@@ -177,17 +229,31 @@ export function ItemDetailDialog({
       document.getElementById(descriptionId)?.focus();
       return;
     }
+    const className = companionClassFromRank(rank);
+    const nextType =
+      item.category === "multitool"
+        ? toolType.trim() || item.shipType
+        : item.shipType;
+    const nextTags =
+      item.category === "companion"
+        ? replaceClassTag(tags, className)
+        : item.category === "multitool"
+          ? replaceMultitoolTypeTag(tags, nextType)
+          : tags;
     try {
       await update.mutateAsync({
         id: item.id,
         description: trimmed,
-        tags,
+        tags: nextTags,
         screenshotPath,
         ...(item.category === "companion"
           ? {
-              className: formatCompanionRank(rank) || null,
+              className: className || null,
               extra: companionRankExtra(item.metadata.extra ?? {}, rank),
             }
+          : {}),
+        ...(item.category === "multitool"
+          ? { shipType: nextType || null }
           : {}),
       });
       await Promise.all([
@@ -198,7 +264,9 @@ export function ItemDetailDialog({
         utils.logs.list.invalidate(),
       ]);
       toast.success("Alterações salvas.");
+      setTags(nextTags);
       setError(null);
+      setEditing(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao atualizar");
     }
@@ -220,12 +288,25 @@ export function ItemDetailDialog({
     }
   }
 
+  const title = item
+    ? item.description.trim() || item.name
+    : "Item arquivado";
+
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          if (!next && confirmDelete) {
+            setConfirmDelete(false);
+            return;
+          }
+          onOpenChange(next);
+        }}
+      >
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
-            <DialogTitle>{item?.name ?? "Item arquivado"}</DialogTitle>
+            <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
               {item
                 ? `${item.shipType || categoryLabel} · ${item.seed}`
@@ -233,214 +314,239 @@ export function ItemDetailDialog({
             </DialogDescription>
           </DialogHeader>
 
-          {query.isLoading ? (
-            <p className="text-sm text-muted-foreground">Carregando item…</p>
-          ) : query.error ? (
-            <p className="text-sm text-destructive">
-              {query.error.message}
-            </p>
-          ) : item ? (
-            <div className="grid gap-4">
-              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                {item.className ? <span>Class {item.className}</span> : null}
-                {item.extra?.element ? <span>{item.extra.element}</span> : null}
-                {item.extra?.biome ? (
-                  <span>Biome {item.extra.biome}</span>
-                ) : null}
-                {item.galaxy != null ? (
-                  <span>{formatGalaxy(item.galaxy)}</span>
-                ) : null}
-                {item.filename ? (
-                  <span className="font-mono text-xs break-all">
-                    {item.filename}
-                  </span>
-                ) : null}
-              </div>
-
-              {saveReady ? (
-                <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-                  {matches.length > 0
-                    ? `Mesmo seed no save aberto: slot ${matches.map((s) => s.slotLabel ?? s.index + 1).join(", ")}.`
-                    : uiCategory === "spacestation"
-                      ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim — e recusa se já houver 20 Space Stations."
-                      : uiCategory === "deepspace"
-                        ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim do array de bases."
-                        : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
-                </p>
-              ) : (
-                <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-                  Sem save aberto.{" "}
-                  <Link href="/save" className={cn(buttonVariants({ variant: "link" }), "h-auto p-0")}>
-                    Abrir um save
-                  </Link>{" "}
-                  para aplicar este item.
-                </p>
-              )}
-
-              <ScreenshotField
-                path={screenshotPath}
-                onPathChange={setScreenshotPath}
-                disabled={update.isPending}
-              />
-
-              {saveReady && matches[0] ? (
-                <ItemCompare
-                  archived={{
-                    seed: item.seed,
-                    className: item.className,
-                    itemType: item.shipType,
-                    payload: item.payload,
-                  }}
-                  save={{
-                    seed: matches[0].seed,
-                    className: matches[0].className,
-                    itemType: matches[0].itemType,
-                    payload: matches[0].payload,
-                  }}
-                  saveLabel={`slot ${matches[0].slotLabel ?? matches[0].index + 1}`}
-                />
-              ) : null}
-
-              <form className="grid gap-3" onSubmit={onSaveEdits} noValidate>
-                <div className="grid gap-2">
-                  <Label htmlFor={descriptionId}>Descrição</Label>
-                  <Textarea
-                    id={descriptionId}
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    aria-invalid={error ? true : undefined}
-                    aria-describedby={error ? errorId : undefined}
-                  />
-                  {error ? (
-                    <p id={errorId} className="text-sm text-destructive">
-                      {error}
-                    </p>
+          <DialogBody className="grid gap-4">
+            {query.isLoading ? (
+              <p className="text-sm text-muted-foreground">Carregando item…</p>
+            ) : query.error ? (
+              <p className="text-sm text-destructive">{query.error.message}</p>
+            ) : item ? (
+              <form
+                className="grid gap-4"
+                onSubmit={(event: FormEvent) => {
+                  event.preventDefault();
+                  void commitEdits();
+                }}
+                noValidate
+              >
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  {item.className ? <span>Class {item.className}</span> : null}
+                  {item.extra?.element ? <span>{item.extra.element}</span> : null}
+                  {item.extra?.biome ? (
+                    <span>Biome {item.extra.biome}</span>
+                  ) : null}
+                  {item.galaxy != null && item.category === "base" ? (
+                    <span>{formatGalaxy(item.galaxy)}</span>
+                  ) : null}
+                  {item.filename ? (
+                    <span className="font-mono text-xs break-all">
+                      {item.filename}
+                    </span>
                   ) : null}
                 </div>
-                <div className="grid gap-2">
-                  <Label htmlFor={tagsId}>Tags</Label>
-                  <TagInput
-                    id={tagsId}
-                    value={tags}
-                    onChange={setTags}
-                    placeholder="exotic"
-                  />
-                </div>
-                {item.category === "companion" ? (
-                  <CompanionRankField
-                    value={rank}
-                    onChange={setRank}
-                    disabled={update.isPending}
+
+                {saveReady ? (
+                  <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+                    {matches.length > 0
+                      ? `Mesmo seed no save aberto: slot ${matches.map((s) => s.slotLabel ?? s.index + 1).join(", ")}.`
+                      : uiCategory === "spacestation"
+                        ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim — e recusa se já houver 20 Space Stations."
+                        : uiCategory === "deepspace"
+                          ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim do array de bases."
+                          : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
+                  </p>
+                ) : (
+                  <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
+                    Sem save aberto.{" "}
+                    <Link
+                      href="/save"
+                      className={cn(
+                        buttonVariants({ variant: "link" }),
+                        "h-auto p-0",
+                      )}
+                    >
+                      Abrir um save
+                    </Link>{" "}
+                    para aplicar este item.
+                  </p>
+                )}
+
+                <ScreenshotField
+                  path={screenshotPath}
+                  onPathChange={setScreenshotPath}
+                  disabled={!editing || update.isPending}
+                />
+
+                {saveReady && matches[0] ? (
+                  <ItemCompare
+                    archived={{
+                      seed: item.seed,
+                      className: item.className,
+                      itemType: item.shipType,
+                      payload: item.payload,
+                    }}
+                    save={{
+                      seed: matches[0].seed,
+                      className: matches[0].className,
+                      itemType: matches[0].itemType,
+                      payload: matches[0].payload,
+                    }}
+                    saveLabel={`slot ${matches[0].slotLabel ?? matches[0].index + 1}`}
                   />
                 ) : null}
-                <div>
+
+                {editing ? (
+                  <>
+                    <div className="grid gap-2">
+                      <Label htmlFor={descriptionId}>Descrição</Label>
+                      <Textarea
+                        id={descriptionId}
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                        aria-invalid={error ? true : undefined}
+                        aria-describedby={error ? errorId : undefined}
+                      />
+                      {error ? (
+                        <p id={errorId} className="text-sm text-destructive">
+                          {error}
+                        </p>
+                      ) : null}
+                    </div>
+                    {item.category === "multitool" ? (
+                      <MultitoolTypeField
+                        id={`${tagsId}-type`}
+                        value={toolType}
+                        onChange={(next) => {
+                          setToolType(next);
+                          setTags((current) =>
+                            replaceMultitoolTypeTag(current, next),
+                          );
+                        }}
+                        disabled={update.isPending}
+                      />
+                    ) : null}
+                    <div className="grid gap-2">
+                      <Label htmlFor={tagsId}>Tags</Label>
+                      <TagInput
+                        id={tagsId}
+                        value={tags}
+                        onChange={setTags}
+                        placeholder="exotic"
+                      />
+                    </div>
+                    {item.category === "companion" ? (
+                      <CompanionRankField
+                        value={rank}
+                        onChange={(next) => {
+                          setRank(next);
+                          setTags((current) =>
+                            replaceClassTag(
+                              current,
+                              companionClassFromRank(next),
+                            ),
+                          );
+                        }}
+                        disabled={update.isPending}
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm whitespace-pre-wrap">{item.description}</p>
+                    <ItemTags tags={item.tags.map((t) => t.label)} />
+                    {item.category === "companion" && formatCompanionRank(rank) ? (
+                      <p className="text-sm text-muted-foreground">
+                        Rank {formatCompanionRank(rank)}
+                      </p>
+                    ) : null}
+                  </>
+                )}
+
+                {item.payload != null ? <JsonTree value={item.payload} /> : null}
+              </form>
+            ) : null}
+          </DialogBody>
+
+          <DialogFooter className={editing ? undefined : "sm:justify-between"}>
+            {editing ? (
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={cancelEdit}
+                  disabled={update.isPending}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => void commitEdits()}
+                  disabled={!item || update.isPending}
+                >
+                  {update.isPending ? "Salvando…" : "Salvar edição"}
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={!item}
+                >
+                  Excluir
+                </Button>
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button
-                    type="submit"
+                    type="button"
                     variant="outline"
-                    size="sm"
-                    disabled={update.isPending}
+                    onClick={startEdit}
+                    disabled={!item}
                   >
-                    {update.isPending ? "Salvando…" : "Salvar alterações"}
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const file = toNmsItem();
+                      if (!file) return;
+                      downloadNmsItemFile(file);
+                      toast.success("Exportado .nmsitem");
+                    }}
+                    disabled={!item}
+                  >
+                    Exportar .nmsitem
+                  </Button>
+                  <Button type="button" onClick={onApply} disabled={!item}>
+                    Aplicar no save
                   </Button>
                 </div>
-              </form>
-
-              {item.payload != null ? <JsonTree value={item.payload} /> : null}
-
-              {confirmDelete ? (
-                <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
-                  <p className="text-sm">
-                    Excluir {item.name} do arquivo? Esta ação não desfaz o save
-                    aberto.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      onClick={() => void onDelete()}
-                      disabled={remove.isPending}
-                    >
-                      {remove.isPending ? "Excluindo…" : "Excluir item"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setConfirmDelete(false)}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setConfirmDelete(true)}
-              disabled={!item || confirmDelete}
-            >
-              Excluir
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                const file = toNmsItem();
-                if (!file) return;
-                downloadNmsItemFile(file);
-                toast.success("Exportado .nmsitem");
-              }}
-              disabled={!item}
-            >
-              Exportar .nmsitem
-            </Button>
-            <Button type="button" onClick={onApply} disabled={!item}>
-              Aplicar no save
-            </Button>
+              </>
+            )}
           </DialogFooter>
+          <ConfirmDeleteDialog
+            open={confirmDelete && item != null}
+            title={item ? `Excluir ${item.name}?` : "Excluir item?"}
+            description="Esta ação tira o item do arquivo pessoal. O save aberto não muda."
+            confirmLabel="Excluir item"
+            pending={remove.isPending}
+            onCancel={() => setConfirmDelete(false)}
+            onConfirm={() => void onDelete()}
+          />
         </DialogContent>
       </Dialog>
 
-      <Dialog
+      <VersionMismatchDialog
         open={pendingItem != null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setPendingItem(null);
-            setVersionWarning(null);
-          }
+        warning={versionWarning}
+        onCancel={() => {
+          setPendingItem(null);
+          setVersionWarning(null);
         }}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Versões diferentes</DialogTitle>
-            <DialogDescription>
-              {versionWarning} O apply não é bloqueado, mas o jogo pode ignorar
-              campos novos.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setPendingItem(null);
-                setVersionWarning(null);
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => {
-                if (pendingItem) void applyItem(pendingItem);
-              }}
-            >
-              Aplicar mesmo assim
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onConfirm={() => {
+          if (pendingItem) void applyItem(pendingItem);
+        }}
+      />
     </>
   );
 }

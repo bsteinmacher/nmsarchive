@@ -19,8 +19,8 @@ export type ExtractedSlot<TPayload = unknown> = ExtractedItem<TPayload> & {
   warning?: string;
   /** Rótulo da coluna Slot; default é o índice 1-based. */
   slotLabel?: string;
-  /** Agrupa wonders automáticos numa listagem secundária. */
-  group?: "primary" | "automatic";
+  /** Agrupa wonders automáticos e o esquadrão em listagens secundárias. */
+  group?: "primary" | "automatic" | "squadron";
 };
 
 export type ExtractedShip = ExtractedSlot<{

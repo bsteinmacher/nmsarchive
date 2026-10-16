@@ -48,8 +48,8 @@ describe("matchesArchiveFilters", () => {
     expect(matchesArchiveFilters(exoticS, { seed: "0xABC" })).toBe(true);
     expect(
       matchesArchiveFilters(
-        { ...exoticS, extra: { element: "Gelo", biome: "Frozen" } },
-        { q: "gelo" },
+        { ...exoticS, extra: { element: "Ice", biome: "Frozen" } },
+        { q: "ice" },
       ),
     ).toBe(true);
   });
@@ -57,5 +57,19 @@ describe("matchesArchiveFilters", () => {
   it("detecta filtros ativos", () => {
     expect(hasActiveArchiveFilters({})).toBe(false);
     expect(hasActiveArchiveFilters({ className: "S" })).toBe(true);
+  });
+
+  it("casa SSS com o rank antigo S/S/S", () => {
+    const pet = {
+      ...exoticS,
+      className: "S/S/S",
+      shipType: "TREX",
+      tags: [],
+    };
+    expect(matchesArchiveFilters(pet, { className: "SSS" })).toBe(true);
+    expect(matchesArchiveFilters(pet, { className: "S" })).toBe(false);
+    expect(
+      matchesArchiveFilters({ ...pet, className: "SSS" }, { className: "SSS" }),
+    ).toBe(true);
   });
 });

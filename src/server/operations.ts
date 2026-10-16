@@ -12,6 +12,9 @@ export const OPERATION_ACTIONS = [
   "currency_edit",
   "reorder",
   "save_create",
+  "tag_create",
+  "tag_update",
+  "tag_delete",
 ] as const;
 
 export type OperationAction = (typeof OPERATION_ACTIONS)[number];

@@ -18,7 +18,7 @@ import {
 import {
   backupFileName,
   groupSaveSlots,
-  newestOverall,
+  preferredSaveFileName,
   newestSave,
   type SaveFileEntry,
   type SaveSlot,
@@ -303,13 +303,11 @@ async function scan(options: { autoload: boolean; reloadSelected: boolean }) {
     const diskStale = Boolean(
       bound && match && !modifiedMatches(match.lastModified, session.diskModified),
     );
-    const remembered = options.autoload ? null : useSaveLocation.getState().selectedName;
-    const preferred = bound ?? remembered ?? newestOverall(slots)?.name ?? null;
-    const selectedName = slots.some((slot) =>
-      slot.files.some((file) => file.name === preferred),
-    )
-      ? preferred
-      : (newestOverall(slots)?.name ?? null);
+    const selectedName = preferredSaveFileName({
+      sessionReady: session.status === "ready",
+      openFileName: bound,
+      slots,
+    });
 
     useSaveLocation.setState({
       slots,
@@ -327,10 +325,7 @@ async function scan(options: { autoload: boolean; reloadSelected: boolean }) {
     });
 
     const shouldOpen = Boolean(
-      selectedName &&
-        (options.reloadSelected ||
-          options.autoload ||
-          (session.status === "idle" && !bound)),
+      selectedName && (options.reloadSelected || options.autoload),
     );
     if (shouldOpen && selectedName) {
       try {
@@ -372,13 +367,11 @@ async function applyLocal(
   const diskStale = Boolean(
     bound && match && !modifiedMatches(match.lastModified, session.diskModified),
   );
-  const remembered = options.autoload ? null : useSaveLocation.getState().selectedName;
-  const preferred = bound ?? remembered ?? newestOverall(slots)?.name ?? null;
-  const selectedName = slots.some((slot) =>
-    slot.files.some((file) => file.name === preferred),
-  )
-    ? preferred
-    : (newestOverall(slots)?.name ?? null);
+  const selectedName = preferredSaveFileName({
+    sessionReady: session.status === "ready",
+    openFileName: bound,
+    slots,
+  });
 
   useSaveLocation.setState({
     supported: true,
@@ -403,7 +396,7 @@ async function applyLocal(
   const shouldOpen = Boolean(
     selectedName &&
       localActive &&
-      (options.reloadSelected || options.autoload || (session.status === "idle" && !bound)),
+      (options.reloadSelected || options.autoload),
   );
   if (shouldOpen && selectedName) {
     await openHandle(selectedName);

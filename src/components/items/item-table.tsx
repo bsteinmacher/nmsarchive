@@ -17,6 +17,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ArchiveItemActions } from "./archive-item-actions";
 
 export function ItemTable({
   items,
@@ -42,6 +43,9 @@ export function ItemTable({
             </TableHead>
           ))}
           <TableHead className={listColumnClass("tags")}>Tags</TableHead>
+          <TableHead className={listColumnClass("actions")}>
+            <span className="sr-only">Ações</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -59,7 +63,9 @@ export function ItemTable({
                   onClick={() => onSelect(item.id)}
                   className="w-full rounded-md text-left focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                 >
-                  <span className="break-words whitespace-normal">{item.name}</span>
+                  <span className="break-words whitespace-normal">
+                    {item.description.trim() || item.name}
+                  </span>
                   {slots.length > 0 ? (
                     <span className="mt-1 block text-xs font-normal text-muted-foreground">
                       No save · slot {slots[0].slotLabel ?? slots[0].index + 1}
@@ -76,6 +82,12 @@ export function ItemTable({
                 {item.tags.length
                   ? item.tags.map((t) => t.label).join(" · ")
                   : "—"}
+              </TableCell>
+              <TableCell className="text-right">
+                <ArchiveItemActions
+                  item={item}
+                  onDetails={() => onSelect(item.id)}
+                />
               </TableCell>
             </TableRow>
           );

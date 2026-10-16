@@ -2,25 +2,25 @@ import { asArray, asNumber, asRecord, asString } from "../value";
 import { biomeLabel, displayId, nestedEnum } from "./names";
 
 /**
- * Afinidade da arena a partir do bioma de origem.
- * Mecânicos (sentinela / MiniRobo) sobrescrevem o bioma.
+ * Arena affinity from the origin biome.
+ * Mechanical companions (sentinel / MiniRobo) override the biome.
  */
 const BIOME_ELEMENT: Record<string, string> = {
   Lush: "Tropical",
-  Toxic: "Tóxico",
-  Scorched: "Fogo",
-  Radioactive: "Radioativo",
-  Frozen: "Gelo",
-  Barren: "Deserto",
-  Dead: "Anômalo",
-  Weird: "Anômalo",
-  Red: "Anômalo",
-  Green: "Anômalo",
-  Blue: "Anômalo",
+  Toxic: "Toxic",
+  Scorched: "Fire",
+  Radioactive: "Radioactive",
+  Frozen: "Ice",
+  Barren: "Desert",
+  Dead: "Anomalous",
+  Weird: "Anomalous",
+  Red: "Anomalous",
+  Green: "Anomalous",
+  Blue: "Anomalous",
   Swamp: "Tropical",
-  Lava: "Fogo",
+  Lava: "Fire",
   Waterworld: "Tropical",
-  GasGiant: "Anômalo",
+  GasGiant: "Anomalous",
 };
 
 const MECHANICAL_CREATURE_TYPES = new Set([
@@ -57,6 +57,41 @@ export function emptyCompanionRank(): CompanionRank {
 export function formatCompanionRank(rank: CompanionRank): string {
   if (!rank.atk || !rank.agi || !rank.hp) return "";
   return `${rank.atk}/${rank.agi}/${rank.hp}`;
+}
+
+export const COMPANION_CLASS_TIERS = [
+  "SSS",
+  "SS",
+  "S",
+  "A",
+  "B",
+  "C",
+] as const;
+
+export type CompanionClassTier = (typeof COMPANION_CLASS_TIERS)[number];
+
+/** 3×S → SSS, 2×S → SS, 1×S → S; sem S, a pior letra. */
+export function companionClassFromRank(rank: CompanionRank): string {
+  if (!rank.atk || !rank.agi || !rank.hp) return "";
+  const letters = [rank.atk, rank.agi, rank.hp];
+  const sCount = letters.filter((letter) => letter === "S").length;
+  if (sCount === 3) return "SSS";
+  if (sCount === 2) return "SS";
+  if (sCount === 1) return "S";
+  if (letters.includes("C")) return "C";
+  if (letters.includes("B")) return "B";
+  return "A";
+}
+
+/** Aceita SSS/SS/S/A/B/C ou o rank antigo S/S/S. */
+export function normalizeItemClass(className: string): string {
+  const upper = className.trim().toUpperCase().replace(/\s+/g, "");
+  if (!upper) return "";
+  if (upper.includes("/")) {
+    const rank = parseCompanionRank(upper);
+    return companionClassFromRank(rank);
+  }
+  return upper;
 }
 
 export function parseCompanionRank(raw: string | null | undefined): CompanionRank {
@@ -115,23 +150,23 @@ export function companionElement(
   biome: string,
   creatureType: string,
 ): string {
-  if (MECHANICAL_CREATURE_TYPES.has(creatureType)) return "Mecânico";
+  if (MECHANICAL_CREATURE_TYPES.has(creatureType)) return "Mechanical";
   return BIOME_ELEMENT[biome] ?? "";
 }
 
-/** Nível de treino: o maior gene-edit (0–10 no jogo) nas três stats. */
+/** Nível de treino: soma dos gene-edits nas três stats (cada uma 0–10). */
 export function companionLevel(treatsEaten: unknown): string {
   const treats = asArray(treatsEaten);
   if (!treats?.length) return "";
-  let max = 0;
+  let total = 0;
   let any = false;
   for (const value of treats) {
     const n = asNumber(value);
     if (n == null) continue;
     any = true;
-    max = Math.max(max, n);
+    total += n;
   }
-  return any ? String(max) : "";
+  return any ? String(total) : "";
 }
 
 export function companionBattleStats(
@@ -157,9 +192,9 @@ export function companionBattleFromArchived(input: {
     ? companionBattleStats(rec)
     : { biome: "", element: "", level: "" };
   return {
-    biome: asString(extra.biome) || fromPayload.biome,
-    element: asString(extra.element) || fromPayload.element,
-    level: asString(extra.level) || fromPayload.level,
+    biome: fromPayload.biome || asString(extra.biome) || "",
+    element: fromPayload.element || asString(extra.element) || "",
+    level: fromPayload.level || asString(extra.level) || "",
   };
 }
 

@@ -34,7 +34,13 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { archiveHref, CATEGORIES, CATEGORY_META, type Category } from "@/types/nms";
+import {
+  archiveHref,
+  CATEGORY_META,
+  SIDEBAR_CATEGORIES,
+  saveHref,
+  type Category,
+} from "@/types/nms";
 import { useSaveSession } from "@/stores/save-session";
 
 const CATEGORY_ICONS: Record<Category, ComponentType<{ className?: string }>> = {
@@ -80,7 +86,7 @@ export function AppSidebar() {
                   <span>All</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {CATEGORIES.map((category) => {
+              {SIDEBAR_CATEGORIES.map((category) => {
                 const meta = CATEGORY_META[category];
                 const Icon = CATEGORY_ICONS[category];
                 const href = archiveHref(category);
@@ -114,14 +120,15 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {saveReady
-                ? CATEGORIES.map((category) => {
+                ? SIDEBAR_CATEGORIES.map((category) => {
                     const meta = CATEGORY_META[category];
                     const Icon = CATEGORY_ICONS[category];
+                    const href = saveHref(category);
                     return (
                       <SidebarMenuItem key={`save-${category}`}>
                         <SidebarMenuButton
-                          isActive={active(meta.href)}
-                          render={<Link href={meta.href} />}
+                          isActive={active(href)}
+                          render={<Link href={href} />}
                         >
                           <Icon />
                           <span>{meta.label}</span>

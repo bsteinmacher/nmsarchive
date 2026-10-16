@@ -5,22 +5,31 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  autoTagsFromSlot,
+  replaceClassTag,
+  replaceMultitoolTypeTag,
+} from "@/lib/auto-tags";
 import { CompanionRankField } from "@/components/items/companion-rank-field";
+import { MultitoolTypeField } from "@/components/items/multitool-type-field";
 import { ScreenshotField } from "@/components/items/screenshot-field";
 import { TagInput } from "@/components/items/tag-input";
 import { getAdapter, isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
+import { archiveMultitoolType } from "@/lib/nms/multitool-type";
 import {
+  companionClassFromRank,
   companionRankExtra,
   emptyCompanionRank,
-  formatCompanionRank,
   type CompanionRank,
 } from "@/lib/nms/extract/companion-battle";
 import { trpc } from "@/lib/trpc";
@@ -52,16 +61,39 @@ export function ArchiveItemDialog({
   const [tags, setTags] = useState<string[]>([]);
   const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
   const [rank, setRank] = useState<CompanionRank>(emptyCompanionRank);
+  const [shipType, setShipType] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [formKey, setFormKey] = useState("");
   const pending = createMeta.isPending || archive.isPending;
   const adapter = getAdapter(category);
+  const itemKey = open && item ? `${item.category}:${item.index}` : "";
 
-  function reset() {
+  function applyDefaults(slot: ExtractedSlot | null) {
     setDescription("");
-    setTags([]);
     setScreenshotPath(null);
     setRank(emptyCompanionRank());
+    const nextType =
+      slot?.category === "multitool"
+        ? archiveMultitoolType(slot.itemType)
+        : (slot?.itemType ?? "");
+    setShipType(nextType);
+    setTags(
+      slot
+        ? slot.category === "multitool"
+          ? replaceMultitoolTypeTag(autoTagsFromSlot(slot), nextType)
+          : autoTagsFromSlot(slot)
+        : [],
+    );
     setError(null);
+  }
+
+  if (itemKey !== formKey) {
+    setFormKey(itemKey);
+    applyDefaults(item);
+  }
+
+  function reset() {
+    applyDefaults(item);
   }
 
   async function commit() {
@@ -88,7 +120,18 @@ export function ArchiveItemDialog({
         playTimeSec: summary.playTimeSec,
         sha256,
       });
-      const rankLabel = formatCompanionRank(rank);
+      const className =
+        category === "companion"
+          ? companionClassFromRank(rank) || undefined
+          : item.className || undefined;
+      const typeLabel =
+        category === "ship" || category === "multitool"
+          ? shipType.trim() || item.itemType
+          : item.itemType;
+      const nextTags =
+        category === "multitool"
+          ? replaceMultitoolTypeTag(tags, typeLabel)
+          : tags;
       await archive.mutateAsync({
         category,
         name: item.name,
@@ -96,11 +139,8 @@ export function ArchiveItemDialog({
         description: trimmed,
         metadata: {
           gameVersion: summary.gameVersion,
-          className:
-            category === "companion"
-              ? rankLabel || undefined
-              : item.className || undefined,
-          shipType: item.itemType || undefined,
+          className,
+          shipType: typeLabel || undefined,
           filename: item.filename || undefined,
           extra:
             category === "companion"
@@ -110,7 +150,7 @@ export function ArchiveItemDialog({
         },
         galaxy: summary.galaxy,
         sourceSaveId: save.id,
-        tags,
+        tags: nextTags,
         screenshotPath: screenshotPath ?? undefined,
       });
       await Promise.all([
@@ -142,13 +182,18 @@ export function ArchiveItemDialog({
       }}
     >
         <DialogContent className="sm:max-w-lg">
+        <form
+          className="flex min-h-0 flex-1 flex-col gap-4"
+          onSubmit={onSubmit}
+          noValidate
+        >
         <DialogHeader>
           <DialogTitle>Arquivar {item?.name ?? adapter.label}</DialogTitle>
           <DialogDescription>
             Copia este item para o SQLite. O save.hg fica só neste browser.
           </DialogDescription>
         </DialogHeader>
-        <form className="grid gap-4" onSubmit={onSubmit} noValidate>
+        <DialogBody className="grid gap-4">
           {item?.warning ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
               {item.warning}
@@ -199,6 +244,32 @@ export function ArchiveItemDialog({
               </p>
             )}
           </div>
+          {category === "ship" ? (
+            <div className="grid gap-2">
+              <Label htmlFor={`${tagsId}-type`}>Type</Label>
+              <Input
+                id={`${tagsId}-type`}
+                value={shipType}
+                onChange={(e) => setShipType(e.target.value)}
+                placeholder="Interceptor"
+              />
+              <p className="text-xs text-muted-foreground">
+                Detectado do filename. Interceptor e Living Ship às vezes vêm
+                como Fighter — ajuste se precisar.
+              </p>
+            </div>
+          ) : null}
+          {category === "multitool" ? (
+            <MultitoolTypeField
+              id={`${tagsId}-type`}
+              value={shipType}
+              onChange={(next) => {
+                setShipType(next);
+                setTags((current) => replaceMultitoolTypeTag(current, next));
+              }}
+              disabled={pending}
+            />
+          ) : null}
           <div className="grid gap-2">
             <Label htmlFor={tagsId}>Tags</Label>
             <TagInput
@@ -217,8 +288,18 @@ export function ArchiveItemDialog({
             disabled={pending}
           />
           {category === "companion" ? (
-            <CompanionRankField value={rank} onChange={setRank} disabled={pending} />
+            <CompanionRankField
+              value={rank}
+              onChange={(next) => {
+                setRank(next);
+                setTags((current) =>
+                  replaceClassTag(current, companionClassFromRank(next)),
+                );
+              }}
+              disabled={pending}
+            />
           ) : null}
+        </DialogBody>
           <DialogFooter>
             <Button
               type="button"

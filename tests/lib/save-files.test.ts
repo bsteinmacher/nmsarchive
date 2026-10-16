@@ -6,6 +6,7 @@ import {
   identifySaveFile,
   newestOverall,
   newestSave,
+  preferredSaveFileName,
   storageFromFolderName,
 } from "../../src/lib/nms/save-files";
 
@@ -75,6 +76,24 @@ describe("groupSaveSlots", () => {
       { name: "save4.hg", lastModified: 10 },
     ]);
     expect(newestOverall(slots)?.name).toBe("save4.hg");
+  });
+
+  it("prefill ignora o nome lembrado quando o save está fechado", () => {
+    const slots = groupSaveSlots(files);
+    expect(
+      preferredSaveFileName({
+        sessionReady: false,
+        openFileName: "save.hg",
+        slots,
+      }),
+    ).toBe("save4.hg");
+    expect(
+      preferredSaveFileName({
+        sessionReady: true,
+        openFileName: "save.hg",
+        slots,
+      }),
+    ).toBe("save.hg");
   });
 });
 

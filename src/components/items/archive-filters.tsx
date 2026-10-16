@@ -6,12 +6,12 @@ import { Label } from "@/components/ui/label";
 import { ListViewToggle } from "@/components/items/list-view-toggle";
 import { TagInput } from "@/components/items/tag-input";
 import {
-  CLASS_FILTER_OPTIONS,
+  classFilterOptions,
   type ArchiveUrlState,
 } from "@/lib/archive-url";
-import { formatGalaxy } from "@/lib/nms/galaxies";
 import { cn } from "cn";
 import type { ArchiveFilterOptions } from "@/types/archive";
+import type { Category } from "@/types/nms";
 
 const selectClass = cn(
   "h-8 w-full min-h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none",
@@ -21,22 +21,20 @@ const selectClass = cn(
 
 function hasFilters(state: ArchiveUrlState): boolean {
   return Boolean(
-    state.className ||
-      state.itemType ||
-      state.tags.length ||
-      state.galaxyDisplay != null ||
-      state.q,
+    state.className || state.itemType || state.tags.length || state.q,
   );
 }
 
 export function ArchiveFilters({
   idPrefix,
+  category,
   state,
   options,
   onChange,
   resultCount,
 }: {
   idPrefix: string;
+  category?: Category;
   state: ArchiveUrlState;
   options: ArchiveFilterOptions;
   onChange: (next: ArchiveUrlState) => void;
@@ -45,15 +43,11 @@ export function ArchiveFilters({
   const qId = `${idPrefix}-q`;
   const classId = `${idPrefix}-class`;
   const typeId = `${idPrefix}-type`;
-  const galaxyId = `${idPrefix}-galaxy`;
   const tagsId = `${idPrefix}-tags`;
   const tagsHintId = `${idPrefix}-tags-hint`;
-  const classValues = new Set([
-    ...CLASS_FILTER_OPTIONS.map((o) => o.value),
-    ...options.classes,
-  ]);
-  const classOptions = [...classValues].sort();
-  const typeOptions = options.types;
+  const classOptions = classFilterOptions(category);
+  const typeGroups = options.typeGroups ?? [];
+  const flatTypes = typeGroups.flatMap((group) => group.types);
   const active = hasFilters(state);
 
   return (
@@ -75,7 +69,7 @@ export function ArchiveFilters({
             }
           />
         </div>
-        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid min-w-0 gap-1.5">
             <Label htmlFor={classId}>Class</Label>
             <select
@@ -90,9 +84,9 @@ export function ArchiveFilters({
               }
             >
               <option value="">Qualquer</option>
-              {classOptions.map((value) => (
-                <option key={value} value={value}>
-                  Class {value}
+              {classOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -111,37 +105,18 @@ export function ArchiveFilters({
               }
             >
               <option value="">Qualquer</option>
-              {typeOptions.map((value) => (
-                <option key={value} value={value}>
-                  {value}
-                </option>
+              {typeGroups.map((group) => (
+                <optgroup key={group.id} label={group.label}>
+                  {group.types.map((value) => (
+                    <option key={`${group.id}-${value}`} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
-              {state.itemType && !typeOptions.includes(state.itemType) ? (
+              {state.itemType && !flatTypes.includes(state.itemType) ? (
                 <option value={state.itemType}>{state.itemType}</option>
               ) : null}
-            </select>
-          </div>
-          <div className="grid min-w-0 gap-1.5">
-            <Label htmlFor={galaxyId}>Galaxy</Label>
-            <select
-              id={galaxyId}
-              className={selectClass}
-              value={state.galaxyDisplay != null ? String(state.galaxyDisplay) : ""}
-              onChange={(e) =>
-                onChange({
-                  ...state,
-                  galaxyDisplay: e.target.value
-                    ? Number(e.target.value)
-                    : undefined,
-                })
-              }
-            >
-              <option value="">Qualquer</option>
-              {options.galaxies.map((index) => (
-                <option key={index} value={String(index + 1)}>
-                  {formatGalaxy(index)}
-                </option>
-              ))}
             </select>
           </div>
           <div className="grid min-w-0 gap-1.5">
@@ -156,7 +131,7 @@ export function ArchiveFilters({
           </div>
           <p
             id={tagsHintId}
-            className="text-pretty text-xs leading-snug text-muted-foreground sm:col-span-2 lg:col-span-1 lg:col-start-4"
+            className="text-pretty text-xs leading-snug text-muted-foreground sm:col-span-2 lg:col-span-1 lg:col-start-3"
           >
             Todas as tags escolhidas precisam bater.
           </p>

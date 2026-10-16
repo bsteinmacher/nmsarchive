@@ -9,8 +9,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { slotCardTags } from "@/lib/auto-tags";
 import { getAdapter, type AdapterColumn, type ExtractedSlot } from "@/lib/nms/extract";
 import type { Category } from "@/types/nms";
+import { CardOpenTarget } from "./card-open-target";
+import { ExportMenu } from "./export-menu";
+import { ItemTags } from "./item-tags";
 
 function dash(value: string) {
   return value || "—";
@@ -41,12 +45,11 @@ export function SaveSlotActions({
         <Button size="sm" variant="ghost" onClick={() => onSelect(item)}>
           Ver detalhes
         </Button>
-        <Button size="sm" variant="outline" onClick={() => onArchive(item)}>
-          Arquivar
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => onExport(item)}>
-          Exportar
-        </Button>
+        <ExportMenu
+          variant="save"
+          onArchive={() => onArchive(item)}
+          onDownload={() => onExport(item)}
+        />
       </div>
     );
   }
@@ -64,7 +67,6 @@ export function SaveSlotGrid({
   category,
   items,
   reorderable,
-  columns,
   caption,
   description,
   emptyMessage,
@@ -112,8 +114,6 @@ export function SaveSlotGrid({
     );
   }
 
-  const previewCols = columns.filter((col) => col.id !== "seed").slice(0, 3);
-
   return (
     <section className="grid gap-3">
       <div className="grid gap-1">
@@ -127,12 +127,8 @@ export function SaveSlotGrid({
             const slot = item.slotLabel ?? String(item.index + 1);
             const isOver = over === item.index && dragging !== item.index;
             const thumb = screenshotUrl(item);
-            const meta = previewCols
-              .map((col) => {
-                const value = columnValue(item, col);
-                return value ? `${col.header} ${value}` : null;
-              })
-              .filter(Boolean);
+            const tags = item.empty ? [] : slotCardTags(item);
+            const canOpen = !item.empty;
             return (
               <li key={`${item.group ?? "primary"}-${item.index}`}>
                 <article
@@ -166,8 +162,15 @@ export function SaveSlotGrid({
                     (item.empty || item.readonly) && "text-muted-foreground",
                     isOver && "bg-muted",
                     dragging === item.index && "opacity-60",
+                    canOpen && "cursor-pointer",
                   )}
                 >
+                  {canOpen ? (
+                    <CardOpenTarget
+                      label={`Ver detalhes do slot ${slot}`}
+                      onOpen={() => onSelect(item)}
+                    />
+                  ) : null}
                   {reorderable ? (
                     <button
                       type="button"
@@ -209,29 +212,31 @@ export function SaveSlotGrid({
                     />
                   )}
                   <div className="min-w-0">
-                    <p className="text-xs text-muted-foreground tabular-nums">
-                      Slot {slot}
-                    </p>
                     <p
                       className={cn(
-                        "font-heading text-base font-medium break-words",
+                        "font-heading text-base font-medium break-words tabular-nums",
                         !item.empty && "text-foreground",
                       )}
                     >
-                      {item.name}
+                      Slot {slot}
                     </p>
+                    {item.empty ? (
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        {item.name}
+                      </p>
+                    ) : null}
                     {item.warning ? (
                       <p className="mt-1 text-xs font-normal text-muted-foreground">
                         {item.warning}
                       </p>
                     ) : null}
-                    {meta.length > 0 ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {meta.join(" · ")}
-                      </p>
+                    {tags.length > 0 ? (
+                      <div className="mt-2">
+                        <ItemTags tags={tags} />
+                      </div>
                     ) : null}
                   </div>
-                  <div className="mt-auto">
+                  <div className="relative z-10 mt-auto">
                     <SaveSlotActions
                       item={item}
                       onSelect={onSelect}

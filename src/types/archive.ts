@@ -10,6 +10,9 @@ export type ArchivedItemExtra = {
   slots?: string;
   tech?: string;
   supercharged?: string;
+  planet?: string;
+  planetType?: string;
+  galaxy?: string;
 };
 
 export type ArchivedItemSummary = {
@@ -46,9 +49,16 @@ export type ArchivedItemDetail = ArchivedItemSummary & {
   sourceSaveId: string | null;
 };
 
+export type ArchiveTypeGroup = {
+  id: string;
+  label: string;
+  types: string[];
+};
+
 export type ArchiveFilterOptions = {
   classes: string[];
   types: string[];
+  typeGroups: ArchiveTypeGroup[];
   galaxies: number[];
   tags: ArchivedItemTag[];
 };

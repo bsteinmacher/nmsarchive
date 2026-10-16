@@ -5,6 +5,8 @@ import {
   CATEGORY_META,
   isCategory,
   REORDERABLE_CATEGORIES,
+  saveHref,
+  SIDEBAR_CATEGORIES,
 } from "@/types/nms";
 
 describe("categories", () => {
@@ -60,7 +62,19 @@ describe("categories", () => {
   it("builds archive hrefs", () => {
     expect(archiveHref()).toBe("/");
     expect(archiveHref("ship")).toBe("/archive/ship");
-    expect(archiveHref("deepspace")).toBe("/archive/deepspace");
-    expect(archiveHref("spacestation")).toBe("/archive/spacestation");
+    expect(archiveHref("frigate")).toBe("/archive/freighter");
+    expect(archiveHref("deepspace")).toBe("/archive/base");
+    expect(archiveHref("spacestation")).toBe("/archive/base");
+    expect(saveHref("frigate")).toBe("/freighter");
+    expect(saveHref("deepspace")).toBe("/base");
+    expect([...SIDEBAR_CATEGORIES]).toEqual([
+      "exosuit",
+      "multitool",
+      "companion",
+      "ship",
+      "freighter",
+      "base",
+      "wonder",
+    ]);
   });
 });

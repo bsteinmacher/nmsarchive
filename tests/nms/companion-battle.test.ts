@@ -2,31 +2,35 @@ import { describe, expect, it } from "vitest";
 import {
   companionBattleFromArchived,
   companionBattleStats,
+  companionClassFromRank,
   companionElement,
   companionLevel,
   companionRankFromMetadata,
   formatCompanionRank,
+  normalizeItemClass,
   parseCompanionRank,
 } from "@/lib/nms/extract/companion-battle";
 
 describe("companionElement", () => {
-  it("mapeia bioma para afinidade da arena", () => {
-    expect(companionElement("Frozen", "Passive")).toBe("Gelo");
+  it("mapeia bioma para afinidade da arena em inglês", () => {
+    expect(companionElement("Frozen", "Passive")).toBe("Ice");
     expect(companionElement("Lush", "Passive")).toBe("Tropical");
-    expect(companionElement("Scorched", "Prey")).toBe("Fogo");
-    expect(companionElement("Barren", "Cat")).toBe("Deserto");
-    expect(companionElement("Weird", "Passive")).toBe("Anômalo");
+    expect(companionElement("Toxic", "Passive")).toBe("Toxic");
+    expect(companionElement("Scorched", "Prey")).toBe("Fire");
+    expect(companionElement("Barren", "Cat")).toBe("Desert");
+    expect(companionElement("Weird", "Passive")).toBe("Anomalous");
   });
 
-  it("trata MiniRobo e sentinelas como Mecânico", () => {
-    expect(companionElement("Lush", "MiniRobo")).toBe("Mecânico");
-    expect(companionElement("Frozen", "Walker")).toBe("Mecânico");
+  it("trata MiniRobo e sentinelas como Mechanical", () => {
+    expect(companionElement("Lush", "MiniRobo")).toBe("Mechanical");
+    expect(companionElement("Frozen", "Walker")).toBe("Mechanical");
   });
 });
 
 describe("companionLevel", () => {
-  it("usa o maior gene-edit das três stats", () => {
-    expect(companionLevel([2, 10, 0])).toBe("10");
+  it("soma os gene-edits das três stats (30 no máximo)", () => {
+    expect(companionLevel([2, 10, 0])).toBe("12");
+    expect(companionLevel([10, 10, 10])).toBe("30");
     expect(companionLevel([0, 0, 0])).toBe("0");
     expect(companionLevel([])).toBe("");
   });
@@ -46,8 +50,8 @@ describe("companionBattleStats", () => {
     });
     expect(stats).toEqual({
       biome: "Frozen",
-      element: "Gelo",
-      level: "7",
+      element: "Ice",
+      level: "12",
     });
   });
 
@@ -66,7 +70,20 @@ describe("companionBattleStats", () => {
           PetBattlerTreatsEaten: [1],
         },
       }),
-    ).toEqual({ biome: "Frozen", element: "Gelo", level: "1" });
+    ).toEqual({ biome: "Frozen", element: "Ice", level: "1" });
+  });
+
+  it("prefere o payload quando o extra antigo tem level/elemento errados", () => {
+    expect(
+      companionBattleFromArchived({
+        extra: { biome: "Lush", element: "Tóxico", level: "10" },
+        payload: {
+          Biome: { Biome: "Lush" },
+          CreatureType: { CreatureType: "Passive" },
+          PetBattlerTreatsEaten: [10, 10, 10],
+        },
+      }),
+    ).toEqual({ biome: "Lush", element: "Tropical", level: "30" });
   });
 });
 
@@ -91,5 +108,22 @@ describe("companion rank metadata", () => {
     expect(
       companionRankFromMetadata({ extra: { rank: "S/S/S" } }),
     ).toEqual({ atk: "S", agi: "S", hp: "S" });
+  });
+
+  it("deriva SSS/SS/S ou a pior letra", () => {
+    expect(companionClassFromRank({ atk: "S", agi: "S", hp: "S" })).toBe("SSS");
+    expect(companionClassFromRank({ atk: "S", agi: "S", hp: "A" })).toBe("SS");
+    expect(companionClassFromRank({ atk: "S", agi: "A", hp: "B" })).toBe("S");
+    expect(companionClassFromRank({ atk: "A", agi: "B", hp: "C" })).toBe("C");
+    expect(companionClassFromRank({ atk: "A", agi: "B", hp: "A" })).toBe("B");
+    expect(companionClassFromRank({ atk: "A", agi: "A", hp: "A" })).toBe("A");
+    expect(companionClassFromRank({ atk: "S", agi: "", hp: "S" })).toBe("");
+  });
+
+  it("normaliza S/S/S antigo para SSS", () => {
+    expect(normalizeItemClass("S/S/S")).toBe("SSS");
+    expect(normalizeItemClass("S/A/S")).toBe("SS");
+    expect(normalizeItemClass("SSS")).toBe("SSS");
+    expect(normalizeItemClass("s")).toBe("S");
   });
 });

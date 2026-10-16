@@ -71,6 +71,21 @@ export function newestOverall(slots: SaveSlot[]): SaveFileEntry | null {
   return newestSave(slots.flatMap((slot) => slot.files));
 }
 
+/** Pasta fechada: o .hg mais recente. Save aberto: o arquivo da sessão, se ainda existir. */
+export function preferredSaveFileName(input: {
+  sessionReady: boolean;
+  openFileName: string | null;
+  slots: SaveSlot[];
+}): string | null {
+  if (input.sessionReady && input.openFileName) {
+    const exists = input.slots.some((slot) =>
+      slot.files.some((file) => file.name === input.openFileName),
+    );
+    if (exists) return input.openFileName;
+  }
+  return newestOverall(input.slots)?.name ?? null;
+}
+
 export function storageFromFolderName(name: string): SaveStorage {
   if (/^st_\d+$/i.test(name)) return "Steam";
   if (/^defaultuser$/i.test(name)) return "GOG";

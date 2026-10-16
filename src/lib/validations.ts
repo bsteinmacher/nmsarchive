@@ -89,6 +89,7 @@ export const updateItemInputSchema = z.object({
   tags: tagsSchema.optional(),
   screenshotPath: screenshotPathSchema.nullable().optional(),
   className: z.string().trim().max(16).nullable().optional(),
+  shipType: z.string().trim().max(80).nullable().optional(),
   extra: z.record(z.string(), z.string()).optional(),
 });
 
@@ -104,6 +105,15 @@ export const listItemsInputSchema = z.object({
 
 export const listTagsInputSchema = z.object({
   q: z.string().trim().max(40).optional(),
+});
+
+export const createTagInputSchema = z.object({
+  label: tagLabelSchema,
+});
+
+export const updateTagInputSchema = z.object({
+  id: z.string().uuid(),
+  label: tagLabelSchema,
 });
 
 export const itemIdInputSchema = z.object({

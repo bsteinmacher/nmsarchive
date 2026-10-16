@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
@@ -103,7 +104,7 @@ export function ImportModelDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Importar modelo</DialogTitle>
           <DialogDescription>
@@ -111,6 +112,7 @@ export function ImportModelDialog({
             o inventário deste slot ficam.
           </DialogDescription>
         </DialogHeader>
+        <DialogBody className="grid gap-4">
         {list.isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
         ) : list.error ? (
@@ -172,6 +174,7 @@ export function ImportModelDialog({
           </p>
         ) : null}
         {roleError ? <p className="text-sm text-destructive">{roleError}</p> : null}
+        </DialogBody>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar

@@ -9,6 +9,7 @@ import { ArchiveItemDialog } from "@/components/items/archive-item-dialog";
 import { SaveContextSwitch } from "@/components/save/save-context-switch";
 import { ListViewToggle } from "@/components/items/list-view-toggle";
 import { SaveItemDetailDialog } from "@/components/items/save-item-detail-dialog";
+import { FrigateCalculator } from "@/components/items/frigate-calculator";
 import {
   SaveSlotActions,
   SaveSlotGrid,
@@ -42,9 +43,10 @@ import {
   type AdapterColumn,
   type ExtractedSlot,
 } from "@/lib/nms/extract";
+import { listSquadronPilots } from "@/lib/nms/extract/squadron";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { trpc } from "@/lib/trpc";
-import { useSaveSession } from "@/stores/save-session";
+import { getMappedJson, useSaveSession } from "@/stores/save-session";
 import {
   CATEGORY_META,
   isReorderableCategory,
@@ -69,7 +71,6 @@ function SlotTable({
   onSelect,
   onArchive,
   onExport,
-  screenshotUrl: _screenshotUrl,
 }: {
   category: Category;
   items: ExtractedSlot[];
@@ -240,8 +241,12 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const status = useSaveSession((s) => s.status);
   const hydrated = useSaveSession((s) => s.hydrated);
   const summary = useSaveSession((s) => s.summary);
+  const saveContext = useSaveSession((s) => s.saveContext);
   const items = useSaveSession((s) => s.items[category]);
   const baseItems = useSaveSession((s) => s.items.base);
+  const frigateItems = useSaveSession((s) => s.items.frigate);
+  const deepSpaceItems = useSaveSession((s) => s.items.deepspace);
+  const spaceStationItems = useSaveSession((s) => s.items.spacestation);
   const exportItem = useSaveSession((s) => s.exportItem);
   const reorderSlots = useSaveSession((s) => s.reorderSlots);
   const [selected, setSelected] = useState<ExtractedSlot | null>(null);
@@ -263,17 +268,56 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const primary = items.filter((item) => {
     if (item.group === "automatic") return false;
     if (category === "base" && isHiddenFromBasesMenu(item)) return false;
+    if (category === "freighter" && item.extra.role === "fleet") return false;
     return true;
   });
   const automatic = items.filter((item) => item.group === "automatic");
   const interiorBases =
     category === "freighter" ? baseItems.filter(isFreighterBaseSlot) : [];
+  const fleetFrigates = category === "freighter" ? frigateItems : [];
+  const squadronPilots =
+    category === "freighter" && status === "ready"
+      ? listSquadronPilots(getMappedJson(), saveContext)
+      : [];
+  const planetDeepSpace = category === "base" ? deepSpaceItems : [];
+  const planetStations = category === "base" ? spaceStationItems : [];
   const filled = primary.filter((item) => !item.empty && !item.readonly).length;
+  const navItems = selected
+    ? selected.group === "automatic"
+      ? automatic
+      : interiorBases.some(
+            (item) =>
+              item.index === selected.index &&
+              item.category === selected.category,
+          )
+        ? interiorBases
+        : fleetFrigates.some(
+              (item) =>
+                item.index === selected.index &&
+                item.category === selected.category,
+            )
+          ? fleetFrigates
+          : selected.group === "squadron"
+            ? squadronPilots
+          : planetDeepSpace.some(
+                (item) =>
+                  item.index === selected.index &&
+                  item.category === selected.category,
+              )
+            ? planetDeepSpace
+            : planetStations.some(
+                  (item) =>
+                    item.index === selected.index &&
+                    item.category === selected.category,
+                )
+              ? planetStations
+              : primary
+    : primary;
 
-  async function moveSlot(from: number, to: number) {
+  async function moveSlot(from: number, to: number, cat: Category = category) {
     if (from === to || to < 0) return;
     try {
-      await reorderSlots(category, from, to);
+      await reorderSlots(cat, from, to);
       setLiveMessage(`Slot ${from + 1} trocado com o slot ${to + 1}.`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao reordenar");
@@ -344,30 +388,32 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             : category === "wonder"
           ? "Personal Wonders (escolha do jogador). Records automáticos ficam na lista abaixo, só leitura."
           : category === "freighter"
-            ? "A Freighter e os três inventários ficam nesta lista. A construção do interior é a base abaixo."
+            ? "Só o slot atual. A frota extra de cargueiras continua no JSON, mas não aparece aqui."
             : meta.description;
 
   const screenshotUrl = (item: ExtractedSlot) =>
     archivedScreenshotUrl(archivedItems, item);
 
-  const reorderHandlers = {
-    dragging,
-    over,
-    onDragOver: setOver,
-    onDrop: (from: number, to: number) => {
-      setDragging(null);
-      setOver(null);
-      void moveSlot(from, to);
-    },
-    onDragLeave: (index: number) => {
-      setOver((current) => (current === index ? null : current));
-    },
-    onDragStart: setDragging,
-    onDragEnd: () => {
-      setDragging(null);
-      setOver(null);
-    },
-  };
+  function reorderHandlersFor(cat: Category) {
+    return {
+      dragging,
+      over,
+      onDragOver: setOver,
+      onDrop: (from: number, to: number) => {
+        setDragging(null);
+        setOver(null);
+        void moveSlot(from, to, cat);
+      },
+      onDragLeave: (index: number) => {
+        setOver((current) => (current === index ? null : current));
+      },
+      onDragStart: setDragging,
+      onDragEnd: () => {
+        setDragging(null);
+        setOver(null);
+      },
+    };
+  }
   const idleHandlers = {
     dragging: null,
     over: null,
@@ -401,7 +447,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
           description={description}
           emptyMessage={
             category === "base"
-              ? "Nenhuma base planetária ou de Ship neste save. Interior da Freighter fica em Freighters; orbitais em Deep Space; estações em Space Station."
+              ? "Nenhuma base planetária ou de Ship neste save. Interior da Freighter fica em Freighters."
               : category === "deepspace"
                 ? "Nenhuma base Deep Space neste save. O jogo adiciona uma quando você constrói com o Deep-Space Base Computer."
                 : category === "spacestation"
@@ -409,12 +455,14 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
                   : undefined
           }
           screenshotUrl={screenshotUrl}
-          {...reorderHandlers}
+          {...reorderHandlersFor(category)}
           onSelect={setSelected}
           onArchive={setArchiving}
           onExport={onExport}
         />
         {category === "freighter" ? (
+          <>
+          <div id="freighter-base">
           <SlotList
             category="base"
             items={interiorBases}
@@ -425,7 +473,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
                 ? "Freighter base"
                 : `Freighter base (${interiorBases.length})`
             }
-            description="A construção do interior. Arquivar a Ship não inclui esta construção."
+            description="A construção do interior. Arquivar a Freighter não inclui esta construção."
             emptyMessage="Este save não tem uma base de Freighter. O jogo cria uma quando você constrói no interior."
             screenshotUrl={screenshotUrl}
             {...idleHandlers}
@@ -433,6 +481,81 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             onArchive={setArchiving}
             onExport={onExport}
           />
+          </div>
+          <div id="frigates">
+          <SlotList
+            category="frigate"
+            items={fleetFrigates}
+            reorderable
+            columns={getAdapter("frigate").columns}
+            caption={`Frigates (${fleetFrigates.filter((item) => !item.empty).length} / ${FLEET_FRIGATE_LIMIT})`}
+            description="Frota de até 30 fragatas. O save só lista as que existem."
+            emptyMessage="Nenhuma Frigate neste save."
+            screenshotUrl={screenshotUrl}
+            {...reorderHandlersFor("frigate")}
+            onSelect={setSelected}
+            onArchive={setArchiving}
+            onExport={onExport}
+          />
+          <FrigateCalculator items={fleetFrigates} />
+          </div>
+          {squadronPilots.length > 0 ? (
+            <div id="squadron">
+              <SlotList
+                category="ship"
+                items={squadronPilots}
+                reorderable={false}
+                columns={[
+                  { id: "className", header: "Rank" },
+                  { id: "itemType", header: "Type" },
+                ]}
+                caption={`Squadron (${squadronPilots.length})`}
+                description="Pilotos do esquadrão neste save. Só leitura — ainda não arquiva nem aplica."
+                screenshotUrl={screenshotUrl}
+                {...idleHandlers}
+                onSelect={setSelected}
+                onArchive={() => {}}
+                onExport={() => {}}
+              />
+            </div>
+          ) : null}
+          </>
+        ) : null}
+        {category === "base" ? (
+          <>
+          <div id="deepspace">
+          <SlotList
+            category="deepspace"
+            items={planetDeepSpace}
+            reorderable={false}
+            columns={getAdapter("deepspace").columns}
+            caption={`Deep Space (${planetDeepSpace.filter((item) => !item.empty).length})`}
+            description="Bases orbitais livres (COSMOS). Mesmo array das bases planetárias."
+            emptyMessage="Nenhuma base Deep Space neste save."
+            screenshotUrl={screenshotUrl}
+            {...idleHandlers}
+            onSelect={setSelected}
+            onArchive={setArchiving}
+            onExport={onExport}
+          />
+          </div>
+          <div id="spacestations">
+          <SlotList
+            category="spacestation"
+            items={planetStations}
+            reorderable={false}
+            columns={getAdapter("spacestation").columns}
+            caption={`Space Stations (${planetStations.filter((item) => !item.empty).length} / 20)`}
+            description="Estação espacial reivindicada. O jogo aceita até 20 por save."
+            emptyMessage="Nenhuma Space Station reivindicada neste save."
+            screenshotUrl={screenshotUrl}
+            {...idleHandlers}
+            onSelect={setSelected}
+            onArchive={setArchiving}
+            onExport={onExport}
+          />
+          </div>
+          </>
         ) : null}
         {automatic.length > 0 ? (
           <SlotList
@@ -458,6 +581,8 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
         item={selected}
         category={selected?.category ?? category}
         open={selected != null}
+        navItems={navItems}
+        onNavigate={setSelected}
         onOpenChange={(open) => {
           if (!open) setSelected(null);
         }}
