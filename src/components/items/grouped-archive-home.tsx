@@ -37,7 +37,7 @@ function ArchiveSection({
       ) : view === "table" ? (
         <ItemTable items={items} category={category} onSelect={onSelect} />
       ) : (
-        <ItemGrid items={items} category={category} onSelect={onSelect} />
+        <ItemGrid items={items} onSelect={onSelect} />
       )}
     </section>
   );

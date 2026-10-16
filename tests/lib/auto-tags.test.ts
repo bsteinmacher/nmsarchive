@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  alignAutoTags,
   autoTagsFromArchived,
   autoTagsFromSlot,
+  replaceClassTag,
   replaceMultitoolTypeTag,
 } from "@/lib/auto-tags";
 import type { ExtractedSlot } from "@/lib/nms/extract/types";
@@ -58,7 +60,7 @@ describe("autoTagsFromSlot", () => {
           extra: { galaxy: "1 · Euclid", planet: "Home" },
         }),
       ),
-    ).toEqual(["Fighter", "S"]);
+    ).toEqual(["S Class", "Fighter", "Ship"]);
     expect(
       autoTagsFromSlot(
         slot({
@@ -74,7 +76,7 @@ describe("autoTagsFromSlot", () => {
     ).toEqual(["HabitableBase", "S", "1 · Euclid", "Home", "Lush"]);
   });
 
-  it("usa o tipo da wiki nas multi-tools e ignora Multi-tool genérico", () => {
+  it("coloca classe, tipo e Multi-tool nas multi-tools", () => {
     expect(
       autoTagsFromSlot(
         slot({
@@ -83,7 +85,7 @@ describe("autoTagsFromSlot", () => {
           className: "S",
         }),
       ),
-    ).toEqual(["Voltaic Staff", "S"]);
+    ).toEqual(["S Class", "Voltaic Staff", "Multi-tool"]);
     expect(
       autoTagsFromSlot(
         slot({
@@ -92,10 +94,10 @@ describe("autoTagsFromSlot", () => {
           className: "A",
         }),
       ),
-    ).toEqual(["A"]);
+    ).toEqual(["A Class", "Multi-tool"]);
   });
 
-  it("usa element, biome e level em inglês nos companions", () => {
+  it("ordena companions: classe, elemento, tipo, level e bioma", () => {
     expect(
       autoTagsFromSlot(
         slot({
@@ -110,7 +112,29 @@ describe("autoTagsFromSlot", () => {
           },
         }),
       ),
-    ).toEqual(["TREX", "Toxic", "Level 30", "SSS"]);
+    ).toEqual(["SSS Class", "Toxic", "TREX", "Level 30", "Toxic Biome"]);
+  });
+
+  it("usa a mesma ordem em freighter e frigate", () => {
+    expect(
+      autoTagsFromSlot(
+        slot({
+          category: "freighter",
+          itemType: "Pirate",
+          className: "S",
+        }),
+      ),
+    ).toEqual(["S Class", "Pirate", "Freighter"]);
+    expect(
+      autoTagsFromSlot(
+        slot({
+          category: "frigate",
+          itemType: "Ghost",
+          className: "S",
+          extra: { traits: "2" },
+        }),
+      ),
+    ).toEqual(["S Class", "Ghost", "Frigate", "2"]);
   });
 });
 
@@ -120,17 +144,64 @@ describe("autoTagsFromArchived", () => {
       autoTagsFromArchived(
         archived({ category: "ship", galaxy: 0, shipType: "Fighter" }),
       ),
-    ).toEqual(["Fighter", "S"]);
+    ).toEqual(["S Class", "Fighter", "Ship"]);
   });
 
-  it("troca a tag de tipo da multi-tool", () => {
+  it("troca a tag de tipo da multi-tool e mantém Multi-tool", () => {
     expect(replaceMultitoolTypeTag(["Multi-tool", "S"], "Pistol")).toEqual([
       "S",
       "Pistol",
+      "Multi-tool",
     ]);
     expect(
       replaceMultitoolTypeTag(["Voltaic Staff", "atlas"], "Rifle"),
     ).toEqual(["Rifle"]);
+    expect(
+      replaceMultitoolTypeTag(
+        ["A Class", "Experimental", "Multi-tool", "Twitch"],
+        "Rifle",
+      ),
+    ).toEqual(["A Class", "Rifle", "Multi-tool", "Twitch"]);
+  });
+
+  it("formata a classe e deixa as tags manuais depois", () => {
+    expect(replaceClassTag(["Ice", "B", "Twitch"], "SSS")).toEqual([
+      "SSS Class",
+      "Ice",
+      "Twitch",
+    ]);
+    expect(
+      alignAutoTags(
+        ["A", "Twitch", "Explorer", "Original"],
+        ["A Class", "Explorer", "Ship"],
+      ),
+    ).toEqual(["A Class", "Explorer", "Ship", "Twitch", "Original"]);
+    expect(
+      alignAutoTags(
+        ["Ice", "Twitch", "Level 0", "Frozen", "Original", "SIXLEGCOW", "B"],
+        ["B Class", "Ice", "SIXLEGCOW", "Level 0", "Frozen Biome"],
+      ),
+    ).toEqual([
+      "B Class",
+      "Ice",
+      "SIXLEGCOW",
+      "Level 0",
+      "Frozen Biome",
+      "Twitch",
+      "Original",
+    ]);
+    expect(
+      alignAutoTags(
+        ["Experimental", "A", "Twitch", "Original"],
+        ["A Class", "Experimental", "Multi-tool"],
+      ),
+    ).toEqual([
+      "A Class",
+      "Experimental",
+      "Multi-tool",
+      "Twitch",
+      "Original",
+    ]);
   });
 
   it("coloca a galáxia só em bases", () => {

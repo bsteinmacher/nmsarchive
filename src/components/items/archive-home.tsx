@@ -306,7 +306,7 @@ function ArchiveHomeInner({
       ) : state.view === "table" ? (
         <ItemTable items={items} category={category} onSelect={setSelectedId} />
       ) : (
-        <ItemGrid items={items} category={category} onSelect={setSelectedId} />
+        <ItemGrid items={items} onSelect={setSelectedId} />
       )}
 
       <ItemDetailDialog
