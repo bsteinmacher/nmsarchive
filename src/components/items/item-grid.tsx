@@ -1,24 +1,18 @@
 "use client";
 
-import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
+import { matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { screenshotPublicUrl } from "@/lib/screenshots";
-import {
-  archiveColumnValue,
-  dataColumns,
-} from "@/lib/list-columns";
 import type { ArchivedItemSummary } from "@/types/archive";
-import { isCategory, type Category } from "@/types/nms";
 import { useSaveSession } from "@/stores/save-session";
 import { ArchiveItemActions } from "./archive-item-actions";
 import { CardOpenTarget } from "./card-open-target";
+import { ItemTags } from "./item-tags";
 
 export function ItemGrid({
   items,
-  category,
   onSelect,
 }: {
   items: ArchivedItemSummary[];
-  category?: Category;
   onSelect: (id: string) => void;
 }) {
   const sessionItems = useSaveSession((s) => s.items);
@@ -27,7 +21,6 @@ export function ItemGrid({
   return (
     <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       {items.map((item) => {
-        const uiCategory = archiveUiCategory(item);
         const sessionCategory = sessionCategoryForArchived(item);
         const slots =
           saveReady && sessionCategory
@@ -37,14 +30,6 @@ export function ItemGrid({
               )
             : [];
         const thumb = screenshotPublicUrl(item.screenshotPath);
-        const columnCategory =
-          category ?? (isCategory(uiCategory) ? uiCategory : undefined);
-        const meta = (columnCategory ? dataColumns(columnCategory) : [])
-          .map((col) => {
-            const value = archiveColumnValue(item, col);
-            return value ? `${col.header} ${value}` : null;
-          })
-          .filter(Boolean);
         const title = item.description.trim() || item.name;
         return (
           <li key={item.id}>
@@ -77,16 +62,9 @@ export function ItemGrid({
                 <p className="font-heading text-base font-medium break-words">
                   {title}
                 </p>
-                {meta.length > 0 ? (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {meta.join(" · ")}
-                  </p>
-                ) : null}
               </div>
               {item.tags.length > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  {item.tags.map((t) => t.label).join(" · ")}
-                </p>
+                <ItemTags tags={item.tags.map((t) => t.label)} />
               ) : null}
               <div className="relative z-10 mt-auto">
                 <ArchiveItemActions

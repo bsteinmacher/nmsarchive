@@ -5,6 +5,8 @@ import {
   archiveColumnValue,
   archiveDataColumns,
   listColumnClass,
+  tableTagLabels,
+  type TableDataColumn,
 } from "@/lib/list-columns";
 import type { ArchivedItemSummary } from "@/types/archive";
 import type { Category } from "@/types/nms";
@@ -22,24 +24,40 @@ import { ArchiveItemActions } from "./archive-item-actions";
 export function ItemTable({
   items,
   category,
+  columns: columnsProp,
   onSelect,
 }: {
   items: ArchivedItemSummary[];
   category?: Category;
+  columns?: readonly TableDataColumn[];
   onSelect: (id: string) => void;
 }) {
   const sessionItems = useSaveSession((s) => s.items);
   const saveReady = useSaveSession((s) => s.status === "ready");
-  const columns = archiveDataColumns(category);
+  const columns: readonly TableDataColumn[] =
+    columnsProp ?? archiveDataColumns(category);
+  const tagColumns = columns.filter((col) => !col.reserved);
 
   return (
-    <Table className="table-fixed">
+    <Table className="min-w-6xl table-fixed">
+      <colgroup>
+        <col />
+        {columns.map((col) => (
+          <col key={col.id} className={listColumnClass(col.id)} />
+        ))}
+        <col className={listColumnClass("tags")} />
+        <col className={listColumnClass("actions")} />
+      </colgroup>
       <TableHeader>
         <TableRow>
           <TableHead>Name</TableHead>
           {columns.map((col) => (
-            <TableHead key={col.id} className={listColumnClass(col.id)}>
-              {col.header}
+            <TableHead
+              key={col.id}
+              className={listColumnClass(col.id)}
+              aria-hidden={col.reserved || undefined}
+            >
+              {col.reserved ? null : col.header}
             </TableHead>
           ))}
           <TableHead className={listColumnClass("tags")}>Tags</TableHead>
@@ -74,14 +92,14 @@ export function ItemTable({
                 </button>
               </TableCell>
               {columns.map((col) => (
-                <TableCell key={col.id} className="whitespace-normal">
-                  {archiveColumnValue(item, col) || "—"}
+                <TableCell key={col.id} className="whitespace-nowrap">
+                  {col.reserved
+                    ? null
+                    : archiveColumnValue(item, col) || "—"}
                 </TableCell>
               ))}
               <TableCell className="whitespace-normal text-muted-foreground">
-                {item.tags.length
-                  ? item.tags.map((t) => t.label).join(" · ")
-                  : "—"}
+                {tableTagLabels(item, tagColumns).join(" · ") || "—"}
               </TableCell>
               <TableCell className="text-right">
                 <ArchiveItemActions

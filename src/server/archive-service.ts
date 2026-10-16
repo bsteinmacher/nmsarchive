@@ -148,7 +148,7 @@ function metadataAsArchiveHint(category: string, metadata: unknown) {
 }
 
 const itemInclude = {
-  tags: { include: { tag: true } },
+  tags: { include: { tag: true }, orderBy: { position: "asc" as const } },
 } as const;
 
 async function syncTags(
@@ -162,6 +162,7 @@ async function syncTags(
     if (!unique.has(slug)) unique.set(slug, label);
   }
   await prisma.itemTag.deleteMany({ where: { itemId } });
+  let position = 0;
   for (const [slug, label] of unique) {
     const tag = await prisma.tag.upsert({
       where: { slug },
@@ -169,8 +170,9 @@ async function syncTags(
       create: { slug, label },
     });
     await prisma.itemTag.create({
-      data: { itemId, tagId: tag.id },
+      data: { itemId, tagId: tag.id, position },
     });
+    position += 1;
   }
 }
 

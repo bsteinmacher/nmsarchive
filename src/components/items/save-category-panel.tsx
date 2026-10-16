@@ -10,6 +10,7 @@ import { SaveContextSwitch } from "@/components/save/save-context-switch";
 import { ListViewToggle } from "@/components/items/list-view-toggle";
 import { SaveItemDetailDialog } from "@/components/items/save-item-detail-dialog";
 import {
+  GroupedSection,
   SaveSlotActions,
   SaveSlotGrid,
   columnValue,
@@ -32,14 +33,18 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { archivedScreenshotUrl } from "@/lib/archive-match";
-import { listColumnClass } from "@/lib/list-columns";
+import {
+  listColumnClass,
+  saveBaseColumns,
+  saveFreighterColumns,
+  type TableDataColumn,
+} from "@/lib/list-columns";
 import type { ArchiveView } from "@/lib/archive-url";
 import {
   FLEET_FRIGATE_LIMIT,
   getAdapter,
   isFreighterBaseSlot,
   isHiddenFromBasesMenu,
-  type AdapterColumn,
   type ExtractedSlot,
 } from "@/lib/nms/extract";
 import { listSquadronPilots } from "@/lib/nms/extract/squadron";
@@ -52,10 +57,17 @@ import {
   type Category,
 } from "@/types/nms";
 
+function isReserved(col: TableDataColumn) {
+  return col.reserved === true;
+}
+
 function SlotTable({
   category,
   items,
   reorderable,
+  reserveReorder = false,
+  framed = false,
+  sectionId,
   columns,
   caption,
   description,
@@ -74,7 +86,10 @@ function SlotTable({
   category: Category;
   items: ExtractedSlot[];
   reorderable: boolean;
-  columns: readonly AdapterColumn[];
+  reserveReorder?: boolean;
+  framed?: boolean;
+  sectionId?: string;
+  columns: readonly TableDataColumn[];
   caption: string;
   description: string;
   emptyMessage?: string;
@@ -90,45 +105,59 @@ function SlotTable({
   onExport: (item: ExtractedSlot) => void;
   screenshotUrl?: (item: ExtractedSlot) => string | null;
 }) {
+  const emptyCopy = emptyMessage ?? getAdapter(category).missingMessage;
+
   if (items.length === 0) {
+    if (framed) {
+      return (
+        <GroupedSection id={sectionId} title={caption} description={emptyCopy} />
+      );
+    }
     return (
       <Card>
         <CardHeader>
           <CardTitle>{caption}</CardTitle>
-          <CardDescription>
-            {emptyMessage ?? getAdapter(category).missingMessage}
-          </CardDescription>
+          <CardDescription>{emptyCopy}</CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
   const visibleColumns = columns.filter((col) => col.id !== "seed");
+  const showReorder = reorderable || reserveReorder;
 
-  return (
-    <section className="grid gap-3">
-      <div className="grid gap-1">
-        <h2 className="font-heading text-base leading-snug font-medium">
-          {caption}
-        </h2>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
+  const table = (
       <Table className="table-fixed">
+          <colgroup>
+            {showReorder ? <col className="w-10" /> : null}
+            <col className={listColumnClass("slot")} />
+            <col />
+            {visibleColumns.map((col) => (
+              <col key={col.id} className={listColumnClass(col.id)} />
+            ))}
+            <col className="w-64" />
+          </colgroup>
           <TableHeader>
             <TableRow>
-              {reorderable ? (
-                <TableHead className="w-10">
-                  <span className="sr-only">Reordenar</span>
+              {showReorder ? (
+                <TableHead className="w-10" aria-hidden={!reorderable || undefined}>
+                  {reorderable ? (
+                    <span className="sr-only">Reordenar</span>
+                  ) : null}
                 </TableHead>
               ) : null}
               <TableHead className={listColumnClass("slot")}>Slot</TableHead>
               <TableHead>Name</TableHead>
               {visibleColumns.map((col) => (
-                <TableHead key={col.id} className={listColumnClass(col.id)}>
-                  {col.header}
+                <TableHead
+                  key={col.id}
+                  className={listColumnClass(col.id)}
+                  aria-hidden={isReserved(col) || undefined}
+                >
+                  {isReserved(col) ? null : col.header}
                 </TableHead>
               ))}
-              <TableHead className={cn(listColumnClass("actions"), "text-right")}>
+              <TableHead className="w-64 text-right">
                 Ações
               </TableHead>
             </TableRow>
@@ -171,8 +200,9 @@ function SlotTable({
                     dragging === item.index && "opacity-60",
                   )}
                 >
-                  {reorderable ? (
-                    <TableCell>
+                  {showReorder ? (
+                    <TableCell aria-hidden={!reorderable || undefined}>
+                      {reorderable ? (
                       <button
                         type="button"
                         draggable
@@ -198,6 +228,7 @@ function SlotTable({
                       >
                         <GripVertical aria-hidden="true" />
                       </button>
+                      ) : null}
                     </TableCell>
                   ) : null}
                   <TableCell className="tabular-nums">{slot}</TableCell>
@@ -215,8 +246,8 @@ function SlotTable({
                     ) : null}
                   </TableCell>
                   {visibleColumns.map((col) => (
-                    <TableCell key={col.id}>
-                      {dash(columnValue(item, col))}
+                    <TableCell key={col.id} className="whitespace-nowrap">
+                      {isReserved(col) ? null : dash(columnValue(item, col))}
                     </TableCell>
                   ))}
                   <TableCell className="text-right">
@@ -232,6 +263,30 @@ function SlotTable({
             })}
           </TableBody>
       </Table>
+  );
+
+  if (framed) {
+    return (
+      <GroupedSection
+        id={sectionId}
+        title={caption}
+        description={description}
+        flush
+      >
+        {table}
+      </GroupedSection>
+    );
+  }
+
+  return (
+    <section id={sectionId} className="grid gap-3">
+      <div className="grid gap-1">
+        <h2 className="font-heading text-base leading-snug font-medium">
+          {caption}
+        </h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      {table}
     </section>
   );
 }
@@ -261,7 +316,6 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const archivedItems = archived.data?.items ?? [];
 
   const adapter = getAdapter(category);
-  const baseAdapter = getAdapter("base");
   const meta = CATEGORY_META[category];
   const reorderable = isReorderableCategory(category);
   const primary = items.filter((item) => {
@@ -439,11 +493,26 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             <ListViewToggle value={view} onChange={setView} />
           </div>
         </div>
+        <div
+          className={
+            category === "freighter" || category === "base"
+              ? "grid min-w-0 gap-8"
+              : "contents"
+          }
+        >
         <SlotList
           category={category}
           items={primary}
           reorderable={reorderable}
-          columns={adapter.columns}
+          reserveReorder={category === "freighter"}
+          framed={category === "freighter" || category === "base"}
+          columns={
+            category === "freighter"
+              ? saveFreighterColumns("freighter")
+              : category === "base"
+                ? saveBaseColumns()
+                : adapter.columns
+          }
           caption={caption}
           description={description}
           emptyMessage={
@@ -463,12 +532,14 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
         />
         {category === "freighter" ? (
           <>
-          <div id="freighter-base">
           <SlotList
             category="base"
             items={interiorBases}
             reorderable={false}
-            columns={baseAdapter.columns}
+            reserveReorder
+            framed
+            sectionId="freighter-base"
+            columns={saveFreighterColumns("base")}
             caption={
               interiorBases.length <= 1
                 ? "Freighter base"
@@ -482,13 +553,14 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             onArchive={setArchiving}
             onExport={onExport}
           />
-          </div>
-          <div id="frigates">
           <SlotList
             category="frigate"
             items={fleetFrigates}
             reorderable
-            columns={getAdapter("frigate").columns}
+            reserveReorder
+            framed
+            sectionId="frigates"
+            columns={saveFreighterColumns("frigate")}
             caption={`Frigates (${fleetFrigates.filter((item) => !item.empty).length} / ${FLEET_FRIGATE_LIMIT})`}
             description="Frota de até 30 fragatas. O save só lista as que existem."
             emptyMessage="Nenhuma Frigate neste save."
@@ -498,17 +570,15 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             onArchive={setArchiving}
             onExport={onExport}
           />
-          </div>
           {squadronPilots.length > 0 ? (
-            <div id="squadron">
               <SlotList
                 category="ship"
                 items={squadronPilots}
                 reorderable={false}
-                columns={[
-                  { id: "className", header: "Rank" },
-                  { id: "itemType", header: "Type" },
-                ]}
+                reserveReorder
+                framed
+                sectionId="squadron"
+                columns={saveFreighterColumns("squadron")}
                 caption={`Squadron (${squadronPilots.length})`}
                 description="Pilotos do esquadrão neste save. Só leitura — ainda não arquiva nem aplica."
                 screenshotUrl={screenshotUrl}
@@ -517,18 +587,18 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
                 onArchive={() => {}}
                 onExport={() => {}}
               />
-            </div>
           ) : null}
           </>
         ) : null}
         {category === "base" ? (
           <>
-          <div id="deepspace">
           <SlotList
             category="deepspace"
             items={planetDeepSpace}
             reorderable={false}
-            columns={getAdapter("deepspace").columns}
+            framed
+            sectionId="deepspace"
+            columns={saveBaseColumns()}
             caption={`Deep Space (${planetDeepSpace.filter((item) => !item.empty).length})`}
             description="Bases orbitais livres (COSMOS). Mesmo array das bases planetárias."
             emptyMessage="Nenhuma base Deep Space neste save."
@@ -538,13 +608,13 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             onArchive={setArchiving}
             onExport={onExport}
           />
-          </div>
-          <div id="spacestations">
           <SlotList
             category="spacestation"
             items={planetStations}
             reorderable={false}
-            columns={getAdapter("spacestation").columns}
+            framed
+            sectionId="spacestations"
+            columns={saveBaseColumns()}
             caption={`Space Stations (${planetStations.filter((item) => !item.empty).length} / 20)`}
             description="Estação espacial reivindicada. O jogo aceita até 20 por save."
             emptyMessage="Nenhuma Space Station reivindicada neste save."
@@ -554,9 +624,9 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             onArchive={setArchiving}
             onExport={onExport}
           />
-          </div>
           </>
         ) : null}
+        </div>
         {automatic.length > 0 ? (
           <SlotList
             category={category}
