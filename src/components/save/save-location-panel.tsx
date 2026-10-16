@@ -20,8 +20,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { downloadBytes } from "@/lib/download";
 import { fsErrorMessage } from "@/lib/nms/fs-access";
+import { reportSaveInPlace } from "@/components/save/save-in-place";
 import {
   newestSave,
   saveKindLabel,
@@ -189,26 +189,7 @@ export function SaveLocationPanel({
 
   async function onSave(force = false) {
     const result = await saveInPlace(force);
-    if (result.status === "stale") {
-      setConfirmStale(true);
-      return;
-    }
-    if (result.status === "unbound") {
-      toast.error(
-        "Esse save não está ligado à pasta. Abra o arquivo de novo, ou baixe uma cópia.",
-      );
-      return;
-    }
-    if (result.status === "cancelled") return;
-    if (result.status === "export") {
-      downloadBytes(result.backupName, result.backupBytes);
-      downloadBytes(result.fileName, result.bytes);
-      toast.success(
-        `Backup ${result.backupName} e o save ${result.fileName} foram baixados.`,
-      );
-      return;
-    }
-    toast.success(`Salvo em ${result.fileName}. Backup ${result.backupName}.`);
+    await reportSaveInPlace(result, () => setConfirmStale(true));
   }
 
   return (
@@ -218,7 +199,7 @@ export function SaveLocationPanel({
         {expanded ? (
           <CardDescription>
             A pasta do jogo neste computador. Cada slot mostra o save do jogador
-            e o automático, e o mais recente abre sozinho. Salvar grava nesse
+            e o automático, e o mais recente fica pré-selecionado. Salvar grava nesse
             mesmo arquivo, depois de um backup com data e hora.
           </CardDescription>
         ) : null}

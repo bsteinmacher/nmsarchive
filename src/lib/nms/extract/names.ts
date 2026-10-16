@@ -11,6 +11,18 @@ export function displayId(value: unknown): string {
   return stripCaret(raw);
 }
 
+const UI_SKIP_PARTS = new Set(["UI", "SPECIES", "NAME", "TITLE"]);
+
+/** CreatureID cru ou UI_FIEND_NAME → FIEND. Nunca devolve a string UI_ completa. */
+export function companionSpeciesTag(creatureId: unknown): string {
+  const id = displayId(creatureId);
+  if (!id) return "";
+  if (!id.toUpperCase().startsWith("UI_")) return id;
+  const parts = id.split("_").filter(Boolean);
+  const core = parts.filter((part) => !UI_SKIP_PARTS.has(part.toUpperCase()));
+  return core.join("_");
+}
+
 export function nestedEnum(
   value: unknown,
   key: string,

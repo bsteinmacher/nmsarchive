@@ -6,10 +6,23 @@ import { asRecord, asString } from "../value";
 import { isTechSlot } from "./inventory-layout";
 import type { ExtractedSlot } from "./types";
 
-/** Quanto do item arquivado entra no slot destino. */
-export const APPLY_DEPTHS = ["model", "supercharged", "tech", "full"] as const;
+/** Re-skin = só visual. Trocar = slots + tech, inventário vazio. */
+export const APPLY_DEPTHS = ["model", "tech"] as const;
 
 export type ApplyDepth = (typeof APPLY_DEPTHS)[number];
+
+export const APPLY_OVERLAY_MODES = [
+  {
+    id: "model" as const,
+    label: "Re-skin",
+    hint: "Só o visual. Slots e tecnologias deste slot ficam.",
+  },
+  {
+    id: "tech" as const,
+    label: "Trocar",
+    hint: "Slots e tecnologias da origem. Inventário fica vazio.",
+  },
+] as const;
 
 export type CompanionLevelChoice = "archived" | "zero";
 
@@ -37,21 +50,10 @@ export function usesApplyDepth(
   );
 }
 
-const TECH_LAYOUT_KEYS = [
-  "ValidSlotIndices",
-  "Width",
-  "Height",
-  "StackSizeGroup",
-  "IsCool",
-  "Version",
-  "NumSlotsFromTech",
-  "BaseStatValues",
-] as const;
-
 export type ApplyMergeSpec = {
   visual: readonly string[];
   grids: readonly string[];
-  /** Campos do destino que permanecem, inclusive no conteúdo completo. */
+  /** Campos do destino que permanecem no overlay. */
   keep: readonly string[];
   layoutKey?: string;
 };
@@ -85,13 +87,25 @@ function copyInventoryClass(
   dest.Class = { ...prev, InventoryClass: className };
 }
 
-function indexKey(slot: unknown): string | null {
-  const index = asRecord(asRecord(slot)?.Index);
-  if (!index) return null;
-  const x = index.X;
-  const y = index.Y;
-  if (typeof x !== "number" || typeof y !== "number") return null;
-  return `${x}:${y}`;
+/** Produtos e substâncias saem; tecnologia fica. */
+export function stripGridCargo(grid: unknown): unknown {
+  const rec = asRecord(grid);
+  if (!rec) return grid;
+  const next = structuredClone(rec);
+  const slots = Array.isArray(next.Slots) ? next.Slots : [];
+  next.Slots = slots.filter(isTechSlot);
+  return next;
+}
+
+export function stripSpecGrids(
+  rec: Record<string, unknown>,
+  spec: ApplyMergeSpec,
+): Record<string, unknown> {
+  const next = structuredClone(rec);
+  for (const gridKey of spec.grids) {
+    if (gridKey in next) next[gridKey] = stripGridCargo(next[gridKey]);
+  }
+  return next;
 }
 
 export function mergeGrid(
@@ -101,8 +115,9 @@ export function mergeGrid(
 ): unknown {
   const source = asRecord(sourceGrid);
   if (!source) return destGrid;
-  if (depth === "full") {
-    const next = structuredClone(source);
+  if (depth === "tech") {
+    const next = asRecord(stripGridCargo(source));
+    if (!next) return destGrid;
     const dest = asRecord(destGrid);
     if (dest && "Name" in dest) next.Name = structuredClone(dest.Name);
     return next;
@@ -110,27 +125,6 @@ export function mergeGrid(
 
   const dest = structuredClone(asRecord(destGrid) ?? {});
   copyInventoryClass(dest, source);
-  if (depth === "model") return dest;
-
-  if ("SpecialSlots" in source) {
-    dest.SpecialSlots = structuredClone(source.SpecialSlots);
-  }
-  if (depth === "supercharged") return dest;
-
-  for (const key of TECH_LAYOUT_KEYS) {
-    if (key in source) dest[key] = structuredClone(source[key]);
-  }
-  const sourceSlots = Array.isArray(source.Slots) ? source.Slots : [];
-  const incomingTech = sourceSlots.filter(isTechSlot);
-  const taken = new Set(
-    incomingTech.map(indexKey).filter((key): key is string => key != null),
-  );
-  const kept = (Array.isArray(dest.Slots) ? dest.Slots : []).filter((slot) => {
-    if (isTechSlot(slot)) return false;
-    const key = indexKey(slot);
-    return key == null || !taken.has(key);
-  });
-  dest.Slots = [...kept, ...structuredClone(incomingTech)];
   return dest;
 }
 
@@ -141,14 +135,14 @@ export function mergeApply(
   spec: ApplyMergeSpec,
 ): Record<string, unknown> {
   const destRec = asRecord(dest) ?? {};
-  if (depth === "full") {
-    const next = structuredClone(source);
+  if (depth === "tech") {
+    const next = stripSpecGrids(source, spec);
     for (const key of spec.keep) {
       if (key in destRec) next[key] = structuredClone(destRec[key]);
     }
     for (const gridKey of spec.grids) {
-      if (!(gridKey in source)) continue;
-      next[gridKey] = mergeGrid(destRec[gridKey], source[gridKey], "full");
+      if (!(gridKey in next)) continue;
+      next[gridKey] = mergeGrid(destRec[gridKey], next[gridKey], "tech");
     }
     return next;
   }
@@ -156,13 +150,6 @@ export function mergeApply(
   const next = structuredClone(destRec);
   for (const key of spec.visual) {
     if (key in source) next[key] = structuredClone(source[key]);
-  }
-  if (
-    spec.layoutKey &&
-    depth !== "model" &&
-    spec.layoutKey in source
-  ) {
-    next[spec.layoutKey] = structuredClone(source[spec.layoutKey]);
   }
   for (const gridKey of spec.grids) {
     if (!(gridKey in source) && !(gridKey in next)) continue;
@@ -180,15 +167,15 @@ export function zeroCompanionTreats(payload: unknown): unknown {
 export function applyTargetSlots(
   category: Category,
   slots: ExtractedSlot[],
-  payload: unknown,
 ): ExtractedSlot[] {
   const usable = slots.filter(
-    (slot) => !slot.readonly && slot.group !== "automatic",
+    (slot) =>
+      !slot.readonly &&
+      slot.group !== "automatic" &&
+      !(category === "freighter" && slot.index !== 0),
   );
   if (category !== "freighter") return usable;
-  const kind = asString(asRecord(payload)?.kind);
-  if (kind === "current") return usable.filter((slot) => slot.index === 0);
-  return usable.filter((slot) => slot.index !== 0);
+  return usable.filter((slot) => slot.index === 0);
 }
 
 export function defaultApplyIndex(slots: ExtractedSlot[]): number | null {

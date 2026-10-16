@@ -65,7 +65,7 @@ describe("multitools adapter", () => {
     expect(items[0]).toMatchObject({
       name: "Atlas Sceptre",
       className: "S",
-      itemType: "Atlas Staff",
+      itemType: "Voltaic Staff",
       empty: false,
       seed: "0xabcdef",
     });

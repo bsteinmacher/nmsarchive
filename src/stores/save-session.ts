@@ -186,38 +186,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     if (get().hydrated) return;
     set({ status: "hydrating" });
     try {
-      const [json, original, mapping, meta] = await Promise.all([
-        idbGet(IDB_JSON),
-        idbGet(IDB_ORIGINAL),
-        idbGet(IDB_MAPPING),
-        idbGet(IDB_META),
-      ]);
-      if (json != null && original && mapping && meta) {
-        mappedJson = json;
-        originalBytes = original as Uint8Array;
-        mappingFile = mapping as MappingFile;
-        const sessionMeta = meta as SessionMeta;
-        const sha256 =
-          sessionMeta.sha256 ?? (await sha256Hex(originalBytes));
-        const formatHint = sessionMeta.formatHint ?? detect(originalBytes);
-        if (!sessionMeta.sha256) {
-          await idbSet(IDB_META, { ...sessionMeta, sha256, formatHint });
-        }
-        set(
-          applyParsed(json, initialSaveContext(json), {
-            hydrated: true,
-            fileName: sessionMeta.fileName,
-            unknownKeys: sessionMeta.unknownKeys,
-            mappingVersion: sessionMeta.mappingVersion,
-            sha256,
-            formatHint,
-            origin: sessionMeta.origin ?? null,
-            diskModified: sessionMeta.diskModified ?? null,
-            dirty: sessionMeta.dirty ?? false,
-          }),
-        );
-        return;
-      }
+      await get().clear();
     } catch {
       // IndexedDB indisponível — segue sem sessão
     }

@@ -7,9 +7,11 @@ import {
 } from "@/lib/archive-filters";
 import { archiveUiCategory } from "@/lib/archive-match";
 import { companionBattleFromArchived } from "@/lib/nms/extract/companion-battle";
+import { archiveMultitoolType } from "@/lib/nms/multitool-type";
 import { seedFromPayload } from "@/lib/nms/extract";
 import { asNumber, asRecord, asString } from "@/lib/nms/value";
 import { pickListExtra } from "@/lib/list-columns";
+import { groupArchiveTypes } from "@/lib/type-groups";
 import {
   archivedMetadataSchema,
   slugifyTag,
@@ -71,10 +73,14 @@ function metadataSummary(
   if (battle.biome) extra.biome = battle.biome;
   if (battle.element) extra.element = battle.element;
   if (battle.level) extra.level = battle.level;
+  const rawType = asString(rec.shipType) ?? "";
   return {
     gameVersion: asNumber(rec.gameVersion),
     className: asString(rec.className) ?? "",
-    shipType: asString(rec.shipType) ?? "",
+    shipType:
+      category === "multitool"
+        ? archiveMultitoolType(rawType) || rawType
+        : rawType,
     filename: asString(rec.filename) ?? "",
     extra: Object.keys(extra).length ? extra : undefined,
   };
@@ -113,6 +119,7 @@ function toSummary(row: {
     name: row.name,
     seed: row.seed,
     description: row.description,
+    notes: asString(asRecord(row.metadata)?.notes) ?? "",
     galaxy: row.galaxy,
     coordinates: row.coordinates,
     screenshotPath: row.screenshotPath,
@@ -317,6 +324,114 @@ export async function listItems(
     );
 }
 
+export type ArchiveTagRow = {
+  id: string;
+  slug: string;
+  label: string;
+  itemCount: number;
+};
+
+export async function listAllTags(
+  prisma: PrismaClient,
+): Promise<ArchiveTagRow[]> {
+  const rows = await prisma.tag.findMany({
+    orderBy: { slug: "asc" },
+    include: { _count: { select: { items: true } } },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    label: row.label,
+    itemCount: row._count.items,
+  }));
+}
+
+export async function createTag(
+  prisma: PrismaClient,
+  label: string,
+): Promise<ArchiveTagRow> {
+  const slug = slugifyTag(label);
+  const existing = await prisma.tag.findUnique({ where: { slug } });
+  if (existing) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "Já existe uma tag com esse nome.",
+    });
+  }
+  const tag = await prisma.tag.create({ data: { slug, label } });
+  await logOperation(prisma, {
+    action: "tag_create",
+    detail: { slug: tag.slug, label: tag.label },
+  });
+  return { id: tag.id, slug: tag.slug, label: tag.label, itemCount: 0 };
+}
+
+export async function updateTag(
+  prisma: PrismaClient,
+  input: { id: string; label: string },
+): Promise<ArchiveTagRow> {
+  const existing = await prisma.tag.findUnique({
+    where: { id: input.id },
+    include: { _count: { select: { items: true } } },
+  });
+  if (!existing) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Tag não encontrada.",
+    });
+  }
+  const slug = slugifyTag(input.label);
+  const clash = await prisma.tag.findUnique({ where: { slug } });
+  if (clash && clash.id !== existing.id) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "Já existe uma tag com esse nome.",
+    });
+  }
+  const tag = await prisma.tag.update({
+    where: { id: existing.id },
+    data: { slug, label: input.label },
+    include: { _count: { select: { items: true } } },
+  });
+  await logOperation(prisma, {
+    action: "tag_update",
+    detail: {
+      slug: tag.slug,
+      label: tag.label,
+      previousSlug: existing.slug,
+    },
+  });
+  return {
+    id: tag.id,
+    slug: tag.slug,
+    label: tag.label,
+    itemCount: tag._count.items,
+  };
+}
+
+export async function deleteTag(prisma: PrismaClient, id: string) {
+  const existing = await prisma.tag.findUnique({
+    where: { id },
+    include: { _count: { select: { items: true } } },
+  });
+  if (!existing) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Tag não encontrada.",
+    });
+  }
+  await logOperation(prisma, {
+    action: "tag_delete",
+    detail: {
+      slug: existing.slug,
+      label: existing.label,
+      itemCount: existing._count.items,
+    },
+  });
+  await prisma.tag.delete({ where: { id } });
+  return { id };
+}
+
 export async function listTags(
   prisma: PrismaClient,
   query?: string,
@@ -356,9 +471,11 @@ export async function listFilterOptions(
       if (!tags.has(tag.slug)) tags.set(tag.slug, tag.label);
     }
   }
+  const typeList = [...types].sort((a, b) => a.localeCompare(b, "pt-BR"));
   return {
     classes: [...classes].sort(),
-    types: [...types].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    types: typeList,
+    typeGroups: groupArchiveTypes(items),
     galaxies: [...galaxies].sort((a, b) => a - b),
     tags: [...tags.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
@@ -435,9 +552,11 @@ export async function updateItem(
   input: {
     id: string;
     description?: string;
+    notes?: string;
     tags?: string[];
     screenshotPath?: string | null;
     className?: string | null;
+    shipType?: string | null;
     extra?: Record<string, string>;
   },
 ): Promise<ArchivedItemSummary> {
@@ -469,7 +588,12 @@ export async function updateItem(
       await deleteScreenshot(previous);
     }
   }
-  if (input.className !== undefined || input.extra) {
+  if (
+    input.notes !== undefined ||
+    input.className !== undefined ||
+    input.shipType !== undefined ||
+    input.extra
+  ) {
     const rec = asRecord(existing.metadata) ?? {};
     const currentExtra = asRecord(rec.extra);
     const extra = input.extra
@@ -481,14 +605,22 @@ export async function updateItem(
             ),
           )
         : undefined;
+    const notes =
+      input.notes !== undefined ? input.notes.trim() : asString(rec.notes);
     const metadata = {
       ...rec,
       className:
         input.className === undefined
           ? rec.className
           : input.className || undefined,
+      shipType:
+        input.shipType === undefined
+          ? rec.shipType
+          : input.shipType || undefined,
       extra,
+      ...(notes ? { notes } : {}),
     };
+    if (!notes) delete (metadata as { notes?: string }).notes;
     await prisma.archivedItem.update({
       where: { id: input.id },
       data: { metadata: metadata as Prisma.InputJsonValue },
@@ -503,9 +635,11 @@ export async function updateItem(
       name: existing.name,
       seed: existing.seed,
       description: input.description != null,
+      notes: input.notes != null,
       tags: input.tags != null,
       screenshot: input.screenshotPath !== undefined,
       rank: input.className !== undefined || input.extra != null,
+      type: input.shipType !== undefined,
     },
   });
   const reloaded = await prisma.archivedItem.findUniqueOrThrow({

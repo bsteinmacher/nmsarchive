@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogBody,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { isTypingTarget, neighborSlots } from "@/lib/item-nav";
 import { getAdapter, type ExtractedSlot } from "@/lib/nms/extract";
 import { saveSlotUiCategory } from "@/lib/archive-match";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { trpc } from "@/lib/trpc";
 import { useSaveSession } from "@/stores/save-session";
 import type { Category } from "@/types/nms";
+import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
 import { ItemCompare } from "./item-compare";
 import { ImportModelDialog } from "./import-model-dialog";
 import { JsonTree } from "./json-tree";
@@ -27,12 +31,16 @@ export function SaveItemDetailDialog({
   open,
   onOpenChange,
   onArchive,
+  navItems = [],
+  onNavigate,
 }: {
   item: ExtractedSlot | null;
   category: Category;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onArchive?: (item: ExtractedSlot) => void;
+  navItems?: ExtractedSlot[];
+  onNavigate?: (item: ExtractedSlot) => void;
 }) {
   const exportItem = useSaveSession((s) => s.exportItem);
   const clearSlot = useSaveSession((s) => s.clearSlot);
@@ -41,6 +49,7 @@ export function SaveItemDetailDialog({
   const [importModel, setImportModel] = useState(false);
   const actionCategory = item?.category ?? category;
   const adapter = getAdapter(actionCategory);
+  const { prev, next } = neighborSlots(navItems, item);
   const slot = item?.slotLabel ?? (item ? String(item.index + 1) : "—");
   const bits = [
     `Slot ${slot}`,
@@ -90,6 +99,19 @@ export function SaveItemDetailDialog({
     setImportModel(false);
   }
 
+  useEffect(() => {
+    if (!open || !onNavigate) return;
+    function onKey(event: KeyboardEvent) {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      if (isTypingTarget(event.target)) return;
+      event.preventDefault();
+      if (event.key === "ArrowLeft" && prev) onNavigate(prev);
+      if (event.key === "ArrowRight" && next) onNavigate(next);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onNavigate, prev, next]);
+
   async function onClear() {
     if (!item) return;
     setClearing(true);
@@ -107,12 +129,55 @@ export function SaveItemDetailDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && confirmDelete) {
+          setConfirmDelete(false);
+          return;
+        }
+        onOpenChange(next);
+      }}
+    >
+        <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{item?.name ?? adapter.label}</DialogTitle>
-          <DialogDescription>{bits.join(" · ")}</DialogDescription>
+          <div className="flex items-start gap-2">
+            {onNavigate ? (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                className="mt-[-2px] shrink-0"
+                disabled={!prev}
+                aria-label="Item anterior"
+                onClick={() => prev && onNavigate(prev)}
+              >
+                <ChevronLeft />
+              </Button>
+            ) : null}
+            <div className="min-w-0 flex-1">
+              <DialogTitle>
+                Slot {slot}
+                {item?.name && !item.empty ? ` · ${item.name}` : ""}
+              </DialogTitle>
+              <DialogDescription>{bits.join(" · ")}</DialogDescription>
+            </div>
+            {onNavigate ? (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                className="mt-[-2px] mr-6 shrink-0"
+                disabled={!next}
+                aria-label="Próximo item"
+                onClick={() => next && onNavigate(next)}
+              >
+                <ChevronRight />
+              </Button>
+            ) : null}
+          </div>
         </DialogHeader>
+        <DialogBody className="grid gap-4">
         {item?.warning ? (
           <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
             {item.warning}
@@ -141,40 +206,13 @@ export function SaveItemDetailDialog({
           />
         ) : null}
         {item ? <JsonTree value={item.payload} /> : null}
-        {confirmDelete && item ? (
-          <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
-            <p className="text-sm">
-              {item.category === "frigate"
-                ? `Excluir ${item.name} deste save? Ela sai da frota. O arquivo pessoal não muda.`
-                : `Excluir ${item.name} deste save? O slot fica vazio. O arquivo pessoal não muda.`}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => void onClear()}
-                disabled={clearing}
-              >
-                {clearing ? "Excluindo…" : "Excluir do save"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setConfirmDelete(false)}
-                disabled={clearing}
-              >
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        ) : null}
+        </DialogBody>
         <DialogFooter>
           {canClear ? (
             <Button
               type="button"
               variant="ghost"
               onClick={() => setConfirmDelete(true)}
-              disabled={confirmDelete}
             >
               Excluir
             </Button>
@@ -215,6 +253,19 @@ export function SaveItemDetailDialog({
             </Button>
           ) : null}
         </DialogFooter>
+          <ConfirmDeleteDialog
+            open={confirmDelete && item != null}
+            title={item ? `Excluir ${item.name}?` : "Excluir item?"}
+            description={
+              item?.category === "frigate"
+                ? "Ela sai da frota. O arquivo pessoal não muda."
+                : "O slot fica vazio. O arquivo pessoal não muda."
+            }
+            confirmLabel="Excluir do save"
+            pending={clearing}
+            onCancel={() => setConfirmDelete(false)}
+            onConfirm={() => void onClear()}
+          />
       </DialogContent>
       <ImportModelDialog
         item={canImportModel ? item : null}

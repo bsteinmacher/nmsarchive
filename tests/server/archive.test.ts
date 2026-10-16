@@ -3,11 +3,15 @@ import {
   archiveItem,
   countItemsByCategory,
   createSaveMetadata,
+  createTag,
   deleteItem,
+  deleteTag,
   getItem,
+  listAllTags,
   listItems,
   listTags,
   updateItem,
+  updateTag,
 } from "@/server/archive-service";
 import { createTestPrisma } from "../helpers/prisma";
 
@@ -79,9 +83,11 @@ describe("archive-service", () => {
     const updated = await updateItem(prisma, {
       id: archived.id,
       description: "Atualizada.",
+      notes: "Comprada em Euclid.",
       tags: ["exotic"],
     });
     expect(updated.description).toBe("Atualizada.");
+    expect(updated.notes).toBe("Comprada em Euclid.");
     expect(updated.tags.map((t) => t.slug)).toEqual(["exotic"]);
 
     await deleteItem(prisma, archived.id);
@@ -110,7 +116,27 @@ describe("archive-service", () => {
       tags: [],
     });
     expect(archived.category).toBe("multitool");
-    expect(archived.shipType).toBe("Atlas Staff");
+    expect(archived.shipType).toBe("Voltaic Staff");
+  });
+
+  it("atualiza o tipo da multi-tool no metadata", async () => {
+    const archived = await archiveItem(prisma, {
+      category: "multitool",
+      name: "Pistol placeholder",
+      seed: "0xmt1",
+      description: "tipo ainda genérico",
+      metadata: { gameVersion: 1, shipType: "Multi-tool", payload: {} },
+      tags: ["Multi-tool"],
+    });
+    expect(archived.shipType).toBe("Multi-tool");
+    const updated = await updateItem(prisma, {
+      id: archived.id,
+      shipType: "Pistol",
+      tags: ["Pistol"],
+    });
+    expect(updated.shipType).toBe("Pistol");
+    expect(updated.tags.map((tag) => tag.label)).toEqual(["Pistol"]);
+    await deleteItem(prisma, archived.id);
   });
 
   it("guarda Atk/Agi/HP do companion no metadata, sem mexer no payload", async () => {
@@ -121,21 +147,21 @@ describe("archive-service", () => {
       description: "pet da arena",
       metadata: {
         gameVersion: 1,
-        extra: { biome: "Radioactive", element: "Radioativo" },
+        extra: { biome: "Radioactive", element: "Radioactive" },
         payload: { CreatureSeed: [true, "0x3c"] },
       },
       tags: [],
     });
     expect(archived.extra).toMatchObject({
       biome: "Radioactive",
-      element: "Radioativo",
+      element: "Radioactive",
     });
     const updated = await updateItem(prisma, {
       id: archived.id,
       className: "S/S/S",
       extra: {
         biome: "Radioactive",
-        element: "Radioativo",
+        element: "Radioactive",
         rank: "S/S/S",
         atk: "S",
         agi: "S",
@@ -145,7 +171,7 @@ describe("archive-service", () => {
     expect(updated.className).toBe("S/S/S");
     expect(updated.extra).toMatchObject({
       biome: "Radioactive",
-      element: "Radioativo",
+      element: "Radioactive",
     });
     const detail = await getItem(prisma, archived.id);
     expect(detail.metadata.extra).toMatchObject({ rank: "S/S/S", atk: "S" });
@@ -419,5 +445,46 @@ describe("archive-service", () => {
     });
     expect(filteredFreighter.some((row) => row.id === interior.id)).toBe(true);
     await deleteItem(prisma, interior.id);
+  });
+
+  it("cria, renomeia e exclui tags do arquivo", async () => {
+    const created = await createTag(prisma, "Tóxico");
+    expect(created).toMatchObject({
+      slug: "toxico",
+      label: "Tóxico",
+      itemCount: 0,
+    });
+    await expect(createTag(prisma, "toxico")).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+
+    const renamed = await updateTag(prisma, {
+      id: created.id,
+      label: "Toxic",
+    });
+    expect(renamed).toMatchObject({ slug: "toxic", label: "Toxic" });
+
+    const listed = await listAllTags(prisma);
+    expect(listed.some((tag) => tag.id === renamed.id && tag.label === "Toxic")).toBe(
+      true,
+    );
+
+    const item = await archiveItem(prisma, {
+      category: "companion",
+      name: "Tagged pet",
+      seed: "0xabc1",
+      description: "usa a tag",
+      metadata: { gameVersion: 1, payload: {} },
+      tags: ["Toxic"],
+    });
+    expect(item.tags.map((tag) => tag.slug)).toEqual(["toxic"]);
+
+    await deleteTag(prisma, renamed.id);
+    await expect(updateTag(prisma, { id: renamed.id, label: "Ice" })).rejects.toMatchObject(
+      { code: "NOT_FOUND" },
+    );
+    const after = await getItem(prisma, item.id);
+    expect(after.tags).toEqual([]);
+    await deleteItem(prisma, item.id);
   });
 });

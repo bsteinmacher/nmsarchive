@@ -23,6 +23,17 @@ export const REORDERABLE_CATEGORIES = [
 
 export type ReorderableCategory = (typeof REORDERABLE_CATEGORIES)[number];
 
+/** Itens do menu. Slugs extras (frigate, deepspace, spacestation) continuam em CATEGORIES. */
+export const SIDEBAR_CATEGORIES = [
+  "exosuit",
+  "multitool",
+  "companion",
+  "ship",
+  "freighter",
+  "base",
+  "wonder",
+] as const satisfies readonly Category[];
+
 export const CATEGORY_META: Record<
   Category,
   { label: string; href: `/${Category}`; description: string }
@@ -41,7 +52,7 @@ export const CATEGORY_META: Record<
   freighter: {
     label: "Freighters",
     href: "/freighter",
-    description: "Freighter atual, frota extra e a base do interior.",
+    description: "Freighter atual, a base do interior e a frota de Frigates.",
   },
   frigate: {
     label: "Frigates",
@@ -69,7 +80,7 @@ export const CATEGORY_META: Record<
     label: "Bases",
     href: "/base",
     description:
-      "Bases planetárias e de Ship. Freighter, Deep Space e Space Station têm menus próprios.",
+      "Planet Bases, Deep Space e Space Stations. A base da Freighter fica em Freighters.",
   },
   deepspace: {
     label: "Deep Space Bases",
@@ -95,6 +106,19 @@ export function isReorderableCategory(
   return (REORDERABLE_CATEGORIES as readonly string[]).includes(value);
 }
 
-export function archiveHref(category?: Category): "/" | `/archive/${Category}` {
-  return category ? `/archive/${category}` : "/";
+export function archiveHref(
+  category?: Category,
+): "/" | `/archive/${Category}` {
+  if (!category) return "/";
+  if (category === "frigate") return "/archive/freighter";
+  if (category === "deepspace" || category === "spacestation") {
+    return "/archive/base";
+  }
+  return `/archive/${category}`;
+}
+
+export function saveHref(category: Category): `/${Category}` {
+  if (category === "frigate") return "/freighter";
+  if (category === "deepspace" || category === "spacestation") return "/base";
+  return CATEGORY_META[category].href;
 }

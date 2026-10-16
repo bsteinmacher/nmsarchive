@@ -196,6 +196,7 @@ describe("matchingArchivedItems", () => {
       category: "ship",
       name: "X",
       description: "",
+      notes: "",
       galaxy: null,
       coordinates: null,
       gameVersion: null,

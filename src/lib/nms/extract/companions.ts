@@ -3,7 +3,7 @@ import { remapSlotIndex, reorderSlots } from "../reorder";
 import { asArray, asNumber, asRecord, asString, normalizeSeed } from "../value";
 import { clonePlayer, emptySlotAt, insertAtFirstEmpty, replaceAtIndex } from "./array";
 import { companionBattleStats } from "./companion-battle";
-import { displayId, emptySlotLabel } from "./names";
+import { companionSpeciesTag, displayId, emptySlotLabel } from "./names";
 import type {
   CategoryAdapter,
   ExtractedSlot,
@@ -99,7 +99,7 @@ export function listCompanions(
         payload: rec,
       };
     }
-    const itemType = displayId(rec.CreatureID);
+    const itemType = companionSpeciesTag(rec.CreatureID);
     const descriptors = asArray(rec.Descriptors) ?? [];
     const seed = companionSeedFromPayload(rec);
     const battle = companionBattleStats(rec);

@@ -141,7 +141,6 @@ export function applyItem(
   context: SaveContext = "main",
   request?: ApplyRequest,
 ): InsertResult {
-  const depth = request?.depth ?? "full";
   const index = request?.index;
 
   if (category === "companion") {
@@ -155,14 +154,14 @@ export function applyItem(
 
   if (category === "ship" || category === "multitool" || category === "freighter") {
     if (index == null) {
-      if (depth === "full") return insertItem(json, category, payload, seed, context);
-      return { ok: false, error: "Escolha o slot destino." };
+      return getAdapter(category).insert(json, payload, context);
     }
-    if (category === "ship") return applyShip(json, index, payload, depth, context);
+    const overlay = request?.depth ?? "model";
+    if (category === "ship") return applyShip(json, index, payload, overlay, context);
     if (category === "multitool") {
-      return applyMultitool(json, index, payload, depth, context);
+      return applyMultitool(json, index, payload, overlay, context);
     }
-    return applyFreighter(json, index, payload, depth, context);
+    return applyFreighter(json, index, payload, overlay, context);
   }
 
   return insertItem(json, category, payload, seed, context);

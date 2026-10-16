@@ -1,3 +1,4 @@
+import { COMPANION_CLASS_TIERS } from "@/lib/nms/extract/companion-battle";
 import { parseGalaxyDisplay } from "@/lib/nms/galaxies";
 import { ITEM_CLASSES } from "@/lib/validations";
 
@@ -77,3 +78,17 @@ export const CLASS_FILTER_OPTIONS = ITEM_CLASSES.map((value) => ({
   value,
   label: `Class ${value}`,
 }));
+
+export const COMPANION_CLASS_FILTER_OPTIONS = COMPANION_CLASS_TIERS.map(
+  (value) => ({
+    value,
+    label: `Class ${value}`,
+  }),
+);
+
+export function classFilterOptions(category?: string) {
+  if (category == null || category === "companion") {
+    return COMPANION_CLASS_FILTER_OPTIONS;
+  }
+  return CLASS_FILTER_OPTIONS;
+}

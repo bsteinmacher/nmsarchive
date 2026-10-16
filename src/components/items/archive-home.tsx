@@ -6,6 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive } from "lucide-react";
 import { cn } from "cn";
 import { ArchiveFilters } from "@/components/items/archive-filters";
+import {
+  GroupedArchiveSections,
+  splitFreighterArchive,
+} from "@/components/items/grouped-archive-home";
 import { ItemDetailDialog } from "@/components/items/item-detail-dialog";
 import { ItemGrid } from "@/components/items/item-grid";
 import { ItemTable } from "@/components/items/item-table";
@@ -17,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { parseGalaxyDisplay } from "@/lib/nms/galaxies";
 import { formatOperationLabel } from "@/lib/operation-labels";
 import {
   archiveSearchHref,
@@ -26,10 +29,14 @@ import {
   type ArchiveView,
 } from "@/lib/archive-url";
 import { rememberArchiveView } from "@/lib/archive-view";
+import {
+  EMPTY_FILTER_OPTIONS,
+  mergeArchiveFilterOptions,
+} from "@/lib/type-groups";
 import { trpc } from "@/lib/trpc";
 import {
   archiveHref,
-  CATEGORIES,
+  SIDEBAR_CATEGORIES,
   CATEGORY_META,
   type Category,
 } from "@/types/nms";
@@ -61,39 +68,95 @@ function ArchiveHomeInner({
     return { ...parsed, view: storedView };
   }, [searchParams, storedView]);
 
-  const listInput = useMemo(() => {
-    let galaxy: number | undefined;
-    if (state.galaxyDisplay != null) {
-      try {
-        galaxy = parseGalaxyDisplay(state.galaxyDisplay);
-      } catch {
-        galaxy = undefined;
-      }
-    }
-    return {
-      category,
+  const extras = useMemo(
+    () => ({
       className: state.className,
       itemType: state.itemType,
       tags: state.tags.length ? state.tags : undefined,
-      galaxy,
       q: state.q?.trim() || undefined,
-    };
-  }, [category, state]);
+    }),
+    [state],
+  );
+  const grouped = category === "freighter" || category === "base";
+  const listInput = useMemo(
+    () => ({
+      category,
+      ...extras,
+    }),
+    [category, extras],
+  );
 
-  const list = trpc.items.list.useQuery(listInput);
-  const options = trpc.items.filterOptions.useQuery({ category });
+  const list = trpc.items.list.useQuery(listInput, { enabled: !grouped });
+  const groupedFreighters = trpc.items.list.useQuery(
+    { ...extras, category: "freighter" },
+    { enabled: category === "freighter" },
+  );
+  const groupedFrigates = trpc.items.list.useQuery(
+    { ...extras, category: "frigate" },
+    { enabled: category === "freighter" },
+  );
+  const groupedPlanetBases = trpc.items.list.useQuery(
+    { ...extras, category: "base" },
+    { enabled: category === "base" },
+  );
+  const groupedDeepspace = trpc.items.list.useQuery(
+    { ...extras, category: "deepspace" },
+    { enabled: category === "base" },
+  );
+  const groupedStations = trpc.items.list.useQuery(
+    { ...extras, category: "spacestation" },
+    { enabled: category === "base" },
+  );
+  const ownOptions = trpc.items.filterOptions.useQuery({ category });
+  const frigateOptions = trpc.items.filterOptions.useQuery(
+    { category: "frigate" },
+    { enabled: category === "freighter" },
+  );
+  const deepspaceOptions = trpc.items.filterOptions.useQuery(
+    { category: "deepspace" },
+    { enabled: category === "base" },
+  );
+  const stationOptions = trpc.items.filterOptions.useQuery(
+    { category: "spacestation" },
+    { enabled: category === "base" },
+  );
+  const options = grouped
+    ? mergeArchiveFilterOptions([
+        ownOptions.data,
+        frigateOptions.data,
+        deepspaceOptions.data,
+        stationOptions.data,
+      ])
+    : (ownOptions.data ?? EMPTY_FILTER_OPTIONS);
   const counts = trpc.items.counts.useQuery();
   const logs = trpc.logs.list.useQuery({ limit: 8 });
   const items = list.data?.items ?? [];
+  const freightSplit = splitFreighterArchive(
+    groupedFreighters.data?.items ?? [],
+  );
+  const groupedTotal =
+    category === "freighter"
+      ? freightSplit.current.length +
+        freightSplit.interior.length +
+        (groupedFrigates.data?.items.length ?? 0)
+      : category === "base"
+        ? (groupedPlanetBases.data?.items.length ?? 0) +
+          (groupedDeepspace.data?.items.length ?? 0) +
+          (groupedStations.data?.items.length ?? 0)
+        : 0;
+  const groupedLoading =
+    category === "freighter"
+      ? groupedFreighters.isLoading || groupedFrigates.isLoading
+      : category === "base"
+        ? groupedPlanetBases.isLoading ||
+          groupedDeepspace.isLoading ||
+          groupedStations.isLoading
+        : false;
   const totalAll = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
   const categoryTotal =
     category == null ? totalAll : (counts.data?.[category] ?? 0);
   const filtersOn = Boolean(
-    state.className ||
-      state.itemType ||
-      state.tags.length ||
-      state.galaxyDisplay != null ||
-      state.q,
+    state.className || state.itemType || state.tags.length || state.q,
   );
 
   useEffect(() => {
@@ -135,7 +198,7 @@ function ArchiveHomeInner({
         >
           All{totalAll ? ` (${totalAll})` : ""}
         </Link>
-        {CATEGORIES.map((slug) => {
+        {SIDEBAR_CATEGORIES.map((slug) => {
           const meta = CATEGORY_META[slug];
           const count = counts.data?.[slug] ?? 0;
           const active = category === slug;
@@ -159,15 +222,48 @@ function ArchiveHomeInner({
 
       <ArchiveFilters
         idPrefix={filterId}
+        category={category}
         state={state}
-        options={
-          options.data ?? { classes: [], types: [], galaxies: [], tags: [] }
-        }
+        options={options}
         onChange={setState}
-        resultCount={list.data?.total}
+        resultCount={grouped ? groupedTotal : list.data?.total}
       />
 
-      {list.isLoading ? (
+      {grouped ? (
+        groupedLoading ? (
+          <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
+        ) : groupedTotal === 0 && filtersOn && categoryTotal > 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Nenhum item com esses filtros</CardTitle>
+              <CardDescription>
+                Nada bate com a combinação atual. Limpe os filtros para ver o
+                arquivo de novo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <button
+                type="button"
+                className={cn(buttonVariants())}
+                onClick={() => setState({ tags: [], view: state.view })}
+              >
+                Limpar filtros
+              </button>
+            </CardContent>
+          </Card>
+        ) : (
+          <GroupedArchiveSections
+            group={category === "base" ? "base" : "freighter"}
+            view={state.view}
+            onSelect={setSelectedId}
+            freighters={groupedFreighters.data?.items}
+            frigates={groupedFrigates.data?.items}
+            planetBases={groupedPlanetBases.data?.items}
+            deepspace={groupedDeepspace.data?.items}
+            stations={groupedStations.data?.items}
+          />
+        )
+      ) : list.isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
       ) : list.error ? (
         <p className="text-sm text-destructive">{list.error.message}</p>

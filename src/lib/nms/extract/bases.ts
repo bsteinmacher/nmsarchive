@@ -1,12 +1,13 @@
 import type { Category } from "@/types/nms";
 import { getPlayerState, type SaveContext } from "../player";
 import { asArray, asNumber, asRecord, asString } from "../value";
+import { formatGalaxy } from "../galaxies";
 import {
   clonePlayer,
   insertAtFirstEmpty,
   replaceAtIndex,
 } from "./array";
-import { nestedEnum } from "./names";
+import { biomeLabel, nestedEnum } from "./names";
 import type { CategoryAdapter, ExtractedSlot, InsertResult } from "./types";
 
 export const FREIGHTER_BASE_TYPE = "FreighterBase";
@@ -71,6 +72,25 @@ export function isHiddenFromBasesMenu(item: {
     isDeepSpaceBaseSlot(item) ||
     isSpaceStationBaseSlot(item)
   );
+}
+
+function baseLocationExtra(rec: Record<string, unknown>): Record<string, string> {
+  const extra: Record<string, string> = {};
+  const address = asRecord(rec.GalacticAddress) ?? asRecord(rec.UniverseAddress);
+  const reality = asNumber(address?.RealityIndex);
+  if (reality != null) extra.galaxy = formatGalaxy(reality);
+  const planet =
+    asString(rec.PlanetName)?.trim() ||
+    asString(asRecord(rec.Owner)?.Username)?.trim() ||
+    "";
+  if (planet) extra.planet = planet;
+  const biome = biomeLabel(rec.Biome);
+  const planetClass =
+    nestedEnum(rec.PlanetType, "PlanetClass") ||
+    nestedEnum(rec.PlanetClass, "PlanetClass");
+  const planetType = biome || planetClass;
+  if (planetType) extra.planetType = planetType;
+  return extra;
 }
 
 export function isEmptyBaseSlot(slot: unknown): boolean {
@@ -165,7 +185,13 @@ export function listPersistentBases(
         : undefined,
       extra: {
         ...(typeKey ? { baseType: typeKey } : {}),
-        ...(empty ? {} : { itemType, objects: String(objects.length) }),
+        ...(empty
+          ? {}
+          : {
+              itemType,
+              objects: String(objects.length),
+              ...baseLocationExtra(rec),
+            }),
       },
       payload: rec,
     };

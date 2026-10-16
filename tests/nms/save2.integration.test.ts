@@ -197,7 +197,7 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(tools.filter((t) => !t.empty)).toHaveLength(4);
       expect(tools[4]?.empty).toBe(true);
       expect(tools[5]?.empty).toBe(true);
-      expect(tools.some((t) => t.itemType === "Atlas Staff")).toBe(true);
+      expect(tools.some((t) => t.itemType === "Voltaic Staff")).toBe(true);
 
       const pets = listCompanions(parsed.json);
       expect(pets).toHaveLength(30);
@@ -205,12 +205,12 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(pets[0]).toMatchObject({
         extra: {
           biome: "Lush",
-          element: "Mecânico",
+          element: "Mechanical",
           level: "0",
         },
       });
       expect(pets[0]?.extra.classes).toBeUndefined();
-      expect(pets.some((p) => p.extra.biome === "Frozen" && p.extra.element === "Gelo")).toBe(
+      expect(pets.some((p) => p.extra.biome === "Frozen" && p.extra.element === "Ice")).toBe(
         true,
       );
       expect(pets.every((p) => p.seed.startsWith("0x"))).toBe(true);

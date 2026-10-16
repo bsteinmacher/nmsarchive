@@ -36,6 +36,9 @@ const LIST_EXTRA_KEYS = [
   "slots",
   "tech",
   "supercharged",
+  "planet",
+  "planetType",
+  "galaxy",
 ] as const satisfies readonly (keyof ArchivedItemExtra)[];
 
 export function pickListExtra(

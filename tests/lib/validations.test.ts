@@ -16,7 +16,7 @@ describe("validations", () => {
     ]);
   });
 
-  it("description é obrigatória no archive", () => {
+  it("título é obrigatório no archive", () => {
     const parsed = archiveItemInputSchema.safeParse({
       category: "ship",
       name: "X",
@@ -25,6 +25,21 @@ describe("validations", () => {
       metadata: { gameVersion: 1, payload: {} },
     });
     expect(parsed.success).toBe(false);
+  });
+
+  it("aceita título e descrição (notes) no archive", () => {
+    const parsed = archiveItemInputSchema.safeParse({
+      category: "ship",
+      name: "X",
+      seed: "0xabc",
+      description: "Golden Vector",
+      metadata: {
+        gameVersion: 1,
+        payload: {},
+        notes: "Achei no portal.",
+      },
+    });
+    expect(parsed.success).toBe(true);
   });
 
   it("screenshotPath no archive só aceita UUID.webp", () => {

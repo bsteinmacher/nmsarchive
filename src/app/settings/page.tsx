@@ -19,8 +19,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { SaveFolderSettings } from "@/components/save/save-location-panel";
+import { TagsPanel } from "@/components/settings/tags-panel";
 import { formatOperationLabel } from "@/lib/operation-labels";
 import { trpc } from "@/lib/trpc";
+
+function logSubject(row: {
+  item?: { name: string } | null;
+  detail: unknown;
+}) {
+  if (row.item?.name) return row.item.name;
+  if (!row.detail || typeof row.detail !== "object") return "—";
+  if ("fileName" in row.detail && typeof row.detail.fileName === "string") {
+    return row.detail.fileName;
+  }
+  if ("label" in row.detail && typeof row.detail.label === "string") {
+    return row.detail.label;
+  }
+  return "—";
+}
 
 function formatBytes(size: number) {
   if (size < 1024) return `${size} B`;
@@ -69,6 +85,8 @@ export default function SettingsPage() {
       </div>
 
       <SaveFolderSettings />
+
+      <TagsPanel />
 
       <Card>
         <CardHeader>
@@ -267,7 +285,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Log de operações</CardTitle>
           <CardDescription>
-            Archive, backup, restore e atualização de mapping.
+            Archive, backup, restore, tags e atualização de mapping.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -291,13 +309,7 @@ export default function SettingsPage() {
                   <TableRow key={row.id}>
                     <TableCell>{formatOperationLabel(row.action)}</TableCell>
                     <TableCell className="max-w-[16rem] truncate">
-                      {row.item?.name ??
-                        (row.detail &&
-                        typeof row.detail === "object" &&
-                        "fileName" in row.detail &&
-                        typeof row.detail.fileName === "string"
-                          ? row.detail.fileName
-                          : "—")}
+                      {logSubject(row)}
                     </TableCell>
                     <TableCell>{formatWhen(row.createdAt)}</TableCell>
                   </TableRow>

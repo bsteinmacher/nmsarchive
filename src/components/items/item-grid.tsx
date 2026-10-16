@@ -2,7 +2,6 @@
 
 import { archiveUiCategory, matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { screenshotPublicUrl } from "@/lib/screenshots";
-import { cn } from "cn";
 import {
   archiveColumnValue,
   dataColumns,
@@ -10,6 +9,8 @@ import {
 import type { ArchivedItemSummary } from "@/types/archive";
 import { isCategory, type Category } from "@/types/nms";
 import { useSaveSession } from "@/stores/save-session";
+import { ArchiveItemActions } from "./archive-item-actions";
+import { CardOpenTarget } from "./card-open-target";
 
 export function ItemGrid({
   items,
@@ -44,17 +45,14 @@ export function ItemGrid({
             return value ? `${col.header} ${value}` : null;
           })
           .filter(Boolean);
+        const title = item.description.trim() || item.name;
         return (
           <li key={item.id}>
-            <button
-              type="button"
-              onClick={() => onSelect(item.id)}
-              className={cn(
-                "flex h-full min-h-11 w-full flex-col gap-3 rounded-xl bg-card p-4 text-left ring-1 ring-foreground/10",
-                "transition-colors hover:bg-muted/30",
-                "focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-              )}
-            >
+            <article className="relative flex h-full min-h-11 w-full cursor-pointer flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
+              <CardOpenTarget
+                label={`Ver detalhes de ${title}`}
+                onOpen={() => onSelect(item.id)}
+              />
               {thumb ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -77,7 +75,7 @@ export function ItemGrid({
               ) : null}
               <div className="min-w-0">
                 <p className="font-heading text-base font-medium break-words">
-                  {item.name}
+                  {title}
                 </p>
                 {meta.length > 0 ? (
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -85,15 +83,18 @@ export function ItemGrid({
                   </p>
                 ) : null}
               </div>
-              <p className="line-clamp-2 text-sm text-muted-foreground">
-                {item.description}
-              </p>
               {item.tags.length > 0 ? (
-                <p className="mt-auto text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground">
                   {item.tags.map((t) => t.label).join(" · ")}
                 </p>
               ) : null}
-            </button>
+              <div className="relative z-10 mt-auto">
+                <ArchiveItemActions
+                  item={item}
+                  onDetails={() => onSelect(item.id)}
+                />
+              </div>
+            </article>
           </li>
         );
       })}

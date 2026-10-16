@@ -30,8 +30,10 @@ export const tagsSchema = z.array(tagLabelSchema).max(TAGS_MAX);
 export const descriptionSchema = z
   .string()
   .trim()
-  .min(1, "Descrição é obrigatória.")
+  .min(1, "Título é obrigatório.")
   .max(DESCRIPTION_MAX);
+
+export const notesSchema = z.string().max(DESCRIPTION_MAX);
 
 export const archivedMetadataSchema = z.object({
   gameVersion: z.number(),
@@ -39,6 +41,7 @@ export const archivedMetadataSchema = z.object({
   shipType: z.string().optional(),
   filename: z.string().optional(),
   extra: z.record(z.string(), z.string()).optional(),
+  notes: notesSchema.optional(),
   payload: z.unknown(),
 });
 
@@ -86,9 +89,11 @@ export const archiveItemInputSchema = z.object({
 export const updateItemInputSchema = z.object({
   id: z.string().uuid(),
   description: descriptionSchema.optional(),
+  notes: notesSchema.optional(),
   tags: tagsSchema.optional(),
   screenshotPath: screenshotPathSchema.nullable().optional(),
   className: z.string().trim().max(16).nullable().optional(),
+  shipType: z.string().trim().max(80).nullable().optional(),
   extra: z.record(z.string(), z.string()).optional(),
 });
 
@@ -104,6 +109,15 @@ export const listItemsInputSchema = z.object({
 
 export const listTagsInputSchema = z.object({
   q: z.string().trim().max(40).optional(),
+});
+
+export const createTagInputSchema = z.object({
+  label: tagLabelSchema,
+});
+
+export const updateTagInputSchema = z.object({
+  id: z.string().uuid(),
+  label: tagLabelSchema,
 });
 
 export const itemIdInputSchema = z.object({

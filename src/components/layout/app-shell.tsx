@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SaveDirtyButton } from "@/components/save/save-dirty-button";
 import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
@@ -20,6 +21,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="text-sm text-muted-foreground">
             Personal Archive
           </span>
+          <SaveDirtyButton />
         </header>
         <main id="conteudo" className="flex flex-1 flex-col p-6">
           {children}

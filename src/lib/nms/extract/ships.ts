@@ -9,7 +9,12 @@ import {
   nameFromFilename,
   normalizeSeed,
 } from "../value";
-import { mergeApply, SHIP_MERGE, type ApplyDepth } from "./apply-depth";
+import {
+  mergeApply,
+  SHIP_MERGE,
+  stripSpecGrids,
+  type ApplyDepth,
+} from "./apply-depth";
 import { clonePlayer, inventoryClass } from "./array";
 import { basePersistentType } from "./bases";
 import { emptySlotLabel } from "./names";
@@ -223,7 +228,7 @@ export function insertShip(
         "Não há slot vazio de nave. O jogo limita o array; o arquivo não expande ShipOwnership.",
     };
   }
-  ships[index] = structuredClone(ownership);
+  ships[index] = stripSpecGrids(structuredClone(ownership), SHIP_MERGE);
   applyShipVisuals(
     cloned.player,
     index,
@@ -300,7 +305,7 @@ export function applyShip(
   mappedJson: unknown,
   index: number,
   payload: unknown,
-  depth: ApplyDepth = "full",
+  depth: ApplyDepth = "model",
   context: SaveContext = "main",
 ): InsertResult {
   const cloned = clonePlayer(mappedJson, context);
@@ -314,9 +319,8 @@ export function applyShip(
   }
   const packed = isPackedShipPayload(payload);
   const ownership = unpackShipOwnership(payload);
-  const empty = isEmptyShipSlot(ships[index]);
-  if (empty && depth === "full") {
-    ships[index] = structuredClone(ownership);
+  if (isEmptyShipSlot(ships[index])) {
+    ships[index] = stripSpecGrids(structuredClone(ownership), SHIP_MERGE);
   } else {
     ships[index] = mergeApply(ships[index], ownership, depth, SHIP_MERGE);
   }

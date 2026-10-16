@@ -1,3 +1,4 @@
+import { normalizeItemClass } from "@/lib/nms/extract/companion-battle";
 import { slugifyTag } from "@/lib/validations";
 
 export type ArchiveFilterInput = {
@@ -12,6 +13,7 @@ export type ArchiveFilterInput = {
 export type ArchiveFilterable = {
   name: string;
   description: string;
+  notes?: string;
   seed: string;
   className: string;
   shipType: string;
@@ -42,7 +44,10 @@ export function matchesArchiveFilters(
   filters: ArchiveFilterInput,
 ): boolean {
   if (filters.className) {
-    if (item.className.toUpperCase() !== filters.className.toUpperCase()) {
+    if (
+      normalizeItemClass(item.className) !==
+      normalizeItemClass(filters.className)
+    ) {
       return false;
     }
   }
@@ -62,6 +67,7 @@ export function matchesArchiveFilters(
     if (
       !includesInsensitive(item.name, q) &&
       !includesInsensitive(item.description, q) &&
+      !includesInsensitive(item.notes ?? "", q) &&
       !includesInsensitive(item.extra?.element ?? "", q) &&
       !includesInsensitive(item.extra?.biome ?? "", q)
     ) {
