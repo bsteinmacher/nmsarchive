@@ -2,14 +2,8 @@
 
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { CollapsibleCard } from "@/components/layout/collapsible-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -73,39 +67,40 @@ export default function SettingsPage() {
 
       <TagsPanel />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Banco local</CardTitle>
-          <CardDescription>
-            SQLite do arquivo pessoal. Informativo — o path não muda nesta fase.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-2 text-sm">
-          <p>
-            <span className="text-muted-foreground">DATABASE_URL · </span>
-            <code>{settings.data?.databaseUrl ?? "…"}</code>
-          </p>
-          <p>
-            <span className="text-muted-foreground">Arquivo · </span>
-            <code className="break-all">
-              {settings.data?.databasePath ?? "…"}
-            </code>
-            {settings.data?.databaseSize != null
-              ? ` · ${formatBytes(settings.data.databaseSize)}`
-              : null}
-          </p>
-        </CardContent>
-      </Card>
+      <CollapsibleCard
+        title="Banco local"
+        description="SQLite do arquivo pessoal. Informativo — o path não muda nesta fase."
+        expandLabel="Abrir banco local"
+        collapseLabel="Recolher banco local"
+        contentClassName="grid gap-2 text-sm"
+      >
+        <p>
+          <span className="text-muted-foreground">DATABASE_URL · </span>
+          <code>{settings.data?.databaseUrl ?? "…"}</code>
+        </p>
+        <p>
+          <span className="text-muted-foreground">Arquivo · </span>
+          <code className="break-all">
+            {settings.data?.databasePath ?? "…"}
+          </code>
+          {settings.data?.databaseSize != null
+            ? ` · ${formatBytes(settings.data.databaseSize)}`
+            : null}
+        </p>
+      </CollapsibleCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Backup e restore</CardTitle>
-          <CardDescription>
+      <CollapsibleCard
+        title="Backup e restore"
+        description={
+          <>
             Cópia em <code>data/backups/</code> antes de arquivar. Guardamos as
             20 mais recentes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
+          </>
+        }
+        expandLabel="Abrir backup e restore"
+        collapseLabel="Recolher backup e restore"
+        contentClassName="grid gap-4"
+      >
           <div className="flex flex-wrap gap-2">
             <Button
               type="button"
@@ -222,58 +217,55 @@ export default function SettingsPage() {
               Nenhum backup ainda. Arquivar uma Ship cria o primeiro.
             </p>
           )}
-        </CardContent>
-      </Card>
+      </CollapsibleCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>mapping.json</CardTitle>
-          <CardDescription>
+      <CollapsibleCard
+        title="mapping.json"
+        description={
+          <>
             Cache em <code>data/mapping.json</code>, baixado do MBINCompiler.
             Depois de atualizar, abra o save de novo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-3">
-          <p className="text-sm text-muted-foreground">
-            libMBIN {settings.data?.mappingVersion ?? "carregando…"}
-          </p>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              void (async () => {
-                try {
-                  const result = await updateMapping.mutateAsync();
-                  toast.success(
-                    `mapping.json ${result.libMBIN_version}. Abra o save de novo para aplicar.`,
-                  );
-                  await refreshAll();
-                } catch (err) {
-                  toast.error(
-                    err instanceof Error
-                      ? err.message
-                      : "Falha ao atualizar mapping",
-                  );
-                }
-              })();
-            }}
-            disabled={updateMapping.isPending}
-          >
-            {updateMapping.isPending
-              ? "Baixando…"
-              : "Atualizar mapping.json"}
-          </Button>
-        </CardContent>
-      </Card>
+          </>
+        }
+        expandLabel="Abrir mapping.json"
+        collapseLabel="Recolher mapping.json"
+        contentClassName="flex flex-wrap items-center gap-3"
+      >
+        <p className="text-sm text-muted-foreground">
+          libMBIN {settings.data?.mappingVersion ?? "carregando…"}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            void (async () => {
+              try {
+                const result = await updateMapping.mutateAsync();
+                toast.success(
+                  `mapping.json ${result.libMBIN_version}. Abra o save de novo para aplicar.`,
+                );
+                await refreshAll();
+              } catch (err) {
+                toast.error(
+                  err instanceof Error
+                    ? err.message
+                    : "Falha ao atualizar mapping",
+                );
+              }
+            })();
+          }}
+          disabled={updateMapping.isPending}
+        >
+          {updateMapping.isPending ? "Baixando…" : "Atualizar mapping.json"}
+        </Button>
+      </CollapsibleCard>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Log de operações</CardTitle>
-          <CardDescription>
-            Archive, backup, restore, tags e atualização de mapping.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+      <CollapsibleCard
+        title="Log de operações"
+        description="Archive, backup, restore, tags e atualização de mapping."
+        expandLabel="Abrir log de operações"
+        collapseLabel="Recolher log de operações"
+      >
           {logs.isLoading ? (
             <p className="text-sm text-muted-foreground">Carregando…</p>
           ) : !logs.data?.length ? (
@@ -302,8 +294,7 @@ export default function SettingsPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+      </CollapsibleCard>
     </div>
   );
 }

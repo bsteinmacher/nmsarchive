@@ -1,17 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, FolderOpen, RefreshCw, Save, X } from "lucide-react";
+import { FolderOpen, RefreshCw, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { CollapsibleCard } from "@/components/layout/collapsible-card";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardAction,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -193,31 +186,16 @@ export function SaveLocationPanel({
   }
 
   return (
-    <Card>
-      <CardHeader className={expanded ? "border-b" : undefined}>
-        <CardTitle>Pasta do jogo</CardTitle>
-        {expanded ? (
-          <CardDescription>
-            A pasta do jogo neste computador. Cada slot mostra o save do jogador
-            e o automático, e o mais recente fica pré-selecionado. Salvar grava nesse
-            mesmo arquivo, depois de um backup com data e hora.
-          </CardDescription>
-        ) : null}
-        <CardAction>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-expanded={expanded}
-            aria-label={expanded ? "Recolher pasta do jogo" : "Abrir pasta do jogo"}
-            onClick={onToggle}
-          >
-            {expanded ? <ChevronUp /> : <ChevronDown />}
-          </Button>
-        </CardAction>
-      </CardHeader>
-      {expanded ? (
-      <CardContent className="grid gap-4">
+    <>
+    <CollapsibleCard
+      title="Pasta do jogo"
+      description="A pasta do jogo neste computador. Cada slot mostra o save do jogador e o automático, e o mais recente fica pré-selecionado. Salvar grava nesse mesmo arquivo, depois de um backup com data e hora."
+      expandLabel="Abrir pasta do jogo"
+      collapseLabel="Recolher pasta do jogo"
+      expanded={expanded}
+      onExpandedChange={() => onToggle()}
+      contentClassName="grid gap-4"
+    >
         {!hydrated ? (
           <p className="text-sm text-muted-foreground">Procurando a pasta do jogo…</p>
         ) : !supported ? (
@@ -391,8 +369,7 @@ export function SaveLocationPanel({
         {locationError ? (
           <p className="text-sm text-destructive">{locationError}</p>
         ) : null}
-      </CardContent>
-      ) : null}
+    </CollapsibleCard>
 
       <Dialog open={confirmStale} onOpenChange={setConfirmStale}>
         <DialogContent className="sm:max-w-md">
@@ -418,7 +395,7 @@ export function SaveLocationPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </>
   );
 }
 
@@ -429,15 +406,13 @@ export function SaveFolderSettings() {
   const clearLocalFolder = useSaveLocation((s) => s.clearLocalFolder);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pasta do jogo</CardTitle>
-        <CardDescription>
-          O app neste computador abre e grava o save.hg. O backup fica em
-          Documentos.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="grid gap-3 text-sm">
+    <CollapsibleCard
+      title="Pasta do jogo"
+      description="O app neste computador abre e grava o save.hg. O backup fica em Documentos."
+      expandLabel="Abrir pasta do jogo"
+      collapseLabel="Recolher pasta do jogo"
+      contentClassName="grid gap-3 text-sm"
+    >
         {!hydrated ? (
           <p className="text-muted-foreground">Procurando a pasta do jogo…</p>
         ) : !saveFolderPath ? (
@@ -466,7 +441,6 @@ export function SaveFolderSettings() {
             "Documentos/NMS Archive"
           )}
         </p>
-      </CardContent>
-    </Card>
+    </CollapsibleCard>
   );
 }
