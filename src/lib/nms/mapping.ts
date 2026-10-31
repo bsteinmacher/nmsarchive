@@ -39,6 +39,47 @@ export function parseMappingFile(data: unknown): MappingFile {
   };
 }
 
+function versionSegment(part: string | undefined): number | string {
+  if (part === undefined) return 0;
+  const numeric = Number(part);
+  if (Number.isFinite(numeric) && String(numeric) === part) return numeric;
+  return part;
+}
+
+/** Compara `libMBIN_version` por segmentos numéricos. `7.1.0.1` < `7.10.0.1`. */
+export function compareLibMbinVersion(a: string, b: string): number {
+  const left = a.split(".");
+  const right = b.split(".");
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i++) {
+    const av = versionSegment(left[i]);
+    const bv = versionSegment(right[i]);
+    if (typeof av === "number" && typeof bv === "number") {
+      if (av !== bv) return av > bv ? 1 : -1;
+      continue;
+    }
+    const cmp = String(av).localeCompare(String(bv));
+    if (cmp !== 0) return Math.sign(cmp);
+  }
+  return 0;
+}
+
+function isDottedNumericVersion(value: string): boolean {
+  return /^\d+(\.\d+)*$/.test(value);
+}
+
+/** Verdadeiro só quando as duas versões existem e a remota é mais nova. */
+export function mappingUpdateAvailable(
+  remote: string | null | undefined,
+  local: string | null | undefined,
+): boolean {
+  if (!remote || !local) return false;
+  if (!isDottedNumericVersion(remote) || !isDottedNumericVersion(local)) {
+    return false;
+  }
+  return compareLibMbinVersion(remote, local) > 0;
+}
+
 export function buildMappingIndex(file: MappingFile): MappingIndex {
   const forward = new Map<string, string>();
   const reverse = new Map<string, string>();

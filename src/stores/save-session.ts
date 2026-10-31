@@ -113,6 +113,7 @@ type SaveSessionState = {
   updateCurrencies: (coins: Partial<PlayerCurrencies>) => Promise<void>;
   downloadRewritten: () => Promise<Uint8Array>;
   downloadOriginal: () => Uint8Array;
+  reparseOpenSave: () => Promise<boolean>;
 };
 
 let mappedJson: unknown | null = null;
@@ -124,7 +125,7 @@ export function getMappedJson(): unknown | null {
 }
 
 async function fetchMapping(): Promise<MappingFile> {
-  const res = await fetch("/api/mapping");
+  const res = await fetch("/api/mapping", { cache: "no-store" });
   if (!res.ok) {
     throw new Error("Não foi possível obter mapping.json do MBINCompiler.");
   }
@@ -451,5 +452,42 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   downloadOriginal: () => {
     if (!originalBytes) throw new Error("Bytes originais indisponíveis.");
     return originalBytes;
+  },
+
+  reparseOpenSave: async () => {
+    if (get().dirty || !originalBytes) return false;
+    const mapping = await fetchMapping();
+    const parsed = await parseHgClient(originalBytes, mapping);
+    mappedJson = parsed.json;
+    mappingFile = mapping;
+    const previous = (await idbGet(IDB_META)) as SessionMeta | undefined;
+    const meta: SessionMeta = {
+      fileName: previous?.fileName ?? get().fileName ?? "save.hg",
+      unknownKeys: parsed.unknownKeys,
+      mappingVersion: parsed.mappingVersion,
+      sha256: previous?.sha256 ?? get().sha256 ?? undefined,
+      formatHint: previous?.formatHint ?? get().formatHint ?? undefined,
+      origin: previous?.origin ?? get().origin ?? undefined,
+      diskModified: previous?.diskModified ?? get().diskModified,
+      dirty: false,
+    };
+    await Promise.all([
+      idbSet(IDB_JSON, parsed.json),
+      idbSet(IDB_MAPPING, mapping),
+      idbSet(IDB_META, meta),
+    ]);
+    const preferred = get().saveContext;
+    const context =
+      preferred === "expedition" && !hasExpeditionContext(parsed.json)
+        ? "main"
+        : preferred;
+    set(
+      applyParsed(parsed.json, context, {
+        unknownKeys: parsed.unknownKeys,
+        mappingVersion: parsed.mappingVersion,
+        dirty: false,
+      }),
+    );
+    return true;
   },
 }));

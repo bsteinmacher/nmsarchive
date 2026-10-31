@@ -28,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { downloadBytes } from "@/lib/download";
+import { trpc } from "@/lib/trpc";
 import { formatPlayTime } from "@/lib/nms/player";
 import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
 import { gameVersionMismatch, parseNmsItem, type NmsItemFile } from "@/lib/nmsitem";
@@ -93,6 +94,18 @@ export function SaveDashboard() {
   const downloadRewritten = useSaveSession((s) => s.downloadRewritten);
   const downloadOriginal = useSaveSession((s) => s.downloadOriginal);
   const dirty = useSaveSession((s) => s.dirty);
+  const reparseOpenSave = useSaveSession((s) => s.reparseOpenSave);
+  const utils = trpc.useUtils();
+  const mappingAvailability = trpc.settings.mappingAvailability.useQuery(
+    undefined,
+    {
+      enabled: unknownKeys.length > 0,
+      staleTime: 5 * 60 * 1000,
+      retry: false,
+    },
+  );
+  const updateMapping = trpc.settings.updateMapping.useMutation();
+  const newerMapping = mappingAvailability.data?.updateAvailable === true;
   const importRef = useRef<HTMLInputElement>(null);
   const [pendingItem, setPendingItem] = useState<NmsItemFile | null>(null);
   const [versionWarning, setVersionWarning] = useState<string | null>(null);
@@ -293,13 +306,54 @@ export function SaveDashboard() {
           <CardHeader>
             <CardTitle>Chaves desconhecidas</CardTitle>
             <CardDescription>
-              O mapping não cobriu {unknownKeys.length} chave(s). O parser
-              as manteve como estão.
+              {newerMapping
+                ? `O MBINCompiler publicou o mapping ${mappingAvailability.data?.remoteVersion} (o cache está em ${mappingAvailability.data?.localVersion}). Atualize o mapping e abra o save de novo.`
+                : `O mapping não cobriu ${unknownKeys.length} chave(s). O parser as manteve como estão.`}
             </CardDescription>
           </CardHeader>
           <CardContent className="font-mono text-xs">
             {unknownKeys.join(", ")}
           </CardContent>
+          {newerMapping ? (
+            <CardFooter>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={updateMapping.isPending}
+                onClick={() => {
+                  void (async () => {
+                    try {
+                      const result = await updateMapping.mutateAsync();
+                      let reparsed = false;
+                      try {
+                        reparsed = await reparseOpenSave();
+                      } catch {
+                        reparsed = false;
+                      }
+                      toast.success(
+                        reparsed
+                          ? `mapping.json ${result.libMBIN_version}. O save foi lido de novo.`
+                          : `mapping.json ${result.libMBIN_version}. Abra o save de novo para aplicar.`,
+                      );
+                      await Promise.all([
+                        utils.settings.get.invalidate(),
+                        utils.logs.list.invalidate(),
+                        utils.settings.mappingAvailability.invalidate(),
+                      ]);
+                    } catch (err) {
+                      toast.error(
+                        err instanceof Error
+                          ? err.message
+                          : "Falha ao atualizar mapping",
+                      );
+                    }
+                  })();
+                }}
+              >
+                {updateMapping.isPending ? "Baixando…" : "Atualizar mapping.json"}
+              </Button>
+            </CardFooter>
+          ) : null}
         </Card>
       ) : null}
 

@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { TRPCError } from "@trpc/server";
-import { loadMappingCached, refreshMapping } from "@/lib/nms/mapping-node";
+import { mappingUpdateAvailable } from "@/lib/nms/mapping";
+import {
+  loadMappingCached,
+  peekRemoteMappingVersion,
+  refreshMapping,
+} from "@/lib/nms/mapping-node";
 import {
   restoreBackupInputSchema,
   restoreUploadInputSchema,
@@ -107,6 +112,26 @@ export const settingsRouter = createTRPCRouter({
       });
       return restored;
     }),
+
+  mappingAvailability: publicProcedure.query(async () => {
+    let localVersion: string | null = null;
+    try {
+      localVersion = (await loadMappingCached()).libMBIN_version;
+    } catch {
+      localVersion = null;
+    }
+    let remoteVersion: string | null = null;
+    try {
+      remoteVersion = await peekRemoteMappingVersion();
+    } catch {
+      remoteVersion = null;
+    }
+    return {
+      localVersion,
+      remoteVersion,
+      updateAvailable: mappingUpdateAvailable(remoteVersion, localVersion),
+    };
+  }),
 
   updateMapping: publicProcedure.mutation(async () => {
     const mapping = await refreshMapping();
