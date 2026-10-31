@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildMappingIndex,
+  compareLibMbinVersion,
   deobfuscate,
   isReadableSave,
+  mappingUpdateAvailable,
   obfuscate,
   parseMappingFile,
 } from "@/lib/nms/mapping";
@@ -56,6 +58,21 @@ describe("mapping walk", () => {
     const unknown = new Set<string>();
     deobfuscate({ Version: 1, Name: "x" }, index, unknown);
     expect([...unknown]).toEqual([]);
+  });
+
+  it("ordena libMBIN_version por segmentos numéricos", () => {
+    expect(compareLibMbinVersion("7.1.0.1", "7.10.0.1")).toBeLessThan(0);
+    expect(compareLibMbinVersion("7.10.0.2", "7.10.0.1")).toBeGreaterThan(0);
+    expect(compareLibMbinVersion("7.10.0.1", "7.10.0.1")).toBe(0);
+  });
+
+  it("só marca atualização quando a versão remota existe e é mais nova", () => {
+    expect(mappingUpdateAvailable("7.10.0.1", "7.1.0.1")).toBe(true);
+    expect(mappingUpdateAvailable("7.10.0.1", "7.10.0.1")).toBe(false);
+    expect(mappingUpdateAvailable("7.1.0.1", "7.10.0.1")).toBe(false);
+    expect(mappingUpdateAvailable(null, "7.1.0.1")).toBe(false);
+    expect(mappingUpdateAvailable("7.10.0.1", null)).toBe(false);
+    expect(mappingUpdateAvailable("unknown", "7.1.0.1")).toBe(false);
   });
 
   it("rejeita mapping.json sem array Mapping", () => {

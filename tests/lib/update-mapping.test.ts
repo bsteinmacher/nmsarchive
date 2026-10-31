@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { downloadMappingJson } from "../../scripts/update-mapping";
+import { peekRemoteMappingVersion } from "@/lib/nms/mapping-node";
 
 const dirs: string[] = [];
 
@@ -29,6 +30,17 @@ describe("downloadMappingJson", () => {
       entries: 1,
     });
     expect(JSON.parse(await readFile(dest, "utf8"))).toEqual(payload);
+  });
+
+  it("lê a versão remota sem gravar o cache", async () => {
+    const payload = {
+      libMBIN_version: "7.10.0.1",
+      Mapping: [{ Key: "F2P", Value: "Version" }],
+    };
+    const version = await peekRemoteMappingVersion(async () =>
+      new Response(JSON.stringify(payload), { status: 200 }),
+    );
+    expect(version).toBe("7.10.0.1");
   });
 
   it("rejeita HTTP de erro e JSON sem Mapping", async () => {
