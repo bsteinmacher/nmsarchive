@@ -1,12 +1,12 @@
 "use client";
 
 import { matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
+import { type AdapterColumn } from "@/lib/nms/extract";
 import {
   archiveColumnValue,
   archiveDataColumns,
   listColumnClass,
   tableTagLabels,
-  type TableDataColumn,
 } from "@/lib/list-columns";
 import type { ArchivedItemSummary } from "@/types/archive";
 import type { Category } from "@/types/nms";
@@ -29,14 +29,12 @@ export function ItemTable({
 }: {
   items: ArchivedItemSummary[];
   category?: Category;
-  columns?: readonly TableDataColumn[];
+  columns?: readonly AdapterColumn[];
   onSelect: (id: string) => void;
 }) {
   const sessionItems = useSaveSession((s) => s.items);
   const saveReady = useSaveSession((s) => s.status === "ready");
-  const columns: readonly TableDataColumn[] =
-    columnsProp ?? archiveDataColumns(category);
-  const tagColumns = columns.filter((col) => !col.reserved);
+  const columns = columnsProp ?? archiveDataColumns(category);
 
   return (
     <Table className="min-w-6xl table-fixed">
@@ -52,12 +50,8 @@ export function ItemTable({
         <TableRow>
           <TableHead>Name</TableHead>
           {columns.map((col) => (
-            <TableHead
-              key={col.id}
-              className={listColumnClass(col.id)}
-              aria-hidden={col.reserved || undefined}
-            >
-              {col.reserved ? null : col.header}
+            <TableHead key={col.id} className={listColumnClass(col.id)}>
+              {col.header}
             </TableHead>
           ))}
           <TableHead className={listColumnClass("tags")}>Tags</TableHead>
@@ -93,13 +87,11 @@ export function ItemTable({
               </TableCell>
               {columns.map((col) => (
                 <TableCell key={col.id} className="whitespace-nowrap">
-                  {col.reserved
-                    ? null
-                    : archiveColumnValue(item, col) || "—"}
+                  {archiveColumnValue(item, col) || "—"}
                 </TableCell>
               ))}
               <TableCell className="whitespace-normal text-muted-foreground">
-                {tableTagLabels(item, tagColumns).join(" · ") || "—"}
+                {tableTagLabels(item, columns).join(" · ") || "—"}
               </TableCell>
               <TableCell className="text-right">
                 <ArchiveItemActions

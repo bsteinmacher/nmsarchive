@@ -1,12 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { GripVertical } from "lucide-react";
 import { cn } from "cn";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
-  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -20,44 +18,6 @@ import { ItemTags } from "./item-tags";
 
 function dash(value: string) {
   return value || "—";
-}
-
-export function GroupedSection({
-  id,
-  title,
-  description,
-  flush = false,
-  children,
-}: {
-  id?: string;
-  title: string;
-  description: string;
-  flush?: boolean;
-  children?: ReactNode;
-}) {
-  return (
-    <section id={id} className="min-w-0 scroll-mt-6">
-      <Card className="min-w-0">
-        <CardHeader className={children ? "border-b" : undefined}>
-          <h2 className="font-heading text-base leading-snug font-medium">
-            {title}
-          </h2>
-          {description ? <CardDescription>{description}</CardDescription> : null}
-        </CardHeader>
-        {children ? (
-          <CardContent
-            className={
-              flush
-                ? "min-w-0 px-0 [&_td:first-child]:ps-4 [&_td:last-child]:pe-4 [&_th:first-child]:ps-4 [&_th:last-child]:pe-4"
-                : undefined
-            }
-          >
-            {children}
-          </CardContent>
-        ) : null}
-      </Card>
-    </section>
-  );
 }
 
 export function columnValue(item: ExtractedSlot, col: AdapterColumn): string {
@@ -107,7 +67,6 @@ export function SaveSlotGrid({
   category,
   items,
   reorderable,
-  framed = false,
   sectionId,
   caption,
   description,
@@ -127,9 +86,6 @@ export function SaveSlotGrid({
   category: Category;
   items: ExtractedSlot[];
   reorderable: boolean;
-  /** A tabela reserva a coluna de arrastar. A grade ignora. */
-  reserveReorder?: boolean;
-  framed?: boolean;
   sectionId?: string;
   columns: readonly AdapterColumn[];
   caption: string;
@@ -150,18 +106,15 @@ export function SaveSlotGrid({
   const emptyCopy = emptyMessage ?? getAdapter(category).missingMessage;
 
   if (items.length === 0) {
-    if (framed) {
-      return (
-        <GroupedSection id={sectionId} title={caption} description={emptyCopy} />
-      );
-    }
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>{caption}</CardTitle>
-          <CardDescription>{emptyCopy}</CardDescription>
-        </CardHeader>
-      </Card>
+      <section id={sectionId}>
+        <Card>
+          <CardHeader>
+            <CardTitle>{caption}</CardTitle>
+            <CardDescription>{emptyCopy}</CardDescription>
+          </CardHeader>
+        </Card>
+      </section>
     );
   }
 
@@ -294,18 +247,6 @@ export function SaveSlotGrid({
           })}
     </ul>
   );
-
-  if (framed) {
-    return (
-      <GroupedSection
-        id={sectionId}
-        title={caption}
-        description={description}
-      >
-        {grid}
-      </GroupedSection>
-    );
-  }
 
   return (
     <section id={sectionId} className="grid gap-3">

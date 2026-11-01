@@ -2,10 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   allViewColumns,
   dataColumns,
-  freighterGroupColumns,
   pickListExtra,
-  saveBaseColumns,
-  saveFreighterColumns,
   tableTagLabels,
 } from "@/lib/list-columns";
 import type { ArchivedItemSummary } from "@/types/archive";
@@ -43,36 +40,22 @@ describe("list-columns", () => {
     ]);
   });
 
-  it("freighters, base e fragatas compartilham a mesma grade", () => {
-    const widths = (category: "freighter" | "base" | "frigate") =>
-      freighterGroupColumns(category).map((col) => col.id);
-    expect(widths("freighter")).toEqual(["className", "itemType", "traits"]);
-    expect(widths("base")).toEqual(["className", "itemType", "objects"]);
-    expect(widths("frigate")).toEqual(["className", "itemType", "traits"]);
-    expect(freighterGroupColumns("freighter")[2]?.reserved).toBe(true);
-    expect(freighterGroupColumns("base")[0]?.reserved).toBe(true);
-    expect(freighterGroupColumns("frigate").some((col) => col.reserved)).toBe(
-      false,
-    );
-  });
-
-  it("o save aberto alinha freighters e bases na mesma grade", () => {
-    expect(saveFreighterColumns("freighter").map((col) => col.id)).toEqual([
-      "className",
-      "itemType",
-      "traits",
+  it("freighter, frigate, squadron e base usam as colunas do próprio adapter", () => {
+    expect(dataColumns("freighter").map((col) => col.header)).toEqual([
+      "Class",
+      "Type",
     ]);
-    expect(saveFreighterColumns("base")[0]?.reserved).toBe(true);
-    expect(saveFreighterColumns("frigate")[2]?.reserved).toBeUndefined();
-    expect(saveFreighterColumns("squadron").map((col) => col.header)).toEqual([
+    expect(dataColumns("frigate").map((col) => col.header)).toEqual([
+      "Class",
+      "Type",
+      "Traits",
+    ]);
+    expect(dataColumns("squadron").map((col) => col.header)).toEqual([
       "Rank",
       "Type",
       "Race",
     ]);
-    expect(saveFreighterColumns("squadron").some((col) => col.reserved)).toBe(
-      false,
-    );
-    expect(saveBaseColumns().map((col) => col.header)).toEqual([
+    expect(dataColumns("base").map((col) => col.header)).toEqual([
       "Type",
       "Objects",
     ]);
@@ -85,9 +68,10 @@ describe("list-columns", () => {
       shipType: "Leviathan",
       tags: ["S Class", "Leviathan", "Frigate", "Expedition", "Living Frigate"],
     });
-    expect(
-      tableTagLabels(frigate, freighterGroupColumns("frigate")),
-    ).toEqual(["Expedition", "Living Frigate"]);
+    expect(tableTagLabels(frigate, dataColumns("frigate"))).toEqual([
+      "Expedition",
+      "Living Frigate",
+    ]);
 
     const interior = summary({
       category: "base",
@@ -96,7 +80,7 @@ describe("list-columns", () => {
       extra: { objects: "687" },
       tags: ["256 · Odyalutai", "687 objects", "Freighter"],
     });
-    expect(tableTagLabels(interior, freighterGroupColumns("base"))).toEqual([
+    expect(tableTagLabels(interior, dataColumns("base"))).toEqual([
       "256 · Odyalutai",
     ]);
   });

@@ -56,7 +56,7 @@ export const CATEGORY_META: Record<
     label: "Freighters",
     href: "/freighter",
     description:
-      "Freighter atual, a base do interior, a frota de Frigates e o esquadrão.",
+      "Freighter atual e a base do interior.",
   },
   frigate: {
     label: "Frigates",
