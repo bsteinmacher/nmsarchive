@@ -4,7 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { archivedToNmsItem } from "@/lib/archive-export";
-import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
+import { usesSlotPicker } from "@/lib/nms/extract/apply-depth";
 import { gameVersionMismatch, type NmsItemFile } from "@/lib/nmsitem";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { trpc } from "@/lib/trpc";
@@ -53,7 +53,7 @@ export function ArchiveItemActions({
         toast.error("Abra um save para aplicar este item num slot.");
         return;
       }
-      if (usesApplyDepth(file.category)) {
+      if (usesSlotPicker(file.category)) {
         setChoiceFile(file);
         return;
       }

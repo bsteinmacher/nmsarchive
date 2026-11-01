@@ -8,7 +8,12 @@ import {
   listExosuit,
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters, insertFreighter } from "@/lib/nms/extract/freighters";
-import { listFrigates, frigatesAdapter, FLEET_FRIGATE_LIMIT } from "@/lib/nms/extract/frigates";
+import {
+  listFrigates,
+  frigatesAdapter,
+  FLEET_FRIGATE_LIMIT,
+  groupFrigatesForDisplay,
+} from "@/lib/nms/extract/frigates";
 import {
   DEEP_SPACE_BASE_TYPE,
   SPACE_STATION_BASE_LIMIT,
@@ -349,31 +354,70 @@ describe("freighter / frigate / base / wonder", () => {
     });
   });
 
-  it("reordena FleetFrigates sem mudar o length; vazios participam", () => {
-    const emptyFrigate = { ResourceSeed: [false, "0x0"] };
-    const json = save({
-      FleetFrigates: [
-        {
-          CustomName: "Kunit",
-          ResourceSeed: [true, "0x11"],
-          FrigateClass: { FrigateClass: "Exploration" },
-        },
-        emptyFrigate,
-        {
-          CustomName: "Vanguard",
-          ResourceSeed: [true, "0x22"],
-          FrigateClass: { FrigateClass: "Combat" },
-        },
-      ],
-    });
-    const result = frigatesAdapter.reorder?.(json, 0, 1);
-    expect(result?.ok).toBe(true);
-    if (!result?.ok) return;
-    const listed = listFrigates(result.json);
-    expect(listed).toHaveLength(3);
-    expect(listed[0]?.empty).toBe(true);
-    expect(listed[1]?.name).toBe("Kunit");
-    expect(listed[2]?.name).toBe("Vanguard");
+  it("mostra a frota na ordem do jogo, sem reescrever o array", () => {
+    const items = listFrigates(
+      save({
+        FleetFrigates: [
+          {
+            CustomName: "Alpha",
+            ResourceSeed: [true, "0x1"],
+            FrigateClass: { FrigateClass: "Support" },
+            InventoryClass: { InventoryClass: "B" },
+          },
+          {
+            CustomName: "Zulu",
+            ResourceSeed: [true, "0x2"],
+            FrigateClass: { FrigateClass: "Support" },
+            InventoryClass: { InventoryClass: "S" },
+          },
+          {
+            CustomName: "Kunit",
+            ResourceSeed: [true, "0x3"],
+            FrigateClass: { FrigateClass: "Exploration" },
+            InventoryClass: { InventoryClass: "S" },
+          },
+          {
+            CustomName: "MS Shield",
+            ResourceSeed: [true, "0x4"],
+            FrigateClass: { FrigateClass: "Support" },
+            InventoryClass: { InventoryClass: "S" },
+          },
+          {
+            CustomName: "The Leviathan",
+            ResourceSeed: [true, "0x5"],
+            FrigateClass: { FrigateClass: "DeepSpace" },
+            InventoryClass: { InventoryClass: "S" },
+          },
+          {
+            CustomName: "Tolvansky",
+            ResourceSeed: [true, "0x6"],
+            FrigateClass: { FrigateClass: "DeepSpaceCommon" },
+            InventoryClass: { InventoryClass: "S" },
+          },
+        ],
+      }),
+    );
+    expect(items.map((item) => item.name)).toEqual([
+      "Alpha",
+      "Zulu",
+      "Kunit",
+      "MS Shield",
+      "The Leviathan",
+      "Tolvansky",
+    ]);
+    expect(frigatesAdapter.reorder).toBeUndefined();
+    const groups = groupFrigatesForDisplay(items);
+    expect(groups.map((group) => group.title)).toEqual([
+      "Exploration",
+      "Support",
+      "Leviathan",
+      "Organic",
+    ]);
+    expect(groups[1]?.items.map((item) => item.name)).toEqual([
+      "MS Shield",
+      "Zulu",
+      "Alpha",
+    ]);
   });
 
   it("aplica fragata no fim do array até o teto de 30 e excluir remove do array", () => {

@@ -16,6 +16,7 @@ import {
   APPLY_OVERLAY_MODES,
   applyTargetSlots,
   payloadTypeLabel,
+  usesApplyDepth,
   type ApplyDepth,
 } from "@/lib/nms/extract/apply-depth";
 import type { ExtractedSlot } from "@/lib/nms/extract/types";
@@ -172,12 +173,15 @@ export function ApplyToSaveDialog({
           : { index: overlaySlot?.index, depth: draft.depth };
       const index = await importItem(item, options);
       const destName = overlaySlot?.name ?? destSlot?.name;
+      const slotName = destName ?? `slot ${index + 1}`;
       toast.success(
         draft.target === "new"
           ? `Criado no slot ${index + 1} do save aberto.`
-          : draft.depth === "model"
-            ? `Re-skin aplicado em ${destName ?? `slot ${index + 1}`}.`
-            : `Trocado em ${destName ?? `slot ${index + 1}`}.`,
+          : category && usesApplyDepth(category) && draft.depth === "model"
+            ? `Re-skin aplicado em ${slotName}.`
+            : category && usesApplyDepth(category)
+              ? `Trocado em ${slotName}.`
+              : `Aplicado em ${slotName}.`,
       );
       setMismatch(null);
       setQueued(null);
@@ -212,8 +216,9 @@ export function ApplyToSaveDialog({
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
-              Criar no primeiro slot vazio, ou colocar em cima de um item do
-              save. Inventário de naves e cargueiras fica vazio.
+              {category === "squadron"
+                ? "Entra no primeiro slot vazio do esquadrão, ou substitui um piloto. O registro inteiro é copiado."
+                : "Criar no primeiro slot vazio, ou colocar em cima de um item do save. Inventário de naves e cargueiras fica vazio."}
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="grid gap-4">
@@ -316,7 +321,9 @@ export function ApplyToSaveDialog({
                 <span className="block text-sm text-muted-foreground">
                   {filled.length === 0
                     ? "Nenhum item preenchido neste save."
-                    : "Escolha o slot e se é re-skin ou troca completa."}
+                    : category === "squadron"
+                      ? "O piloto inteiro entra neste slot."
+                      : "Escolha o slot e se é re-skin ou troca completa."}
                 </span>
               </button>
             </fieldset>
@@ -343,6 +350,7 @@ export function ApplyToSaveDialog({
                     </option>
                   ))}
                 </select>
+                {category && usesApplyDepth(category) ? (
                 <fieldset className="grid gap-2">
                   <legend className="text-sm font-medium">Como aplicar</legend>
                   {APPLY_OVERLAY_MODES.map((mode) => (
@@ -363,6 +371,7 @@ export function ApplyToSaveDialog({
                     </button>
                   ))}
                 </fieldset>
+                ) : null}
               </div>
             ) : null}
 

@@ -31,7 +31,7 @@ import { MultitoolTypeField } from "@/components/items/multitool-type-field";
 import { ApplyToSaveDialog } from "@/components/items/apply-to-save-dialog";
 import { ConfirmDeleteDialog } from "@/components/items/confirm-delete-dialog";
 import { VersionMismatchDialog } from "@/components/items/version-mismatch-dialog";
-import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
+import { usesApplyDepth, usesSlotPicker } from "@/lib/nms/extract/apply-depth";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { CATEGORY_META, isCategory } from "@/types/nms";
 import {
@@ -195,7 +195,7 @@ export function ItemDetailDialog({
       toast.error("Abra um save para aplicar este item num slot.");
       return;
     }
-    if (usesApplyDepth(file.category)) {
+    if (usesSlotPicker(file.category)) {
       setApplyOpen(true);
       return;
     }
@@ -343,7 +343,21 @@ export function ItemDetailDialog({
                 noValidate
               >
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                  {item.className ? <span>Class {item.className}</span> : null}
+                  {item.category === "squadron" && item.className ? (
+                    <span>Rank {item.className}</span>
+                  ) : item.className ? (
+                    <span>Class {item.className}</span>
+                  ) : null}
+                  {item.category === "squadron" && item.extra?.race ? (
+                    <span>{item.extra.race}</span>
+                  ) : null}
+                  {item.category === "squadron" &&
+                  item.metadata.extra?.unlocked === "false" ? (
+                    <span>Locked</span>
+                  ) : item.category === "squadron" &&
+                    item.metadata.extra?.unlocked === "true" ? (
+                    <span>Unlocked</span>
+                  ) : null}
                   {item.extra?.element ? <span>{item.extra.element}</span> : null}
                   {item.extra?.biome ? (
                     <span>Biome {item.extra.biome}</span>
@@ -366,6 +380,8 @@ export function ItemDetailDialog({
                         ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim — e recusa se já houver 20 Space Stations."
                         : uiCategory === "deepspace"
                           ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim do array de bases."
+                          : item && item.category === "squadron"
+                            ? "Não há item com este seed no save aberto. Aplicar pergunta se cria num slot vazio ou se substitui um piloto."
                           : item && usesApplyDepth(item.category)
                             ? "Não há item com este seed no save aberto. Aplicar pergunta se cria num slot vazio ou se coloca em cima de uma existente."
                             : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}

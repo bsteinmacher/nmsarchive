@@ -5,6 +5,7 @@ export const CATEGORIES = [
   "ship",
   "freighter",
   "frigate",
+  "squadron",
   "base",
   "deepspace",
   "spacestation",
@@ -13,23 +14,25 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number];
 
-/** Naves, MTs, pets e fragatas: lista com slots vazios + drag-and-drop. */
+/** Naves, MTs, pets e esquadrão: lista com slots vazios + drag-and-drop. */
 export const REORDERABLE_CATEGORIES = [
   "ship",
   "multitool",
   "companion",
-  "frigate",
+  "squadron",
 ] as const;
 
 export type ReorderableCategory = (typeof REORDERABLE_CATEGORIES)[number];
 
-/** Itens do menu. Slugs extras (frigate, deepspace, spacestation) continuam em CATEGORIES. */
+/** Itens do menu. Deep Space e Space Station continuam dentro de Bases. */
 export const SIDEBAR_CATEGORIES = [
   "exosuit",
   "multitool",
   "companion",
   "ship",
   "freighter",
+  "frigate",
+  "squadron",
   "base",
   "wonder",
 ] as const satisfies readonly Category[];
@@ -52,13 +55,20 @@ export const CATEGORY_META: Record<
   freighter: {
     label: "Freighters",
     href: "/freighter",
-    description: "Freighter atual, a base do interior e a frota de Frigates.",
+    description:
+      "Freighter atual, a base do interior, a frota de Frigates e o esquadrão.",
   },
   frigate: {
     label: "Frigates",
     href: "/frigate",
     description:
-      "Frota de Frigates (até 30). O save só lista as que existem — não há slots vazios pré-alocados.",
+      "Frota na ordem da lista do jogo: função, depois classe (S, A, B, C), depois nome. Até 30.",
+  },
+  squadron: {
+    label: "Squadron",
+    href: "/squadron",
+    description:
+      "Quatro pilotos. Arraste para reordenar. Arquivar leva o piloto, a nave e se o slot está liberado.",
   },
   companion: {
     label: "Companions",
@@ -110,7 +120,6 @@ export function archiveHref(
   category?: Category,
 ): "/" | `/archive/${Category}` {
   if (!category) return "/";
-  if (category === "frigate") return "/archive/freighter";
   if (category === "deepspace" || category === "spacestation") {
     return "/archive/base";
   }
@@ -118,7 +127,6 @@ export function archiveHref(
 }
 
 export function saveHref(category: Category): `/${Category}` {
-  if (category === "frigate") return "/freighter";
   if (category === "deepspace" || category === "spacestation") return "/base";
   return CATEGORY_META[category].href;
 }

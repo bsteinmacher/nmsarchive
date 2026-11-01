@@ -43,14 +43,14 @@ import type { ArchiveView } from "@/lib/archive-url";
 import {
   FLEET_FRIGATE_LIMIT,
   getAdapter,
+  groupFrigatesForDisplay,
   isFreighterBaseSlot,
   isHiddenFromBasesMenu,
   type ExtractedSlot,
 } from "@/lib/nms/extract";
-import { listSquadronPilots } from "@/lib/nms/extract/squadron";
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { trpc } from "@/lib/trpc";
-import { getMappedJson, useSaveSession } from "@/stores/save-session";
+import { useSaveSession } from "@/stores/save-session";
 import {
   CATEGORY_META,
   isReorderableCategory,
@@ -295,10 +295,10 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const status = useSaveSession((s) => s.status);
   const hydrated = useSaveSession((s) => s.hydrated);
   const summary = useSaveSession((s) => s.summary);
-  const saveContext = useSaveSession((s) => s.saveContext);
   const items = useSaveSession((s) => s.items[category]);
   const baseItems = useSaveSession((s) => s.items.base);
   const frigateItems = useSaveSession((s) => s.items.frigate);
+  const squadronItems = useSaveSession((s) => s.items.squadron);
   const deepSpaceItems = useSaveSession((s) => s.items.deepspace);
   const spaceStationItems = useSaveSession((s) => s.items.spacestation);
   const exportItem = useSaveSession((s) => s.exportItem);
@@ -313,7 +313,14 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     { category },
     { enabled: status === "ready" },
   );
-  const archivedItems = archived.data?.items ?? [];
+  const archivedSquadron = trpc.items.list.useQuery(
+    { category: "squadron" },
+    { enabled: status === "ready" && category === "freighter" },
+  );
+  const archivedItems = [
+    ...(archived.data?.items ?? []),
+    ...(archivedSquadron.data?.items ?? []),
+  ];
 
   const adapter = getAdapter(category);
   const meta = CATEGORY_META[category];
@@ -327,11 +334,17 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   const automatic = items.filter((item) => item.group === "automatic");
   const interiorBases =
     category === "freighter" ? baseItems.filter(isFreighterBaseSlot) : [];
-  const fleetFrigates = category === "freighter" ? frigateItems : [];
-  const squadronPilots =
-    category === "freighter" && status === "ready"
-      ? listSquadronPilots(getMappedJson(), saveContext)
-      : [];
+  const showFleet = category === "freighter" || category === "frigate";
+  const fleetFrigates = showFleet
+    ? category === "frigate"
+      ? items
+      : frigateItems
+    : [];
+  const fleetGroups = showFleet
+    ? groupFrigatesForDisplay(fleetFrigates)
+    : [];
+  const fleetInGameOrder = fleetGroups.flatMap((group) => group.items);
+  const squadronPilots = category === "freighter" ? squadronItems : [];
   const planetDeepSpace = category === "base" ? deepSpaceItems : [];
   const planetStations = category === "base" ? spaceStationItems : [];
   const filled = primary.filter((item) => !item.empty && !item.readonly).length;
@@ -349,8 +362,8 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
                 item.index === selected.index &&
                 item.category === selected.category,
             )
-          ? fleetFrigates
-          : selected.group === "squadron"
+          ? fleetInGameOrder
+          : selected.category === "squadron"
             ? squadronPilots
           : planetDeepSpace.some(
                 (item) =>
@@ -429,7 +442,9 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
 
   const description =
     category === "frigate"
-      ? "Até 30 fragatas. O JSON só tem as que existem; aplicar acrescenta no fim. Arraste para reordenar."
+      ? "Até 30 fragatas. O JSON só tem as que existem; aplicar acrescenta no fim. A ordem na tela segue a lista do jogo."
+      : category === "squadron"
+        ? "Quatro pilotos. Arraste para reordenar. Arquivar leva o piloto, a nave e se o slot está liberado."
       : reorderable
     ? "Arraste pela alça para trocar de lugar — slots vazios entram na troca e o array não muda de tamanho."
     : category === "exosuit"
@@ -480,6 +495,45 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   };
 
   const SlotList = view === "grid" ? SaveSlotGrid : SlotTable;
+  const fleetSection = showFleet ? (
+    <div className="grid gap-3">
+      <div className="grid gap-1">
+        <h2 className="font-heading text-base leading-snug font-medium">
+          {`Frigates (${fleetFrigates.filter((item) => !item.empty).length} / ${FLEET_FRIGATE_LIMIT})`}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          A lista do jogo agrupa por função. Dentro da função, a ordem é a
+          classe (S, A, B, C) e depois o nome. Recrutar não coloca as
+          primeiras do array no topo.
+        </p>
+      </div>
+      {fleetGroups.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          Nenhuma Frigate neste save.
+        </p>
+      ) : (
+        fleetGroups.map((group) => (
+          <SlotList
+            key={group.role}
+            category="frigate"
+            items={group.items}
+            reorderable={false}
+            reserveReorder
+            framed
+            sectionId={`frigates-${group.role}`}
+            columns={saveFreighterColumns("frigate")}
+            caption={`${group.title} (${group.items.length})`}
+            description=""
+            screenshotUrl={screenshotUrl}
+            {...idleHandlers}
+            onSelect={setSelected}
+            onArchive={setArchiving}
+            onExport={onExport}
+          />
+        ))
+      )}
+    </div>
+  ) : null;
 
   return (
     <>
@@ -495,20 +549,29 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
         </div>
         <div
           className={
-            category === "freighter" || category === "base"
+            category === "freighter" || category === "frigate" || category === "base"
               ? "grid min-w-0 gap-8"
               : "contents"
           }
         >
+        {category === "frigate" ? (
+          fleetSection
+        ) : (
         <SlotList
           category={category}
           items={primary}
           reorderable={reorderable}
-          reserveReorder={category === "freighter"}
-          framed={category === "freighter" || category === "base"}
+          reserveReorder={category === "freighter" || category === "squadron"}
+          framed={
+            category === "freighter" ||
+            category === "base" ||
+            category === "squadron"
+          }
           columns={
             category === "freighter"
               ? saveFreighterColumns("freighter")
+              : category === "squadron"
+                ? saveFreighterColumns("squadron")
               : category === "base"
                 ? saveBaseColumns()
                 : adapter.columns
@@ -530,6 +593,7 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
           onArchive={setArchiving}
           onExport={onExport}
         />
+        )}
         {category === "freighter" ? (
           <>
           <SlotList
@@ -553,41 +617,24 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             onArchive={setArchiving}
             onExport={onExport}
           />
+          {fleetSection}
           <SlotList
-            category="frigate"
-            items={fleetFrigates}
+            category="squadron"
+            items={squadronPilots}
             reorderable
             reserveReorder
             framed
-            sectionId="frigates"
-            columns={saveFreighterColumns("frigate")}
-            caption={`Frigates (${fleetFrigates.filter((item) => !item.empty).length} / ${FLEET_FRIGATE_LIMIT})`}
-            description="Frota de até 30 fragatas. O save só lista as que existem."
-            emptyMessage="Nenhuma Frigate neste save."
+            sectionId="squadron"
+            columns={saveFreighterColumns("squadron")}
+            caption={`Squadron (${squadronPilots.filter((item) => !item.empty).length} / ${squadronPilots.length || 4})`}
+            description="Quatro pilotos. Arraste para reordenar. Arquivar leva o piloto, a nave e se o slot está liberado."
+            emptyMessage="Este save não tem esquadrão."
             screenshotUrl={screenshotUrl}
-            {...reorderHandlersFor("frigate")}
+            {...reorderHandlersFor("squadron")}
             onSelect={setSelected}
             onArchive={setArchiving}
             onExport={onExport}
           />
-          {squadronPilots.length > 0 ? (
-              <SlotList
-                category="ship"
-                items={squadronPilots}
-                reorderable={false}
-                reserveReorder
-                framed
-                sectionId="squadron"
-                columns={saveFreighterColumns("squadron")}
-                caption={`Squadron (${squadronPilots.length})`}
-                description="Pilotos do esquadrão neste save. Só leitura — ainda não arquiva nem aplica."
-                screenshotUrl={screenshotUrl}
-                {...idleHandlers}
-                onSelect={setSelected}
-                onArchive={() => {}}
-                onExport={() => {}}
-              />
-          ) : null}
           </>
         ) : null}
         {category === "base" ? (

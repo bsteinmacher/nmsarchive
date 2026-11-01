@@ -30,7 +30,7 @@ import {
 import { downloadBytes } from "@/lib/download";
 import { trpc } from "@/lib/trpc";
 import { formatPlayTime } from "@/lib/nms/player";
-import { usesApplyDepth } from "@/lib/nms/extract/apply-depth";
+import { usesSlotPicker } from "@/lib/nms/extract/apply-depth";
 import { gameVersionMismatch, parseNmsItem, type NmsItemFile } from "@/lib/nmsitem";
 import { ApplyToSaveDialog } from "@/components/items/apply-to-save-dialog";
 import { CollapsibleCard } from "@/components/layout/collapsible-card";
@@ -163,7 +163,7 @@ export function SaveDashboard() {
       toast.error(err instanceof Error ? err.message : "Arquivo inválido");
       return;
     }
-    if (usesApplyDepth(item.category)) {
+    if (usesSlotPicker(item.category)) {
       setChoiceFile(item);
       return;
     }

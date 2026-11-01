@@ -84,6 +84,7 @@ export function GroupedArchiveSections({
   onSelect,
   freighters = [],
   frigates = [],
+  squadron = [],
   planetBases = [],
   deepspace = [],
   stations = [],
@@ -93,6 +94,7 @@ export function GroupedArchiveSections({
   onSelect: (id: string) => void;
   freighters?: ArchivedItemSummary[];
   frigates?: ArchivedItemSummary[];
+  squadron?: ArchivedItemSummary[];
   planetBases?: ArchivedItemSummary[];
   deepspace?: ArchivedItemSummary[];
   stations?: ArchivedItemSummary[];
@@ -132,6 +134,17 @@ export function GroupedArchiveSections({
           view={view}
           onSelect={onSelect}
           empty="Nenhuma Frigate no arquivo."
+          alignWithGroup
+        />
+        <ArchiveSection
+          id="squadron"
+          title="Squadron"
+          description="Pilotos do esquadrão guardados no arquivo pessoal."
+          category="squadron"
+          items={squadron}
+          view={view}
+          onSelect={onSelect}
+          empty="Nenhum piloto no arquivo."
           alignWithGroup
         />
       </div>

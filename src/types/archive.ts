@@ -13,6 +13,7 @@ export type ArchivedItemExtra = {
   planet?: string;
   planetType?: string;
   galaxy?: string;
+  race?: string;
 };
 
 export type ArchivedItemSummary = {

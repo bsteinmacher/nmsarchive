@@ -18,6 +18,7 @@ describe("categories", () => {
       "ship",
       "freighter",
       "frigate",
+      "squadron",
       "base",
       "deepspace",
       "spacestation",
@@ -41,6 +42,7 @@ describe("categories", () => {
     expect(isCategory("wonder")).toBe(true);
     expect(isCategory("deepspace")).toBe(true);
     expect(isCategory("spacestation")).toBe(true);
+    expect(isCategory("squadron")).toBe(true);
     expect(isCategory("WeaponOwnership")).toBe(false);
     expect(isCategory("inventory")).toBe(false);
     expect(isCategory("")).toBe(false);
@@ -50,22 +52,24 @@ describe("categories", () => {
     expect((CATEGORIES as readonly string[]).includes("inventory")).toBe(false);
   });
 
-  it("marks ships, multitools, companions and frigates as reorderable", () => {
+  it("marks ships, multitools, companions and squadron as reorderable", () => {
     expect([...REORDERABLE_CATEGORIES]).toEqual([
       "ship",
       "multitool",
       "companion",
-      "frigate",
+      "squadron",
     ]);
   });
 
   it("builds archive hrefs", () => {
     expect(archiveHref()).toBe("/");
     expect(archiveHref("ship")).toBe("/archive/ship");
-    expect(archiveHref("frigate")).toBe("/archive/freighter");
+    expect(archiveHref("frigate")).toBe("/archive/frigate");
+    expect(archiveHref("squadron")).toBe("/archive/squadron");
     expect(archiveHref("deepspace")).toBe("/archive/base");
     expect(archiveHref("spacestation")).toBe("/archive/base");
-    expect(saveHref("frigate")).toBe("/freighter");
+    expect(saveHref("frigate")).toBe("/frigate");
+    expect(saveHref("squadron")).toBe("/squadron");
     expect(saveHref("deepspace")).toBe("/base");
     expect([...SIDEBAR_CATEGORIES]).toEqual([
       "exosuit",
@@ -73,6 +77,8 @@ describe("categories", () => {
       "companion",
       "ship",
       "freighter",
+      "frigate",
+      "squadron",
       "base",
       "wonder",
     ]);

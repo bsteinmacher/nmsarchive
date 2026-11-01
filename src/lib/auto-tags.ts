@@ -29,6 +29,7 @@ const SKIP_EXTRA = new Set([
   "hp",
   "species",
   "shipType",
+  "unlocked",
 ]);
 
 const CLASS_SLUGS = new Set(["sss", "ss", "s", "a", "b", "c"]);
@@ -38,6 +39,7 @@ const CATEGORY_TAG: Record<string, string> = {
   multitool: "Multi-tool",
   freighter: "Freighter",
   frigate: "Frigate",
+  squadron: "Squadron",
 };
 
 const MULTITOOL_CATEGORY = "Multi-tool";

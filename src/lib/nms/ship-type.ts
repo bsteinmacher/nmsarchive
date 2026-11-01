@@ -13,6 +13,7 @@ const SHIP_TYPE_MARKERS: readonly [marker: string, label: string][] = [
   ["BIGGS", "Exotic"],
   ["EXOTIC", "Exotic"],
   ["CORVETTE", "Corvette"],
+  ["S-CLASS", "Exotic"],
   ["SHUTTLE", "Shuttle"],
   ["SCIENTIFIC", "Explorer"],
   ["FIGHTER", "Fighter"],

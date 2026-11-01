@@ -13,6 +13,7 @@ import {
 } from "@/lib/nms/extract/exosuit";
 import { listFreighters } from "@/lib/nms/extract/freighters";
 import { listFrigates } from "@/lib/nms/extract/frigates";
+import { listSquadronPilots } from "@/lib/nms/extract/squadron";
 import {
   basePersistentType,
   listBases,
@@ -229,6 +230,20 @@ describe.skipIf(!hasSave)("save2.hg (fixture local gitignored)", () => {
       expect(freighters.filter((f) => f.empty)).toHaveLength(8);
 
       expect(listFrigates(parsed.json)).toHaveLength(17);
+      const squadron = listSquadronPilots(parsed.json);
+      expect(squadron).toHaveLength(4);
+      expect(squadron.every((pilot) => !pilot.empty)).toBe(true);
+      expect(squadron.every((pilot) => pilot.itemType === "Exotic")).toBe(true);
+      expect(squadron.every((pilot) => pilot.className === "Ace")).toBe(true);
+      expect(squadron.map((pilot) => pilot.extra.race)).toEqual([
+        "Vy'keen",
+        "Korvax",
+        "Vy'keen",
+        "Gek",
+      ]);
+      expect(squadron.every((pilot) => pilot.extra.unlocked === "true")).toBe(
+        true,
+      );
       const bases = listBases(parsed.json);
       expect(bases).toHaveLength(69);
       expect(

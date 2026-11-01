@@ -21,6 +21,7 @@ const WIDTH: Record<string, string> = {
   element: "w-32",
   biome: "w-36",
   objects: "w-24",
+  race: "w-28",
   slots: "w-24",
   tech: "w-24",
   supercharged: "w-32",
@@ -46,6 +47,7 @@ const LIST_EXTRA_KEYS = [
   "planet",
   "planetType",
   "galaxy",
+  "race",
 ] as const satisfies readonly (keyof ArchivedItemExtra)[];
 
 export function pickListExtra(
@@ -85,6 +87,7 @@ const CATEGORY_TAG: Record<string, string> = {
   multitool: "Multi-tool",
   freighter: "Freighter",
   frigate: "Frigate",
+  squadron: "Squadron",
 };
 
 /**
@@ -92,6 +95,14 @@ const CATEGORY_TAG: Record<string, string> = {
  * (Class, Type, uma coluna extra, Tags) para os valores caírem na mesma posição.
  */
 export function freighterGroupColumns(category: Category): TableDataColumn[] {
+  if (category === "squadron") {
+    return [
+      { id: "className", header: "Rank" },
+      { id: "itemType", header: "Type" },
+      { id: "race", header: "Race" },
+    ];
+  }
+
   const metric: TableDataColumn =
     category === "base"
       ? { id: "objects", header: "Objects" }
@@ -111,13 +122,7 @@ export function freighterGroupColumns(category: Category): TableDataColumn[] {
 export function saveFreighterColumns(
   kind: "freighter" | "base" | "frigate" | "squadron",
 ): TableDataColumn[] {
-  if (kind === "squadron") {
-    return [
-      { id: "className", header: "Rank" },
-      { id: "itemType", header: "Type" },
-      { id: "traits", header: "Traits", reserved: true },
-    ];
-  }
+  if (kind === "squadron") return freighterGroupColumns("squadron");
   return freighterGroupColumns(kind);
 }
 
