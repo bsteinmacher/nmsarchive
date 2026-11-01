@@ -2,15 +2,8 @@
 
 import { isArchivedFreighterBase } from "@/lib/archive-match";
 import type { ArchiveView } from "@/lib/archive-url";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-} from "@/components/ui/card";
 import type { Category } from "@/types/nms";
 import type { ArchivedItemSummary } from "@/types/archive";
-import { freighterGroupColumns } from "@/lib/list-columns";
 import { ItemGrid } from "./item-grid";
 import { ItemTable } from "./item-table";
 
@@ -23,7 +16,6 @@ function ArchiveSection({
   view,
   onSelect,
   empty,
-  alignWithGroup = false,
 }: {
   id?: string;
   title: string;
@@ -33,40 +25,22 @@ function ArchiveSection({
   view: ArchiveView;
   onSelect: (id: string) => void;
   empty: string;
-  alignWithGroup?: boolean;
 }) {
   return (
-    <section id={id} className="min-w-0 scroll-mt-6">
-      <Card className="min-w-0">
-        <CardHeader className="border-b">
-          <h2 className="font-heading text-base leading-snug font-medium">
-            {title}
-          </h2>
-          <CardDescription>{description}</CardDescription>
-        </CardHeader>
-        <CardContent
-          className={
-            view === "table" && items.length > 0
-              ? "min-w-0 px-0 [&_td:first-child]:ps-4 [&_td:last-child]:pe-4 [&_th:first-child]:ps-4 [&_th:last-child]:pe-4"
-              : undefined
-          }
-        >
-          {items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{empty}</p>
-          ) : view === "table" ? (
-            <ItemTable
-              items={items}
-              category={category}
-              columns={
-                alignWithGroup ? freighterGroupColumns(category) : undefined
-              }
-              onSelect={onSelect}
-            />
-          ) : (
-            <ItemGrid items={items} onSelect={onSelect} />
-          )}
-        </CardContent>
-      </Card>
+    <section id={id} className="grid min-w-0 scroll-mt-6 gap-3">
+      <div className="grid gap-1">
+        <h2 className="font-heading text-base leading-snug font-medium">
+          {title}
+        </h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      {items.length === 0 ? (
+        <p className="text-sm text-muted-foreground">{empty}</p>
+      ) : view === "table" ? (
+        <ItemTable items={items} category={category} onSelect={onSelect} />
+      ) : (
+        <ItemGrid items={items} onSelect={onSelect} />
+      )}
     </section>
   );
 }
@@ -83,8 +57,6 @@ export function GroupedArchiveSections({
   view,
   onSelect,
   freighters = [],
-  frigates = [],
-  squadron = [],
   planetBases = [],
   deepspace = [],
   stations = [],
@@ -93,8 +65,6 @@ export function GroupedArchiveSections({
   view: ArchiveView;
   onSelect: (id: string) => void;
   freighters?: ArchivedItemSummary[];
-  frigates?: ArchivedItemSummary[];
-  squadron?: ArchivedItemSummary[];
   planetBases?: ArchivedItemSummary[];
   deepspace?: ArchivedItemSummary[];
   stations?: ArchivedItemSummary[];
@@ -112,40 +82,16 @@ export function GroupedArchiveSections({
           view={view}
           onSelect={onSelect}
           empty="Nenhuma Freighter no arquivo."
-          alignWithGroup
         />
         <ArchiveSection
           id="freighter-base"
           title="Freighter base"
-          description="Interior da cargueira."
+          description="Interior da cargueira. Arquivar a Freighter não inclui esta construção."
           category="base"
           items={interior}
           view={view}
           onSelect={onSelect}
           empty="Nenhuma Freighter base no arquivo."
-          alignWithGroup
-        />
-        <ArchiveSection
-          id="frigates"
-          title="Frigates"
-          description="Fragatas guardadas no arquivo pessoal."
-          category="frigate"
-          items={frigates}
-          view={view}
-          onSelect={onSelect}
-          empty="Nenhuma Frigate no arquivo."
-          alignWithGroup
-        />
-        <ArchiveSection
-          id="squadron"
-          title="Squadron"
-          description="Pilotos do esquadrão guardados no arquivo pessoal."
-          category="squadron"
-          items={squadron}
-          view={view}
-          onSelect={onSelect}
-          empty="Nenhum piloto no arquivo."
-          alignWithGroup
         />
       </div>
     );

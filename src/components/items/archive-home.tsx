@@ -81,14 +81,6 @@ function ArchiveHomeInner({
     { ...extras, category: "freighter" },
     { enabled: category === "freighter" },
   );
-  const groupedFrigates = trpc.items.list.useQuery(
-    { ...extras, category: "frigate" },
-    { enabled: category === "freighter" },
-  );
-  const groupedSquadron = trpc.items.list.useQuery(
-    { ...extras, category: "squadron" },
-    { enabled: category === "freighter" },
-  );
   const groupedPlanetBases = trpc.items.list.useQuery(
     { ...extras, category: "base" },
     { enabled: category === "base" },
@@ -102,14 +94,6 @@ function ArchiveHomeInner({
     { enabled: category === "base" },
   );
   const ownOptions = trpc.items.filterOptions.useQuery({ category });
-  const frigateOptions = trpc.items.filterOptions.useQuery(
-    { category: "frigate" },
-    { enabled: category === "freighter" },
-  );
-  const squadronOptions = trpc.items.filterOptions.useQuery(
-    { category: "squadron" },
-    { enabled: category === "freighter" },
-  );
   const deepspaceOptions = trpc.items.filterOptions.useQuery(
     { category: "deepspace" },
     { enabled: category === "base" },
@@ -118,15 +102,14 @@ function ArchiveHomeInner({
     { category: "spacestation" },
     { enabled: category === "base" },
   );
-  const options = grouped
-    ? mergeArchiveFilterOptions([
-        ownOptions.data,
-        frigateOptions.data,
-        squadronOptions.data,
-        deepspaceOptions.data,
-        stationOptions.data,
-      ])
-    : (ownOptions.data ?? EMPTY_FILTER_OPTIONS);
+  const options =
+    category === "base"
+      ? mergeArchiveFilterOptions([
+          ownOptions.data,
+          deepspaceOptions.data,
+          stationOptions.data,
+        ])
+      : (ownOptions.data ?? EMPTY_FILTER_OPTIONS);
   const counts = trpc.items.counts.useQuery();
   const items = list.data?.items ?? [];
   const freightSplit = splitFreighterArchive(
@@ -134,10 +117,7 @@ function ArchiveHomeInner({
   );
   const groupedTotal =
     category === "freighter"
-      ? freightSplit.current.length +
-        freightSplit.interior.length +
-        (groupedFrigates.data?.items.length ?? 0) +
-        (groupedSquadron.data?.items.length ?? 0)
+      ? freightSplit.current.length + freightSplit.interior.length
       : category === "base"
         ? (groupedPlanetBases.data?.items.length ?? 0) +
           (groupedDeepspace.data?.items.length ?? 0) +
@@ -145,22 +125,28 @@ function ArchiveHomeInner({
         : 0;
   const groupedLoading =
     category === "freighter"
-      ? groupedFreighters.isLoading ||
-        groupedFrigates.isLoading ||
-        groupedSquadron.isLoading
+      ? groupedFreighters.isLoading
       : category === "base"
         ? groupedPlanetBases.isLoading ||
           groupedDeepspace.isLoading ||
           groupedStations.isLoading
         : false;
+  const groupedError =
+    category === "freighter"
+      ? groupedFreighters.error
+      : category === "base"
+        ? (groupedPlanetBases.error ??
+          groupedDeepspace.error ??
+          groupedStations.error)
+        : null;
   const totalAll = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
   const categoryTotal =
     category == null
       ? totalAll
-      : category === "freighter"
-        ? (counts.data?.freighter ?? 0) +
-          (counts.data?.frigate ?? 0) +
-          (counts.data?.squadron ?? 0)
+      : category === "base"
+        ? (counts.data?.base ?? 0) +
+          (counts.data?.deepspace ?? 0) +
+          (counts.data?.spacestation ?? 0)
         : (counts.data?.[category] ?? 0);
   const filtersOn = Boolean(
     state.className || state.itemType || state.tags.length || state.q,
@@ -236,42 +222,21 @@ function ArchiveHomeInner({
         resultCount={grouped ? groupedTotal : list.data?.total}
       />
 
-      {grouped ? (
-        groupedLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
-        ) : groupedTotal === 0 && filtersOn && categoryTotal > 0 ? (
-          <Card>
-            <CardHeader>
-              <CardTitle>Nenhum item com esses filtros</CardTitle>
-              <CardDescription>
-                Nada bate com a combinação atual. Limpe os filtros para ver o
-                arquivo de novo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <button
-                type="button"
-                className={cn(buttonVariants())}
-                onClick={() => setState({ tags: [], view: state.view })}
-              >
-                Limpar filtros
-              </button>
-            </CardContent>
-          </Card>
-        ) : (
-          <GroupedArchiveSections
-            group={category === "base" ? "base" : "freighter"}
-            view={state.view}
-            onSelect={setSelectedId}
-            freighters={groupedFreighters.data?.items}
-            frigates={groupedFrigates.data?.items}
-            squadron={groupedSquadron.data?.items}
-            planetBases={groupedPlanetBases.data?.items}
-            deepspace={groupedDeepspace.data?.items}
-            stations={groupedStations.data?.items}
-          />
-        )
-      ) : list.isLoading ? (
+      {grouped && groupedLoading ? (
+        <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
+      ) : grouped && groupedError ? (
+        <p className="text-sm text-destructive">{groupedError.message}</p>
+      ) : grouped && groupedTotal > 0 ? (
+        <GroupedArchiveSections
+          group={category === "base" ? "base" : "freighter"}
+          view={state.view}
+          onSelect={setSelectedId}
+          freighters={groupedFreighters.data?.items}
+          planetBases={groupedPlanetBases.data?.items}
+          deepspace={groupedDeepspace.data?.items}
+          stations={groupedStations.data?.items}
+        />
+      ) : !grouped && list.isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
       ) : list.error ? (
         <p className="text-sm text-destructive">{list.error.message}</p>
