@@ -42,6 +42,11 @@ export function usesApplyChoices(
   return (CHOICE_CATEGORIES as readonly string[]).includes(category);
 }
 
+/** Naves, multi-tools, cargueira e esquadrão perguntam o slot de destino. */
+export function usesSlotPicker(category: string): boolean {
+  return usesApplyDepth(category) || category === "squadron";
+}
+
 export function usesApplyDepth(
   category: string,
 ): category is "ship" | "multitool" | "freighter" {

@@ -1,16 +1,34 @@
 import { frigateClassLabel } from "../freighter-type";
 import { getPlayerState, type SaveContext } from "../player";
 import { asArray, asRecord, asString, normalizeSeed } from "../value";
-import {
-  clonePlayer,
-  replaceAtIndex,
-  reorderPlayerArray,
-} from "./array";
+import { clonePlayer, replaceAtIndex } from "./array";
 import { nestedEnum } from "./names";
 import type { CategoryAdapter, ExtractedSlot, InsertResult } from "./types";
 
 /** Teto da frota no jogo. O JSON não pré-aloca 30 vazios — só as fragatas existentes. */
 export const FLEET_FRIGATE_LIMIT = 30;
+
+/** Ordem da Frigate List. Leviathan e Organic são classes diferentes. */
+const FRIGATE_ROLE_ORDER = [
+  "Combat",
+  "Exploration",
+  "Mining",
+  "Diplomacy",
+  "Support",
+  "Normandy",
+  "DeepSpace",
+  "DeepSpaceCommon",
+  "Pirate",
+  "GhostShip",
+] as const;
+
+const INVENTORY_CLASS_ORDER = ["S", "A", "B", "C"] as const;
+
+export type FrigateDisplayGroup = {
+  role: string;
+  title: string;
+  items: ExtractedSlot[];
+};
 
 export function isEmptyFrigateSlot(slot: unknown): boolean {
   const rec = asRecord(slot);
@@ -48,9 +66,8 @@ export function listFrigates(
         payload: rec,
       };
     }
-    const itemType = frigateClassLabel(
-      nestedEnum(rec.FrigateClass, "FrigateClass"),
-    );
+    const role = nestedEnum(rec.FrigateClass, "FrigateClass");
+    const itemType = frigateClassLabel(role);
     const className = nestedEnum(rec.InventoryClass, "InventoryClass");
     const traits = asArray(rec.TraitIDs) ?? [];
     const custom = asString(rec.CustomName)?.trim();
@@ -68,6 +85,7 @@ export function listFrigates(
       extra: {
         class: className,
         itemType,
+        role,
         traits: String(traits.length),
       },
       payload: rec,
@@ -103,6 +121,49 @@ export function insertFrigate(
   return { ok: true, json: cloned.json, index: arr.length - 1 };
 }
 
+function rankOf(order: readonly string[], value: string): number {
+  const index = order.indexOf(value);
+  return index === -1 ? order.length : index;
+}
+
+/** Ordem da tela do jogo. Não altera FleetFrigates. */
+export function compareFrigateDisplay(
+  a: ExtractedSlot,
+  b: ExtractedSlot,
+): number {
+  if (a.empty !== b.empty) return a.empty ? 1 : -1;
+  const role =
+    rankOf(FRIGATE_ROLE_ORDER, a.extra.role ?? "") -
+    rankOf(FRIGATE_ROLE_ORDER, b.extra.role ?? "");
+  if (role !== 0) return role;
+  const inventory =
+    rankOf(INVENTORY_CLASS_ORDER, a.className) -
+    rankOf(INVENTORY_CLASS_ORDER, b.className);
+  if (inventory !== 0) return inventory;
+  return a.name.localeCompare(b.name, "pt-BR");
+}
+
+export function groupFrigatesForDisplay(
+  items: ExtractedSlot[],
+): FrigateDisplayGroup[] {
+  const groups: FrigateDisplayGroup[] = [];
+  for (const item of [...items].sort(compareFrigateDisplay)) {
+    if (item.empty) continue;
+    const role = item.extra.role || "Unknown";
+    const last = groups[groups.length - 1];
+    if (last?.role === role) {
+      last.items.push(item);
+      continue;
+    }
+    groups.push({
+      role,
+      title: frigateClassLabel(role),
+      items: [item],
+    });
+  }
+  return groups;
+}
+
 export function clearFrigate(
   mappedJson: unknown,
   index: number,
@@ -135,8 +196,6 @@ export const frigatesAdapter: CategoryAdapter = {
   replace: (json, index, payload, context) =>
     replaceAtIndex(json, "FleetFrigates", index, payload, context),
   clear: clearFrigate,
-  reorder: (json, from, to, context) =>
-    reorderPlayerArray(json, "FleetFrigates", from, to, [], [], context),
   summarize(payload) {
     const listed = listFrigates({
       BaseContext: { PlayerStateData: { FleetFrigates: [payload] } },

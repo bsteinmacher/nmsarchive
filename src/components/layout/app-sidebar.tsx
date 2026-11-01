@@ -18,6 +18,7 @@ import {
   Swords,
   Telescope,
   Truck,
+  Users,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import {
@@ -48,6 +49,7 @@ const CATEGORY_ICONS: Record<Category, ComponentType<{ className?: string }>> = 
   multitool: Swords,
   freighter: Truck,
   frigate: Telescope,
+  squadron: Users,
   companion: Dog,
   wonder: Sparkles,
   exosuit: Shirt,

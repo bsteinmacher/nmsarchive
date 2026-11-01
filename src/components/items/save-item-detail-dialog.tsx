@@ -53,7 +53,19 @@ export function SaveItemDetailDialog({
   const slot = item?.slotLabel ?? (item ? String(item.index + 1) : "—");
   const bits = [
     `Slot ${slot}`,
-    item?.className ? `Class ${item.className}` : null,
+    item?.category === "squadron"
+      ? item.className
+        ? `Rank ${item.className}`
+        : null
+      : item?.className
+        ? `Class ${item.className}`
+        : null,
+    item?.extra.race || null,
+    item?.extra.unlocked === "true"
+      ? "Unlocked"
+      : item?.extra.unlocked === "false"
+        ? "Locked"
+        : null,
     item?.extra.element || null,
     item?.extra.biome ? `Biome ${item.extra.biome}` : null,
     item?.extra.level ? `Level ${item.extra.level}` : null,
@@ -259,7 +271,9 @@ export function SaveItemDetailDialog({
             description={
               item?.category === "frigate"
                 ? "Ela sai da frota. O arquivo pessoal não muda."
-                : "O slot fica vazio. O arquivo pessoal não muda."
+                : item?.category === "squadron"
+                  ? "O slot fica vazio e bloqueado. O arquivo pessoal não muda."
+                  : "O slot fica vazio. O arquivo pessoal não muda."
             }
             confirmLabel="Excluir do save"
             pending={clearing}

@@ -85,6 +85,10 @@ function ArchiveHomeInner({
     { ...extras, category: "frigate" },
     { enabled: category === "freighter" },
   );
+  const groupedSquadron = trpc.items.list.useQuery(
+    { ...extras, category: "squadron" },
+    { enabled: category === "freighter" },
+  );
   const groupedPlanetBases = trpc.items.list.useQuery(
     { ...extras, category: "base" },
     { enabled: category === "base" },
@@ -102,6 +106,10 @@ function ArchiveHomeInner({
     { category: "frigate" },
     { enabled: category === "freighter" },
   );
+  const squadronOptions = trpc.items.filterOptions.useQuery(
+    { category: "squadron" },
+    { enabled: category === "freighter" },
+  );
   const deepspaceOptions = trpc.items.filterOptions.useQuery(
     { category: "deepspace" },
     { enabled: category === "base" },
@@ -114,6 +122,7 @@ function ArchiveHomeInner({
     ? mergeArchiveFilterOptions([
         ownOptions.data,
         frigateOptions.data,
+        squadronOptions.data,
         deepspaceOptions.data,
         stationOptions.data,
       ])
@@ -127,7 +136,8 @@ function ArchiveHomeInner({
     category === "freighter"
       ? freightSplit.current.length +
         freightSplit.interior.length +
-        (groupedFrigates.data?.items.length ?? 0)
+        (groupedFrigates.data?.items.length ?? 0) +
+        (groupedSquadron.data?.items.length ?? 0)
       : category === "base"
         ? (groupedPlanetBases.data?.items.length ?? 0) +
           (groupedDeepspace.data?.items.length ?? 0) +
@@ -135,7 +145,9 @@ function ArchiveHomeInner({
         : 0;
   const groupedLoading =
     category === "freighter"
-      ? groupedFreighters.isLoading || groupedFrigates.isLoading
+      ? groupedFreighters.isLoading ||
+        groupedFrigates.isLoading ||
+        groupedSquadron.isLoading
       : category === "base"
         ? groupedPlanetBases.isLoading ||
           groupedDeepspace.isLoading ||
@@ -143,7 +155,13 @@ function ArchiveHomeInner({
         : false;
   const totalAll = Object.values(counts.data ?? {}).reduce((a, b) => a + b, 0);
   const categoryTotal =
-    category == null ? totalAll : (counts.data?.[category] ?? 0);
+    category == null
+      ? totalAll
+      : category === "freighter"
+        ? (counts.data?.freighter ?? 0) +
+          (counts.data?.frigate ?? 0) +
+          (counts.data?.squadron ?? 0)
+        : (counts.data?.[category] ?? 0);
   const filtersOn = Boolean(
     state.className || state.itemType || state.tags.length || state.q,
   );
@@ -247,6 +265,7 @@ function ArchiveHomeInner({
             onSelect={setSelectedId}
             freighters={groupedFreighters.data?.items}
             frigates={groupedFrigates.data?.items}
+            squadron={groupedSquadron.data?.items}
             planetBases={groupedPlanetBases.data?.items}
             deepspace={groupedDeepspace.data?.items}
             stations={groupedStations.data?.items}

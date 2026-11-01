@@ -16,6 +16,7 @@ import { applyFreighter, freightersAdapter } from "./freighters";
 import { frigatesAdapter } from "./frigates";
 import { applyMultitool, multitoolsAdapter } from "./multitools";
 import { applyShip, shipsAdapter } from "./ships";
+import { squadronAdapter } from "./squadron";
 import type { CategoryAdapter, ExtractedSlot, InsertResult, WriteResult } from "./types";
 import { wondersAdapter } from "./wonders";
 
@@ -30,7 +31,7 @@ export {
   reorderShipOwnership,
   clearShip,
 } from "./ships";
-export { FLEET_FRIGATE_LIMIT } from "./frigates";
+export { FLEET_FRIGATE_LIMIT, groupFrigatesForDisplay } from "./frigates";
 export {
   DEEP_SPACE_BASE_TYPE,
   DEEP_SPACE_LABEL,
@@ -67,6 +68,7 @@ const ADAPTERS = {
   exosuit: exosuitAdapter,
   freighter: freightersAdapter,
   frigate: frigatesAdapter,
+  squadron: squadronAdapter,
   base: basesAdapter,
   deepspace: deepSpaceAdapter,
   spacestation: spaceStationAdapter,
@@ -96,6 +98,7 @@ export function listAllCategories(
     exosuit: ADAPTERS.exosuit.list(json, context),
     freighter: ADAPTERS.freighter.list(json, context),
     frigate: ADAPTERS.frigate.list(json, context),
+    squadron: ADAPTERS.squadron.list(json, context),
     base: ADAPTERS.base.list(json, context),
     deepspace: ADAPTERS.deepspace.list(json, context),
     spacestation: ADAPTERS.spacestation.list(json, context),
@@ -150,6 +153,13 @@ export function applyItem(
         : payload;
     if (index == null) return insertItem(json, category, body, seed, context);
     return replaceItem(json, category, index, body, context);
+  }
+
+  if (category === "squadron") {
+    if (index == null) {
+      return getAdapter(category).insert(json, payload, context);
+    }
+    return replaceItem(json, category, index, payload, context);
   }
 
   if (category === "ship" || category === "multitool" || category === "freighter") {

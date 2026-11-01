@@ -42,7 +42,7 @@ export function GroupedSection({
           <h2 className="font-heading text-base leading-snug font-medium">
             {title}
           </h2>
-          <CardDescription>{description}</CardDescription>
+          {description ? <CardDescription>{description}</CardDescription> : null}
         </CardHeader>
         {children ? (
           <CardContent

@@ -69,6 +69,7 @@ function emptyItems(): ItemsByCategory {
     exosuit: [],
     freighter: [],
     frigate: [],
+    squadron: [],
     base: [],
     deepspace: [],
     spacestation: [],

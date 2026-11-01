@@ -115,6 +115,19 @@ describe("autoTagsFromSlot", () => {
     ).toEqual(["SSS Class", "Toxic", "TREX", "Level 30", "Toxic Biome"]);
   });
 
+  it("squadron leva rank, tipo, categoria e raça, sem o flag de liberado", () => {
+    expect(
+      autoTagsFromSlot(
+        slot({
+          category: "squadron",
+          className: "Ace",
+          itemType: "Exotic",
+          extra: { rank: "Ace", race: "Vy'keen", unlocked: "true" },
+        }),
+      ),
+    ).toEqual(["Ace", "Exotic", "Squadron", "Vy'keen"]);
+  });
+
   it("usa a mesma ordem em freighter e frigate", () => {
     expect(
       autoTagsFromSlot(

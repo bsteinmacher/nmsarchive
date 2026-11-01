@@ -53,6 +53,11 @@ describe("shipTypeFromFilename", () => {
       shipTypeFromFilename("MODELS/COMMON/SPACECRAFT/S-CLASS/BIGGS.SCENE.MBIN"),
     ).toBe("Exotic");
     expect(
+      shipTypeFromFilename(
+        "MODELS/COMMON/SPACECRAFT/S-CLASS/S-CLASS_PROC.SCENE.MBIN",
+      ),
+    ).toBe("Exotic");
+    expect(
       shipTypeFromFilename("MODELS/COMMON/SPACECRAFT/CORVETTE/CORVETTE.SCENE.MBIN"),
     ).toBe("Corvette");
   });

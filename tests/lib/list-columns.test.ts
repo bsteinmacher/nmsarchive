@@ -67,9 +67,11 @@ describe("list-columns", () => {
     expect(saveFreighterColumns("squadron").map((col) => col.header)).toEqual([
       "Rank",
       "Type",
-      "Traits",
+      "Race",
     ]);
-    expect(saveFreighterColumns("squadron")[2]?.reserved).toBe(true);
+    expect(saveFreighterColumns("squadron").some((col) => col.reserved)).toBe(
+      false,
+    );
     expect(saveBaseColumns().map((col) => col.header)).toEqual([
       "Type",
       "Objects",
