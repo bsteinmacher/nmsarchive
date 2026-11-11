@@ -10,9 +10,11 @@ import {
 } from "../value";
 import {
   mergeApply,
+  mergeApplyParts,
   MULTITOOL_MERGE,
   stripSpecGrids,
   type ApplyDepth,
+  type ApplyParts,
 } from "./apply-depth";
 import {
   insertAtFirstEmpty,
@@ -145,6 +147,7 @@ export function applyMultitool(
   payload: unknown,
   depth: ApplyDepth = "model",
   context: SaveContext = "main",
+  parts?: ApplyParts,
 ): InsertResult {
   const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
@@ -159,7 +162,9 @@ export function applyMultitool(
   if (!source) return { ok: false, error: "Payload de multi-tool inválido." };
   tools[index] = isEmptyMultitoolSlot(tools[index])
     ? stripSpecGrids(structuredClone(source), MULTITOOL_MERGE)
-    : mergeApply(tools[index], source, depth, MULTITOOL_MERGE);
+    : depth === "model" && parts
+      ? mergeApplyParts(tools[index], source, MULTITOOL_MERGE, parts)
+      : mergeApply(tools[index], source, depth, MULTITOOL_MERGE);
   syncCurrentWeapon(cloned.player, index);
   return { ok: true, index, json: cloned.json };
 }
