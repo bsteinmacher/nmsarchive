@@ -14,10 +14,13 @@ import {
 } from "@/components/ui/dialog";
 import {
   APPLY_OVERLAY_MODES,
+  applyPartOptions,
   applyTargetSlots,
+  defaultApplyParts,
   payloadTypeLabel,
   usesApplyDepth,
   type ApplyDepth,
+  type ApplyParts,
 } from "@/lib/nms/extract/apply-depth";
 import type { ExtractedSlot } from "@/lib/nms/extract/types";
 import { asRecord, asString } from "@/lib/nms/value";
@@ -54,6 +57,7 @@ type Draft = {
   target: "new" | "overlay";
   overlayIndex: number | null;
   depth: ApplyDepth;
+  parts: ApplyParts;
   pickedId: string | null;
 };
 
@@ -80,6 +84,7 @@ export function ApplyToSaveDialog({
     target: "new",
     overlayIndex: null,
     depth: "model",
+    parts: defaultApplyParts("ship"),
     pickedId: null,
   });
   const [pending, setPending] = useState(false);
@@ -132,6 +137,9 @@ export function ApplyToSaveDialog({
       target: destSlot && !destSlot.empty ? "overlay" : canCreate ? "new" : "overlay",
       overlayIndex,
       depth: "model",
+      parts: defaultApplyParts(
+        category && usesApplyDepth(category) ? category : "ship",
+      ),
       pickedId: null,
     });
   }
@@ -170,7 +178,15 @@ export function ApplyToSaveDialog({
       const options =
         draft.target === "new"
           ? undefined
-          : { index: overlaySlot?.index, depth: draft.depth };
+          : {
+              index: overlaySlot?.index,
+              depth: draft.depth,
+              ...(category &&
+              usesApplyDepth(category) &&
+              draft.depth === "model"
+                ? { parts: draft.parts }
+                : {}),
+            };
       const index = await importItem(item, options);
       const destName = overlaySlot?.name ?? destSlot?.name;
       const slotName = destName ?? `slot ${index + 1}`;
@@ -370,6 +386,35 @@ export function ApplyToSaveDialog({
                       </span>
                     </button>
                   ))}
+                  {draft.depth === "model" ? (
+                    <div className="grid gap-2 pt-1">
+                      <p className="text-sm font-medium">O que levar do item</p>
+                      <div className="grid gap-1.5">
+                        {applyPartOptions(category).map((part) => (
+                          <label
+                            key={part.id}
+                            className="flex items-center gap-2 text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              className="size-4 accent-primary"
+                              checked={draft.parts[part.id]}
+                              onChange={() =>
+                                setDraft({
+                                  ...draft,
+                                  parts: {
+                                    ...draft.parts,
+                                    [part.id]: !draft.parts[part.id],
+                                  },
+                                })
+                              }
+                            />
+                            {part.label}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                 </fieldset>
                 ) : null}
               </div>

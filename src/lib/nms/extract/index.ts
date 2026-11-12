@@ -167,11 +167,14 @@ export function applyItem(
       return getAdapter(category).insert(json, payload, context);
     }
     const overlay = request?.depth ?? "model";
-    if (category === "ship") return applyShip(json, index, payload, overlay, context);
-    if (category === "multitool") {
-      return applyMultitool(json, index, payload, overlay, context);
+    const parts = overlay === "model" ? request?.parts : undefined;
+    if (category === "ship") {
+      return applyShip(json, index, payload, overlay, context, parts);
     }
-    return applyFreighter(json, index, payload, overlay, context);
+    if (category === "multitool") {
+      return applyMultitool(json, index, payload, overlay, context, parts);
+    }
+    return applyFreighter(json, index, payload, overlay, context, parts);
   }
 
   return insertItem(json, category, payload, seed, context);

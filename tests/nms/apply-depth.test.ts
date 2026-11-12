@@ -123,6 +123,64 @@ describe("apply ship depths", () => {
     );
   });
 
+  it("re-skin da nave só leva inventário e tech quando marcados", () => {
+    const dest = {
+      ...destShip,
+      Inventory: {
+        ...destShip.Inventory,
+        ValidSlotIndices: [
+          { X: 0, Y: 0 },
+          { X: 1, Y: 0 },
+        ],
+      },
+    };
+    const source = {
+      ...sourceShip,
+      Inventory: {
+        ...sourceShip.Inventory,
+        ValidSlotIndices: [
+          { X: 0, Y: 0 },
+          { X: 2, Y: 1 },
+          { X: 4, Y: 1 },
+        ],
+      },
+    };
+    const held = {
+      name: false,
+      model: true,
+      class: true,
+      slots: false,
+      inventory: false,
+      technologies: false,
+      origin: false,
+    };
+    const kept = applyItem(saveWith(dest, false), "ship", source, "0x222", "main", {
+      index: 0,
+      depth: "model",
+      parts: held,
+    });
+    expect(kept.ok).toBe(true);
+    if (!kept.ok) return;
+    expect(asRecord(ownershipAt(kept.json)?.Inventory)?.Slots).toEqual([
+      tech("DEST_TECH", 0, 0),
+      product("DEST_CARGO", 1, 0),
+    ]);
+
+    const taken = applyItem(saveWith(dest, false), "ship", source, "0x222", "main", {
+      index: 0,
+      depth: "model",
+      parts: { ...held, slots: true, inventory: true, technologies: true },
+    });
+    expect(taken.ok).toBe(true);
+    if (!taken.ok) return;
+    const inventory = asRecord(ownershipAt(taken.json)?.Inventory);
+    expect(inventory?.Slots).toEqual([
+      tech("SRC_TECH", 2, 1),
+      product("SRC_CARGO", 4, 1),
+    ]);
+    expect(inventory?.Width).toBe(8);
+  });
+
   it("trocar leva slots e tech da origem e esvazia a carga", () => {
     const result = applyShip(saveWith(destShip, false), 0, sourceShip, "tech");
     expect(result.ok).toBe(true);
@@ -384,12 +442,13 @@ describe("apply multitool and freighter", () => {
     });
   });
 
-  it("modelo da cargueira atual troca o resource e mantém nome, sistema e carga", () => {
+  it("modelo da cargueira atual troca visual, nome e origem e mantém a carga", () => {
     const save = {
       BaseContext: {
         PlayerStateData: {
           PlayerFreighterName: "Meu freighter",
           CurrentFreighterHomeSystemSeed: [true, "0xHOME"],
+          FreighterUniverseAddress: [true, "0xADDR"],
           CurrentFreighter: {
             Filename: "MODELS/PIRATEFREIGHTER.SCENE.MBIN",
             Seed: [true, "0x1"],
@@ -418,10 +477,11 @@ describe("apply multitool and freighter", () => {
           Slots: [product("NEW", 1, 1)],
           Name: "other",
         },
-        Inventory_TechOnly: { Class: { InventoryClass: "S" } },
+        Inventory_TechOnly: { Class: { InventoryClass: "S" }, Name: "tech" },
         Inventory_Cargo: { Class: { InventoryClass: "S" } },
         PlayerFreighterName: "Arquivado",
         CurrentFreighterHomeSystemSeed: [true, "0xOTHER"],
+        FreighterUniverseAddress: [true, "0xARCH"],
       },
       "0x2",
       "main",
@@ -430,14 +490,148 @@ describe("apply multitool and freighter", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const player = getPlayerState(result.json);
-    expect(player?.PlayerFreighterName).toBe("Meu freighter");
-    expect(player?.CurrentFreighterHomeSystemSeed).toEqual([true, "0xHOME"]);
+    expect(player?.PlayerFreighterName).toBe("Arquivado");
+    expect(player?.CurrentFreighterHomeSystemSeed).toEqual([true, "0xOTHER"]);
+    expect(player?.FreighterUniverseAddress).toEqual([true, "0xARCH"]);
     expect(asString(asRecord(player?.CurrentFreighter)?.Filename)).toContain(
       "CAPITAL",
     );
     const inventory = asRecord(player?.FreighterInventory);
     expect(asString(asRecord(inventory?.Class)?.InventoryClass)).toBe("S");
+    expect(inventory?.Name).toBe("other");
     expect(inventory?.Slots).toEqual([product("KEEP", 0, 0)]);
+    expect(asRecord(player?.FreighterInventory_TechOnly)?.Name).toBe("tech");
+  });
+
+  it("re-skin da cargueira mantém a classe quando ela não vem marcada", () => {
+    const save = {
+      BaseContext: {
+        PlayerStateData: {
+          PlayerFreighterName: "Meu freighter",
+          CurrentFreighterHomeSystemSeed: [true, "0xHOME"],
+          FreighterUniverseAddress: [true, "0xADDR"],
+          CurrentFreighter: {
+            Filename: "MODELS/PIRATEFREIGHTER.SCENE.MBIN",
+            Seed: [true, "0x1"],
+          },
+          FreighterInventory: {
+            Class: { InventoryClass: "S" },
+            Slots: [product("KEEP", 0, 0)],
+            Name: "inv",
+          },
+          FreighterInventory_TechOnly: { Class: { InventoryClass: "S" } },
+          FreighterInventory_Cargo: { Class: { InventoryClass: "S" } },
+        },
+      },
+    };
+    const result = applyItem(
+      save,
+      "freighter",
+      {
+        kind: "current",
+        Resource: {
+          Filename: "MODELS/CAPITALFREIGHTER.SCENE.MBIN",
+          Seed: [true, "0x2"],
+        },
+        Inventory: {
+          Class: { InventoryClass: "A" },
+          Slots: [product("NEW", 1, 1)],
+          Name: "Iris",
+        },
+        Inventory_TechOnly: { Class: { InventoryClass: "A" } },
+        Inventory_Cargo: { Class: { InventoryClass: "A" } },
+        PlayerFreighterName: "Iris",
+        CurrentFreighterHomeSystemSeed: [true, "0xOTHER"],
+        FreighterUniverseAddress: [true, "0xARCH"],
+      },
+      "0x2",
+      "main",
+      {
+        index: 0,
+        depth: "model",
+        parts: {
+          name: true,
+          model: true,
+          class: false,
+          slots: false,
+          inventory: false,
+          technologies: false,
+          origin: true,
+        },
+      },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const player = getPlayerState(result.json);
+    expect(player?.PlayerFreighterName).toBe("Iris");
+    expect(player?.CurrentFreighterHomeSystemSeed).toEqual([true, "0xOTHER"]);
+    expect(player?.FreighterUniverseAddress).toEqual([true, "0xARCH"]);
+    expect(asString(asRecord(player?.CurrentFreighter)?.Filename)).toContain(
+      "CAPITAL",
+    );
+    const inventory = asRecord(player?.FreighterInventory);
+    expect(asString(asRecord(inventory?.Class)?.InventoryClass)).toBe("S");
+    expect(inventory?.Name).toBe("Iris");
+    expect(inventory?.Slots).toEqual([product("KEEP", 0, 0)]);
+  });
+
+  it("modelo da frota troca resource, nome e sistema e mantém a carga", () => {
+    const save = {
+      BaseContext: {
+        PlayerStateData: {
+          CurrentFreighter: { Filename: "A", Seed: [true, "0x1"] },
+          FreighterFleet: [
+            {
+              HomeSystemSeed: [true, "0xHOME"],
+              Resource: {
+                Filename: "MODELS/PIRATEFREIGHTER.SCENE.MBIN",
+                Seed: [true, "0x1"],
+              },
+              Inventory: {
+                Class: { InventoryClass: "C" },
+                Slots: [product("KEEP", 0, 0)],
+                Name: "Minha",
+              },
+              Inventory_TechOnly: { Class: { InventoryClass: "C" } },
+              Inventory_Cargo: { Class: { InventoryClass: "C" } },
+            },
+          ],
+        },
+      },
+    };
+    const result = applyItem(
+      save,
+      "freighter",
+      {
+        kind: "fleet",
+        HomeSystemSeed: [true, "0xOTHER"],
+        Resource: {
+          Filename: "MODELS/CAPITALFREIGHTER.SCENE.MBIN",
+          Seed: [true, "0x2"],
+        },
+        Inventory: {
+          Class: { InventoryClass: "S" },
+          Slots: [product("NEW", 1, 1)],
+          Name: "Arquivada",
+        },
+        Inventory_TechOnly: { Class: { InventoryClass: "S" } },
+        Inventory_Cargo: { Class: { InventoryClass: "S" } },
+      },
+      "0x2",
+      "main",
+      { index: 1, depth: "model" },
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const slot = asRecord(
+      asArray(getPlayerState(result.json)?.FreighterFleet)?.[0],
+    );
+    expect(slot?.HomeSystemSeed).toEqual([true, "0xOTHER"]);
+    expect(asString(asRecord(slot?.Resource)?.Filename)).toContain("CAPITAL");
+    const inventory = asRecord(slot?.Inventory);
+    expect(inventory?.Name).toBe("Arquivada");
+    expect(inventory?.Slots).toEqual([product("KEEP", 0, 0)]);
+    expect(asString(asRecord(inventory?.Class)?.InventoryClass)).toBe("S");
   });
 
   it("trocar a multi-tool leva tech da origem e esvazia o store", () => {

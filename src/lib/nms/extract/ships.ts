@@ -11,9 +11,11 @@ import {
 } from "../value";
 import {
   mergeApply,
+  mergeApplyParts,
   SHIP_MERGE,
   stripSpecGrids,
   type ApplyDepth,
+  type ApplyParts,
 } from "./apply-depth";
 import { clonePlayer, inventoryClass } from "./array";
 import { basePersistentType } from "./bases";
@@ -307,6 +309,7 @@ export function applyShip(
   payload: unknown,
   depth: ApplyDepth = "model",
   context: SaveContext = "main",
+  parts?: ApplyParts,
 ): InsertResult {
   const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
@@ -321,15 +324,19 @@ export function applyShip(
   const ownership = unpackShipOwnership(payload);
   if (isEmptyShipSlot(ships[index])) {
     ships[index] = stripSpecGrids(structuredClone(ownership), SHIP_MERGE);
+  } else if (depth === "model" && parts) {
+    ships[index] = mergeApplyParts(ships[index], ownership, SHIP_MERGE, parts);
   } else {
     ships[index] = mergeApply(ships[index], ownership, depth, SHIP_MERGE);
   }
-  applyShipVisuals(
-    cloned.player,
-    index,
-    packed ? payload.customisation : undefined,
-    packed ? payload.hull : undefined,
-  );
+  if (!parts || parts.model) {
+    applyShipVisuals(
+      cloned.player,
+      index,
+      packed ? payload.customisation : undefined,
+      packed ? payload.hull : undefined,
+    );
+  }
   const legacy = asArray(cloned.player.ShipUsesLegacyColours);
   if (legacy && index < legacy.length) legacy[index] = false;
   return { ok: true, index, json: cloned.json };

@@ -10,10 +10,13 @@ import {
 import {
   FREIGHTER_MERGE,
   mergeApply,
+  mergeApplyParts,
   mergeGrid,
+  mergeGridParts,
   stripGridCargo,
   stripSpecGrids,
   type ApplyDepth,
+  type ApplyParts,
 } from "./apply-depth";
 import { clonePlayer, inventoryClass } from "./array";
 import type { CategoryAdapter, ExtractedSlot, InsertResult } from "./types";
@@ -181,16 +184,59 @@ const FREIGHTER_GRIDS = [
   ["FreighterInventory_Cargo", "Inventory_Cargo"],
 ] as const;
 
-function applyCurrentMerged(
+const FLEET_GRID_KEYS = [
+  "Inventory",
+  "Inventory_TechOnly",
+  "Inventory_Cargo",
+] as const;
+
+/** Nome da grade vem da origem; slots do destino ficam. */
+function withGridName(grid: unknown, sourceGrid: unknown): unknown {
+  const source = asRecord(sourceGrid);
+  const dest = asRecord(grid);
+  if (!source || !dest || !("Name" in source)) return grid;
+  return { ...dest, Name: structuredClone(source.Name) };
+}
+
+function copyFleetGridNames(
+  dest: Record<string, unknown>,
+  source: Record<string, unknown>,
+): Record<string, unknown> {
+  const next = dest;
+  for (const key of FLEET_GRID_KEYS) {
+    if (!(key in next)) continue;
+    next[key] = withGridName(next[key], source[key]);
+  }
+  return next;
+}
+
+function applyCurrentParts(
   mappedJson: unknown,
   payload: CurrentFreighterPayload,
-  depth: ApplyDepth,
+  parts: ApplyParts,
   context: SaveContext,
 ): InsertResult {
   const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
-  cloned.player.CurrentFreighter = structuredClone(payload.Resource);
-  if (depth === "tech") {
+  if (parts.model) {
+    cloned.player.CurrentFreighter = structuredClone(payload.Resource);
+  }
+  if (parts.name && "PlayerFreighterName" in payload) {
+    cloned.player.PlayerFreighterName = structuredClone(payload.PlayerFreighterName);
+  }
+  if (parts.origin) {
+    if ("CurrentFreighterHomeSystemSeed" in payload) {
+      cloned.player.CurrentFreighterHomeSystemSeed = structuredClone(
+        payload.CurrentFreighterHomeSystemSeed,
+      );
+    }
+    if ("FreighterUniverseAddress" in payload) {
+      cloned.player.FreighterUniverseAddress = structuredClone(
+        payload.FreighterUniverseAddress,
+      );
+    }
+  }
+  if (parts.slots) {
     if ("FreighterLayout" in payload) {
       cloned.player.FreighterLayout = structuredClone(payload.FreighterLayout);
     }
@@ -203,11 +249,60 @@ function applyCurrentMerged(
   for (const [playerKey, payloadKey] of FREIGHTER_GRIDS) {
     const source = payload[payloadKey];
     if (source == null && cloned.player[playerKey] == null) continue;
-    cloned.player[playerKey] = mergeGrid(
+    cloned.player[playerKey] = mergeGridParts(
       cloned.player[playerKey],
       source,
-      depth,
+      parts,
     );
+  }
+  return { ok: true, json: cloned.json, index: 0 };
+}
+
+function applyCurrentMerged(
+  mappedJson: unknown,
+  payload: CurrentFreighterPayload,
+  depth: ApplyDepth,
+  context: SaveContext,
+  parts?: ApplyParts,
+): InsertResult {
+  if (depth === "model" && parts) {
+    return applyCurrentParts(mappedJson, payload, parts, context);
+  }
+  const cloned = clonePlayer(mappedJson, context);
+  if ("error" in cloned) return { ok: false, error: cloned.error };
+  cloned.player.CurrentFreighter = structuredClone(payload.Resource);
+  if (depth === "tech") {
+    if ("FreighterLayout" in payload) {
+      cloned.player.FreighterLayout = structuredClone(payload.FreighterLayout);
+    }
+    if ("FreighterCargoLayout" in payload) {
+      cloned.player.FreighterCargoLayout = structuredClone(
+        payload.FreighterCargoLayout,
+      );
+    }
+  } else {
+    if ("PlayerFreighterName" in payload) {
+      cloned.player.PlayerFreighterName = structuredClone(
+        payload.PlayerFreighterName,
+      );
+    }
+    if ("CurrentFreighterHomeSystemSeed" in payload) {
+      cloned.player.CurrentFreighterHomeSystemSeed = structuredClone(
+        payload.CurrentFreighterHomeSystemSeed,
+      );
+    }
+    if ("FreighterUniverseAddress" in payload) {
+      cloned.player.FreighterUniverseAddress = structuredClone(
+        payload.FreighterUniverseAddress,
+      );
+    }
+  }
+  for (const [playerKey, payloadKey] of FREIGHTER_GRIDS) {
+    const source = payload[payloadKey];
+    if (source == null && cloned.player[playerKey] == null) continue;
+    const merged = mergeGrid(cloned.player[playerKey], source, depth);
+    cloned.player[playerKey] =
+      depth === "model" ? withGridName(merged, source) : merged;
   }
   return { ok: true, json: cloned.json, index: 0 };
 }
@@ -226,6 +321,7 @@ export function applyFreighter(
   payload: unknown,
   depth: ApplyDepth = "model",
   context: SaveContext = "main",
+  parts?: ApplyParts,
 ): InsertResult {
   if (index === 0 || isCurrentPayload(payload)) {
     if (!isCurrentPayload(payload) || index !== 0) {
@@ -236,7 +332,7 @@ export function applyFreighter(
           : "Esta cargueira é da frota e não entra no slot Atual.",
       };
     }
-    return applyCurrentMerged(mappedJson, payload, depth, context);
+    return applyCurrentMerged(mappedJson, payload, depth, context, parts);
   }
   const cloned = clonePlayer(mappedJson, context);
   if ("error" in cloned) return { ok: false, error: cloned.error };
@@ -251,9 +347,17 @@ export function applyFreighter(
   const source = fleetBody(payload);
   if (!source) return { ok: false, error: "Payload de cargueira inválido." };
   const empty = isEmptyFreighterResource(asRecord(fleet[fleetIndex])?.Resource);
-  fleet[fleetIndex] = empty
+  const merged = empty
     ? stripSpecGrids(structuredClone(source), FREIGHTER_MERGE)
-    : mergeApply(fleet[fleetIndex], source, depth, FREIGHTER_MERGE);
+    : depth === "model" && parts
+      ? mergeApplyParts(fleet[fleetIndex], source, FREIGHTER_MERGE, parts, {
+          originKeys: ["HomeSystemSeed"],
+        })
+      : mergeApply(fleet[fleetIndex], source, depth, FREIGHTER_MERGE);
+  fleet[fleetIndex] =
+    !empty && depth === "model" && !parts
+      ? copyFleetGridNames(merged, source)
+      : merged;
   return { ok: true, json: cloned.json, index };
 }
 
