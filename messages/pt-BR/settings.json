@@ -23,7 +23,7 @@
   "size": "Tamanho",
   "when": "Quando",
   "restore": "Restaurar",
-  "noBackups": "Nenhum backup ainda. Arquivar uma Ship cria o primeiro.",
+  "noBackups": "Nenhum backup ainda. Arquivar uma nave cria o primeiro.",
   "mappingTitle": "mapping.json",
   "mappingDescription": "Cache em <code>data/mapping.json</code>, baixado do MBINCompiler. Depois de atualizar, abra o save de novo.",
   "mappingExpand": "Abrir mapping.json",

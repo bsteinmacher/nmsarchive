@@ -7,6 +7,7 @@ import {
   sessionCategoryForArchived,
 } from "@/lib/archive-match";
 import { useCategoryCopy, useColumnHeader } from "@/i18n/format";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { type AdapterColumn } from "@/lib/nms/extract";
 import {
   archiveColumnValue,
@@ -105,7 +106,9 @@ export function ItemTable({
                           ? categories.label(ui)
                           : item.category;
                       })()
-                    : archiveColumnValue(item, col) || "—"}
+                    : (col.id === "itemType"
+                        ? gameTermLabel(archiveColumnValue(item, col))
+                        : archiveColumnValue(item, col)) || "—"}
                 </TableCell>
               ))}
               <TableCell className="whitespace-normal text-muted-foreground">

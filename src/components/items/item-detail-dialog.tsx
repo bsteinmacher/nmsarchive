@@ -3,6 +3,7 @@
 import { useId, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useCategoryCopy } from "@/i18n/format";
+import { gameTermLabel } from "@/i18n/game-terms";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -329,7 +330,7 @@ export function ItemDetailDialog({
             <DialogDescription>
               {item
                 ? t("seedMeta", {
-                    type: item.shipType || categoryLabel,
+                    type: gameTermLabel(item.shipType) || categoryLabel,
                     seed: item.seed,
                   })
                 : t("loadingPersonal")}

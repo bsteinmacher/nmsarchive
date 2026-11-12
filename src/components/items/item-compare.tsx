@@ -3,6 +3,7 @@
 import { Check, Minus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useColumnHeader } from "@/i18n/format";
+import { gameTermLabel } from "@/i18n/game-terms";
 import {
   jsonDiff,
   jsonDiffHasChanges,
@@ -122,8 +123,9 @@ export function ItemCompare({
             </span>
             <span className="font-mono text-xs break-all text-muted-foreground">
               {t("archiveAndSave", {
-                archived: row.archived,
-                save: row.save,
+                archived:
+                  row.field === "itemType" ? gameTermLabel(row.archived) : row.archived,
+                save: row.field === "itemType" ? gameTermLabel(row.save) : row.save,
               })}
             </span>
           </li>

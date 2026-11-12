@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,7 +52,10 @@ function slotCaption(
   classLabel: (value: string) => string,
 ): string {
   const label = slot.slotLabel ?? String(slot.index + 1);
-  const type = [slot.itemType, slot.className ? classLabel(slot.className) : ""]
+  const type = [
+    slot.itemType ? gameTermLabel(slot.itemType) : "",
+    slot.className ? classLabel(slot.className) : "",
+  ]
     .filter(Boolean)
     .join(" · ");
   const name = slot.empty ? emptyLabel : slot.name;
@@ -265,7 +269,7 @@ export function ApplyToSaveDialog({
                   <p className="text-sm font-medium">{t("fromArchive")}</p>
                   {list.data?.items.map((archived) => {
                     const bits = [
-                      archived.shipType,
+                      archived.shipType ? gameTermLabel(archived.shipType) : "",
                       archived.className
                         ? common("classValue", { value: archived.className })
                         : "",
@@ -453,7 +457,10 @@ export function ApplyToSaveDialog({
 
             {typeChanges && overlaySlot ? (
               <p className="text-sm">
-                {t("typeBecomes", { dest: destType, source: sourceType })}
+                {t("typeBecomes", {
+                  dest: gameTermLabel(destType),
+                  source: gameTermLabel(sourceType),
+                })}
                 {draft.depth === "model" ? t("techMayNotFit") : t("slotsFromOrigin")}
               </p>
             ) : null}

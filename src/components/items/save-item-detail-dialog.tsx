@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -72,7 +73,7 @@ export function SaveItemDetailDialog({
     item?.extra.element || null,
     item?.extra.biome ? common("biomeValue", { value: item.extra.biome }) : null,
     item?.extra.level ? `${t("columns.level")} ${item.extra.level}` : null,
-    item?.itemType || null,
+    item?.itemType ? gameTermLabel(item.itemType) : null,
     item?.seed || null,
   ].filter(Boolean);
   const canImportModel =

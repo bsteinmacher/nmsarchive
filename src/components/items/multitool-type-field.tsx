@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { Label } from "@/components/ui/label";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { isMultitoolType, MULTITOOL_TYPES } from "@/lib/nms/multitool-type";
 import { cn } from "cn";
 
@@ -38,10 +39,10 @@ export function MultitoolTypeField({
         <option value="">{t("chooseType")}</option>
         {MULTITOOL_TYPES.map((type) => (
           <option key={type} value={type}>
-            {type}
+            {gameTermLabel(type)}
           </option>
         ))}
-        {extra ? <option value={extra}>{extra}</option> : null}
+        {extra ? <option value={extra}>{gameTermLabel(extra)}</option> : null}
       </select>
       <p className="text-xs text-muted-foreground">
         {t("multitoolTypeHint")}

@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { slotCardTags } from "@/lib/auto-tags";
 import { getAdapter, type AdapterColumn, type ExtractedSlot } from "@/lib/nms/extract";
 import type { Category } from "@/types/nms";
@@ -23,7 +24,7 @@ function dash(value: string) {
 
 export function columnValue(item: ExtractedSlot, col: AdapterColumn): string {
   if (col.id === "className") return item.className;
-  if (col.id === "itemType") return item.itemType;
+  if (col.id === "itemType") return gameTermLabel(item.itemType);
   if (col.id === "seed") return item.seed;
   return item.extra[col.id] ?? "";
 }

@@ -6,47 +6,47 @@
   "header": "Personal Archive",
   "categories": {
     "ship": {
-      "label": "Ships",
-      "description": "Slots do save aberto (vazios visíveis, arraste para reordenar) e Ships no arquivo."
+      "label": "Naves",
+      "description": "Slots do save aberto (vazios visíveis, arraste para reordenar) e naves no arquivo."
     },
     "multitool": {
-      "label": "Multi Tools",
-      "description": "Multi Tools do save (com vazios) e do arquivo pessoal."
+      "label": "Multi-ferramentas",
+      "description": "Multi-ferramentas do save (com vazios) e do arquivo pessoal."
     },
     "freighter": {
-      "label": "Freighters",
-      "description": "Freighter atual e a base do interior."
+      "label": "Cargueiras",
+      "description": "Cargueira atual e a base do interior."
     },
     "frigate": {
-      "label": "Frigates",
+      "label": "Fragatas",
       "description": "Frota na ordem da lista do jogo: função, depois classe (S, A, B, C), depois nome. Até 30."
     },
     "squadron": {
-      "label": "Squadron",
+      "label": "Esquadrão",
       "description": "Quatro pilotos. Arraste para reordenar. Arquivar leva o piloto, a nave e se o slot está liberado."
     },
     "companion": {
-      "label": "Companions",
+      "label": "Companheiros",
       "description": "Pets do save (com vazios) e do arquivo pessoal."
     },
     "wonder": {
-      "label": "Wonders",
-      "description": "Personal Wonders escolhidas pelo jogador."
+      "label": "Maravilhas",
+      "description": "Maravilhas pessoais escolhidas pelo jogador."
     },
     "exosuit": {
-      "label": "Exosuit",
+      "label": "Exotraje",
       "description": "Só slots liberados e posição das tecnologias — não o conteúdo de itens."
     },
     "base": {
       "label": "Bases",
-      "description": "Planet Bases, Deep Space e Space Stations. A base da Freighter fica em Freighters."
+      "description": "Bases planetárias, espaço profundo e estações espaciais. A base da cargueira fica em Cargueiras."
     },
     "deepspace": {
-      "label": "Deep Space Bases",
+      "label": "Bases no espaço profundo",
       "description": "Bases orbitais livres (COSMOS). Mesmo array das bases planetárias; não há limite separado no JSON."
     },
     "spacestation": {
-      "label": "Space Stations",
+      "label": "Estações espaciais",
       "description": "Estação espacial reivindicada (COSMOS). Até 20 por save; a 21ª é recusada na hora de aplicar."
     }
   }

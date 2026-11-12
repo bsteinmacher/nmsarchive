@@ -1,6 +1,6 @@
 {
   "metaTitle": "NMS Archive",
-  "metaDescription": "Arquivo pessoal de Ships, Multi Tools e descobertas de No Man's Sky.",
+  "metaDescription": "Arquivo pessoal de naves, multi-ferramentas e descobertas de No Man's Sky.",
   "cancel": "Cancelar",
   "save": "Salvar",
   "saving": "Salvando…",
@@ -40,7 +40,7 @@
   "detailsOfSlot": "Ver detalhes do slot {slot}",
   "reorderSlot": "Reordenar slot {slot}",
   "inSaveSlot": "No save · slot {slot}",
-  "classValue": "Class {value}",
+  "classValue": "Classe {value}",
   "rankValue": "Rank {value}",
   "biomeValue": "Biome {value}",
   "failApply": "Falha ao aplicar",

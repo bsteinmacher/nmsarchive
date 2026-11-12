@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useCategoryCopy } from "@/i18n/format";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ListViewToggle } from "@/components/items/list-view-toggle";
@@ -114,13 +115,13 @@ export function ArchiveFilters({
                 <optgroup key={group.id} label={categories.label(group.id)}>
                   {group.types.map((value) => (
                     <option key={`${group.id}-${value}`} value={value}>
-                      {value}
+                      {gameTermLabel(value)}
                     </option>
                   ))}
                 </optgroup>
               ))}
               {state.itemType && !flatTypes.includes(state.itemType) ? (
-                <option value={state.itemType}>{state.itemType}</option>
+                <option value={state.itemType}>{gameTermLabel(state.itemType)}</option>
               ) : null}
             </select>
           </div>
