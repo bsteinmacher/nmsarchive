@@ -1,6 +1,7 @@
 "use client";
 
 import { useId } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 
 export function ConfirmDeleteDialog({
@@ -20,6 +21,7 @@ export function ConfirmDeleteDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("common");
   const titleId = useId();
   const descId = useId();
   if (!open) return null;
@@ -48,7 +50,7 @@ export function ConfirmDeleteDialog({
             onClick={onCancel}
             disabled={pending}
           >
-            Cancelar
+            {t("cancel")}
           </Button>
           <Button
             type="button"
@@ -56,7 +58,7 @@ export function ConfirmDeleteDialog({
             onClick={onConfirm}
             disabled={pending}
           >
-            {pending ? "Excluindo…" : confirmLabel}
+            {pending ? t("deleting") : confirmLabel}
           </Button>
         </div>
       </div>

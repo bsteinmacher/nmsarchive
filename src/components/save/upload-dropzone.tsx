@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useSaveSession } from "@/stores/save-session";
 
 export function UploadDropzone() {
+  const t = useTranslations("save");
+  const common = useTranslations("common");
   const inputRef = useRef<HTMLInputElement>(null);
   const loadFile = useSaveSession((s) => s.loadFile);
   const status = useSaveSession((s) => s.status);
@@ -18,12 +21,12 @@ export function UploadDropzone() {
       if (!file) return;
       try {
         await loadFile(file);
-        toast.success(`Save carregado: ${file.name}`);
+        toast.success(t("saveLoaded", { name: file.name }));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Falha ao ler o save");
+        toast.error(err instanceof Error ? err.message : common("failReadSave"));
       }
     },
-    [loadFile],
+    [common, loadFile, t],
   );
 
   return (
@@ -52,9 +55,7 @@ export function UploadDropzone() {
         <Upload className="size-6" />
       )}
       <p>
-        {loading
-          ? "Decodificando LZ4 e aplicando mapping no worker…"
-          : "Solte um save.hg aqui. Nada é enviado ao servidor."}
+        {loading ? t("decoding") : t("dropSave")}
       </p>
       <input
         ref={inputRef}
@@ -71,7 +72,7 @@ export function UploadDropzone() {
         disabled={loading}
         onClick={() => inputRef.current?.click()}
       >
-        Escolher save.hg
+        {t("chooseSave")}
       </Button>
     </div>
   );

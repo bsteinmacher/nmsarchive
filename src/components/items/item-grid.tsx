@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
 import { screenshotPublicUrl } from "@/lib/screenshots";
 import type { ArchivedItemSummary } from "@/types/archive";
@@ -15,6 +16,7 @@ export function ItemGrid({
   items: ArchivedItemSummary[];
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("common");
   const sessionItems = useSaveSession((s) => s.items);
   const saveReady = useSaveSession((s) => s.status === "ready");
 
@@ -35,7 +37,7 @@ export function ItemGrid({
           <li key={item.id}>
             <article className="relative flex h-full min-h-11 w-full cursor-pointer flex-col gap-3 rounded-xl bg-card p-4 ring-1 ring-foreground/10">
               <CardOpenTarget
-                label={`Ver detalhes de ${title}`}
+                label={t("detailsOf", { title })}
                 onOpen={() => onSelect(item.id)}
               />
               {thumb ? (
@@ -54,7 +56,9 @@ export function ItemGrid({
               {slots.length > 0 ? (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                    No save · slot {slots[0].slotLabel ?? slots[0].index + 1}
+                    {t("inSaveSlot", {
+                      slot: slots[0].slotLabel ?? slots[0].index + 1,
+                    })}
                   </span>
                 </div>
               ) : null}

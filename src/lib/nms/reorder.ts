@@ -1,3 +1,5 @@
+import commonMessages from "../../../messages/pt-BR/common.json";
+
 /**
  * Troca dois índices sem compactar nem mudar o length.
  * Slots vazios participam. PLAN §2.7.5.
@@ -12,7 +14,7 @@ export function reorderSlots<T>(arr: T[], from: number, to: number): T[] {
     from >= arr.length ||
     to >= arr.length
   ) {
-    throw new Error("Índices de slot fora do array.");
+    throw new Error(commonMessages.slotOutOfRange);
   }
   const next = arr.slice();
   const tmp = next[from]!;

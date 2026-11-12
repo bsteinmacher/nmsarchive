@@ -9,6 +9,7 @@ import {
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { PrismaClient } from "@prisma/client";
+import settingsMessages from "../../messages/pt-BR/settings.json";
 import { BACKUP_KEEP_DEFAULT, BACKUP_NAME_RE } from "@/lib/validations";
 import { BACKUPS_DIR, resolveDatabasePath } from "@/server/paths";
 
@@ -118,7 +119,7 @@ export async function backupDatabase(opts?: {
 export function assertBackupFileName(fileName: string): string {
   const base = path.basename(fileName);
   if (base !== fileName || !BACKUP_NAME_RE.test(base)) {
-    throw new Error("Nome de backup inválido.");
+    throw new Error(settingsMessages.backupNameInvalid);
   }
   return base;
 }
@@ -134,7 +135,7 @@ export async function restoreFromBackupFile(opts: {
   const fileName = assertBackupFileName(opts.fileName);
   const source = path.join(backupsDir, fileName);
   if (!existsSync(source)) {
-    throw new Error("Backup não encontrado.");
+    throw new Error(settingsMessages.backupMissing);
   }
   await backupDatabase({
     dbPath,
@@ -156,11 +157,11 @@ export async function restoreFromBytes(opts: {
   const dbPath = opts.dbPath ?? resolveDatabasePath();
   const backupsDir = opts.backupsDir ?? BACKUPS_DIR;
   if (opts.bytes.byteLength < 16) {
-    throw new Error("Arquivo .db pequeno demais para ser um SQLite.");
+    throw new Error(settingsMessages.dbTooSmall);
   }
   const header = new TextDecoder("ascii").decode(opts.bytes.slice(0, 16));
   if (!header.startsWith("SQLite format 3")) {
-    throw new Error("O arquivo não parece um banco SQLite.");
+    throw new Error(settingsMessages.notSqlite);
   }
   await backupDatabase({
     dbPath,

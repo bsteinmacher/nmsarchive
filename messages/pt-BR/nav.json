@@ -1,0 +1,53 @@
+{
+  "archiveGroup": "Personal Archive",
+  "openSaveGroup": "Save aberto",
+  "dashboard": "Dashboard",
+  "settings": "Settings",
+  "header": "Personal Archive",
+  "categories": {
+    "ship": {
+      "label": "Ships",
+      "description": "Slots do save aberto (vazios visíveis, arraste para reordenar) e Ships no arquivo."
+    },
+    "multitool": {
+      "label": "Multi Tools",
+      "description": "Multi Tools do save (com vazios) e do arquivo pessoal."
+    },
+    "freighter": {
+      "label": "Freighters",
+      "description": "Freighter atual e a base do interior."
+    },
+    "frigate": {
+      "label": "Frigates",
+      "description": "Frota na ordem da lista do jogo: função, depois classe (S, A, B, C), depois nome. Até 30."
+    },
+    "squadron": {
+      "label": "Squadron",
+      "description": "Quatro pilotos. Arraste para reordenar. Arquivar leva o piloto, a nave e se o slot está liberado."
+    },
+    "companion": {
+      "label": "Companions",
+      "description": "Pets do save (com vazios) e do arquivo pessoal."
+    },
+    "wonder": {
+      "label": "Wonders",
+      "description": "Personal Wonders escolhidas pelo jogador."
+    },
+    "exosuit": {
+      "label": "Exosuit",
+      "description": "Só slots liberados e posição das tecnologias — não o conteúdo de itens."
+    },
+    "base": {
+      "label": "Bases",
+      "description": "Planet Bases, Deep Space e Space Stations. A base da Freighter fica em Freighters."
+    },
+    "deepspace": {
+      "label": "Deep Space Bases",
+      "description": "Bases orbitais livres (COSMOS). Mesmo array das bases planetárias; não há limite separado no JSON."
+    },
+    "spacestation": {
+      "label": "Space Stations",
+      "description": "Estação espacial reivindicada (COSMOS). Até 20 por save; a 21ª é recusada na hora de aplicar."
+    }
+  }
+}

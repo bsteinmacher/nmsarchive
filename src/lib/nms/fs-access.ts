@@ -1,3 +1,4 @@
+import saveMessages from "../../../messages/pt-BR/save.json";
 import { identifySaveFile } from "@/lib/nms/save-files";
 
 export type FsPermission = "granted" | "denied" | "prompt";
@@ -97,10 +98,10 @@ export function isPickerAbort(err: unknown): boolean {
 
 export function fsErrorMessage(err: unknown): string {
   if (err instanceof DOMException && err.name === "NotAllowedError") {
-    return "O navegador bloqueou a pasta. Escolha de novo para autorizar a gravação.";
+    return saveMessages.folderBlocked;
   }
   if (err instanceof Error && err.message) return err.message;
-  return "Falha ao acessar a pasta.";
+  return saveMessages.folderFailed;
 }
 
 export async function pickDirectory(options: {
@@ -110,7 +111,7 @@ export async function pickDirectory(options: {
 }): Promise<FsDirectoryHandle | null> {
   const picker = window.showDirectoryPicker;
   if (!picker) {
-    throw new Error("Este navegador não abre pasta. Use Chromium, ou solte o save.hg.");
+    throw new Error(saveMessages.folderUnsupported);
   }
   try {
     return await picker({

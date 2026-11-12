@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
+import saveMessages from "../../../messages/pt-BR/save.json";
 import path from "node:path";
 import {
   MAPPING_URL,
@@ -17,7 +18,7 @@ async function fetchRemoteMapping(
 ): Promise<{ json: unknown; parsed: MappingFile }> {
   const res = await fetchImpl(MAPPING_URL, { cache: "no-store" });
   if (!res.ok) {
-    throw new Error(`Falha ao baixar mapping.json (${res.status})`);
+    throw new Error(saveMessages.mappingDownload.replace("{status}", String(res.status)));
   }
   const json: unknown = await res.json();
   return { json, parsed: parseMappingFile(json) };

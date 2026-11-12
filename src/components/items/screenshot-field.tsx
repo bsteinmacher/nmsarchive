@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,8 @@ export function ScreenshotField({
   onPathChange: (path: string | null) => void;
   disabled?: boolean;
 }) {
+  const t = useTranslations("archive");
+  const common = useTranslations("common");
   const inputId = useId();
   const hintId = useId();
   const errorId = useId();
@@ -32,7 +35,7 @@ export function ScreenshotField({
       onPathChange(next);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Falha ao enviar a screenshot.",
+        err instanceof Error ? err.message : common("failScreenshot"),
       );
     } finally {
       setPending(false);
@@ -41,13 +44,13 @@ export function ScreenshotField({
 
   return (
     <div className="grid gap-2">
-      <Label htmlFor={inputId}>Screenshot</Label>
+      <Label htmlFor={inputId}>{t("screenshot")}</Label>
       {preview ? (
         <div className="relative overflow-hidden rounded-lg">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={preview}
-            alt="Screenshot do item"
+            alt={t("screenshotAlt")}
             className="aspect-video w-full object-cover outline outline-1 outline-[oklch(0_0_0_/_0.1)] dark:outline-[oklch(1_0_0_/_0.1)]"
           />
           <Button
@@ -59,7 +62,7 @@ export function ScreenshotField({
             disabled={disabled || pending}
           >
             <X aria-hidden="true" />
-            Remover foto
+            {t("removePhoto")}
           </Button>
         </div>
       ) : null}
@@ -84,11 +87,11 @@ export function ScreenshotField({
       ) : (
         <p id={hintId} className="text-xs text-muted-foreground">
           {pending ? (
-            "Convertendo para WebP…"
+            t("convertingWebp")
           ) : (
             <>
               <ImagePlus className="me-1 inline size-3.5 align-text-bottom" aria-hidden="true" />
-              JPEG, PNG ou WebP. Guardamos em WebP com no máximo 1 MB.
+              {t("screenshotHint")}
             </>
           )}
         </p>

@@ -1,4 +1,6 @@
 import { SCREENSHOT_MAX_BYTES } from "@/lib/screenshots";
+import archiveMessages from "../../messages/pt-BR/archive.json";
+import commonMessages from "../../messages/pt-BR/common.json";
 
 const SOURCE_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -7,7 +9,7 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
     canvas.toBlob(
       (blob) => {
         if (!blob) {
-          reject(new Error("Não foi possível converter a imagem para WebP."));
+          reject(new Error(archiveMessages.webpFailed));
           return;
         }
         resolve(blob);
@@ -21,10 +23,10 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
 /** Converte JPEG/PNG/WebP no browser para WebP ≤ 1 MB (o servidor só aceita WebP). */
 export async function prepareScreenshot(file: File): Promise<Blob> {
   if (!file.type.startsWith("image/") && file.type !== "") {
-    throw new Error("Escolha um arquivo de imagem.");
+    throw new Error(archiveMessages.chooseImage);
   }
   if (file.size > SOURCE_MAX_BYTES) {
-    throw new Error("A imagem original é grande demais. Escolha outra com até 8 MB.");
+    throw new Error(archiveMessages.imageTooBig);
   }
   if (file.type === "image/webp" && file.size <= SCREENSHOT_MAX_BYTES) {
     return file;
@@ -42,7 +44,7 @@ export async function prepareScreenshot(file: File): Promise<Blob> {
       canvas.height = Math.max(1, Math.round(height));
       const ctx = canvas.getContext("2d");
       if (!ctx) {
-        throw new Error("Não foi possível converter a imagem para WebP.");
+        throw new Error(archiveMessages.webpFailed);
       }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
@@ -56,7 +58,7 @@ export async function prepareScreenshot(file: File): Promise<Blob> {
     bitmap.close();
   }
 
-  throw new Error("Não deu para ficar abaixo de 1 MB. Escolha uma imagem menor.");
+  throw new Error(archiveMessages.under1mb);
 }
 
 export async function uploadScreenshot(file: File): Promise<string> {
@@ -68,10 +70,10 @@ export async function uploadScreenshot(file: File): Promise<string> {
     | { path?: string; error?: string }
     | null;
   if (!res.ok) {
-    throw new Error(payload?.error ?? "Falha ao enviar a screenshot.");
+    throw new Error(payload?.error ?? commonMessages.failScreenshot);
   }
   if (!payload?.path) {
-    throw new Error("Falha ao enviar a screenshot.");
+    throw new Error(commonMessages.failScreenshot);
   }
   return payload.path;
 }

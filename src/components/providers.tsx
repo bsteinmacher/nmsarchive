@@ -2,7 +2,8 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { httpBatchLink } from "@trpc/client";
-import { useState } from "react";
+import { NextIntlClientProvider, type AbstractIntlMessages } from "next-intl";
+import { useEffect, useState } from "react";
 import superjson from "superjson";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,8 +23,20 @@ function getQueryClient() {
   });
 }
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({
+  locale,
+  messages,
+  children,
+}: {
+  locale: string;
+  messages: AbstractIntlMessages;
+  children: React.ReactNode;
+}) {
   const [queryClient] = useState(getQueryClient);
+  const [timeZone, setTimeZone] = useState("America/Sao_Paulo");
+  useEffect(() => {
+    setTimeZone(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  }, []);
   const [trpcClient] = useState(() =>
     trpc.createClient({
       links: [
@@ -36,6 +49,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
   );
 
   return (
+    <NextIntlClientProvider
+      locale={locale}
+      messages={messages}
+      timeZone={timeZone}
+    >
     <ThemeProvider
       attribute="class"
       defaultTheme="dark"
@@ -52,5 +70,6 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
         </QueryClientProvider>
       </trpc.Provider>
     </ThemeProvider>
+    </NextIntlClientProvider>
   );
 }

@@ -7,13 +7,14 @@ import {
   screenshotFileName,
 } from "@/lib/screenshots";
 import { SCREENSHOTS_DIR } from "@/server/paths";
+import archiveMessages from "../../messages/pt-BR/archive.json";
 
 export function screenshotAbsolutePath(fileName: string): string {
   const base = screenshotFileName(fileName);
   const abs = path.resolve(SCREENSHOTS_DIR, base);
   const root = path.resolve(SCREENSHOTS_DIR);
   if (abs !== path.join(root, base)) {
-    throw new Error("Screenshot inválido.");
+    throw new Error(archiveMessages.screenshotInvalid);
   }
   return abs;
 }
@@ -29,7 +30,7 @@ export async function saveScreenshot(bytes: Uint8Array): Promise<string> {
 export async function readScreenshot(id: string): Promise<Uint8Array> {
   const abs = screenshotAbsolutePath(id);
   if (!existsSync(abs)) {
-    throw new Error("Screenshot não encontrada.");
+    throw new Error(archiveMessages.screenshotMissing);
   }
   return new Uint8Array(await readFile(abs));
 }

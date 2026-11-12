@@ -1,4 +1,6 @@
 import { z } from "zod";
+import archiveMessages from "../../messages/pt-BR/archive.json";
+import commonMessages from "../../messages/pt-BR/common.json";
 import { CATEGORIES, type Category } from "@/types/nms";
 import { getAdapter, seedFromPayload } from "@/lib/nms/extract";
 import { summarizePlayer } from "@/lib/nms/player";
@@ -55,11 +57,11 @@ export function parseNmsItem(text: string): NmsItemFile {
   try {
     json = JSON.parse(text);
   } catch {
-    throw new Error("Arquivo .nmsitem não é JSON válido.");
+    throw new Error(commonMessages.nmsitemBadJson);
   }
   const parsed = nmsItemSchema.safeParse(json);
   if (!parsed.success) {
-    throw new Error("Arquivo .nmsitem não segue o schema esperado.");
+    throw new Error(commonMessages.nmsitemBadSchema);
   }
   return parsed.data;
 }
@@ -88,7 +90,9 @@ export function gameVersionMismatch(
 ): string | null {
   const version = summarizePlayer(saveJson).gameVersion;
   if (item.gameVersion !== version) {
-    return `Versão do item (${item.gameVersion}) difere do save aberto (${version}).`;
+    return archiveMessages.versionDiffers
+      .replace("{item}", String(item.gameVersion))
+      .replace("{save}", String(version));
   }
   return null;
 }

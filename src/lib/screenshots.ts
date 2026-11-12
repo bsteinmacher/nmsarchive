@@ -1,4 +1,5 @@
 import { SCREENSHOT_FILE_RE } from "@/lib/validations";
+import archiveMessages from "../../messages/pt-BR/archive.json";
 
 export const SCREENSHOT_MAX_BYTES = 1_048_576;
 
@@ -42,17 +43,17 @@ export function detectScreenshotKind(bytes: Uint8Array): ScreenshotKind {
 
 export function assertStoredWebp(bytes: Uint8Array): void {
   if (bytes.byteLength === 0) {
-    throw new Error("Imagem vazia.");
+    throw new Error(archiveMessages.emptyImage);
   }
   if (bytes.byteLength > SCREENSHOT_MAX_BYTES) {
-    throw new Error("A imagem deve ter no máximo 1 MB.");
+    throw new Error(archiveMessages.imageMax);
   }
   const kind = detectScreenshotKind(bytes);
   if (kind === "svg") {
-    throw new Error("SVG não é aceito. Envie uma foto em WebP.");
+    throw new Error(archiveMessages.noSvg);
   }
   if (kind !== "webp") {
-    throw new Error("Envie a screenshot em WebP (máx. 1 MB).");
+    throw new Error(archiveMessages.sendWebp);
   }
 }
 
@@ -63,7 +64,7 @@ export function screenshotFileName(id: string): string {
     : `${trimmed}.webp`;
   const base = withExt.split(/[/\\]/).pop() ?? "";
   if (!SCREENSHOT_FILE_RE.test(base)) {
-    throw new Error("Screenshot inválido.");
+    throw new Error(archiveMessages.screenshotInvalid);
   }
   return base.toLowerCase();
 }

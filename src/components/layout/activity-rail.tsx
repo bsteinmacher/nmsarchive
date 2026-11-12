@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useShortDateTime } from "@/i18n/format";
 import { cn } from "cn";
 import { SaveActionsMenu } from "@/components/save/save-actions-menu";
 import { Button } from "@/components/ui/button";
@@ -24,21 +26,14 @@ import {
 const RAIL_EXPANDED = "w-80";
 const RAIL_COLLAPSED = "w-12";
 
-function formatWhen(date: Date) {
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 function isLifecycle(kind: SessionActivityEvent["kind"]) {
   return kind === "open" || kind === "save" || kind === "cancel";
 }
 
 function SessionEntry({ event }: { event: SessionActivityEvent }) {
-  const label = sessionActivityLabel(event);
+  const formatWhen = useShortDateTime();
+  const activity = useTranslations("settings.activity");
+  const label = sessionActivityLabel(event, activity);
   if (isLifecycle(event.kind)) {
     return (
       <li className="grid gap-1.5 px-2 py-2">
@@ -67,6 +62,7 @@ function SessionEntry({ event }: { event: SessionActivityEvent }) {
 }
 
 function ActivityFeed() {
+  const t = useTranslations("settings");
   const session = useSessionActivity();
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +79,7 @@ function ActivityFeed() {
     >
       {session.length === 0 ? (
         <p className="mt-auto px-3 py-2 text-sm text-muted-foreground">
-          Nenhuma alteração nesta sessão.
+          {t("activityEmpty")}
         </p>
       ) : (
         <ol className="mt-auto flex flex-col gap-0.5 p-3">
@@ -97,19 +93,20 @@ function ActivityFeed() {
 }
 
 function RailBody({ headingId }: { headingId: string }) {
+  const t = useTranslations("settings");
   const ready = useSaveSession((s) => s.status === "ready");
 
   return (
     <>
       <h2 id={headingId} className="sr-only">
-        Atividade da sessão
+        {t("activityHeading")}
       </h2>
       <ActivityFeed />
       <div className="grid shrink-0 gap-2 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <SaveActionsMenu />
         {!ready ? (
           <p className="text-xs text-muted-foreground">
-            Abra um save para gravar as alterações no jogo.
+            {t("activityNeedSave")}
           </p>
         ) : null}
       </div>
@@ -126,6 +123,7 @@ function RailToggle({
   dirty: boolean;
   controlsId?: string;
 }) {
+  const t = useTranslations("settings");
   return (
     <Button
       type="button"
@@ -136,11 +134,11 @@ function RailToggle({
       aria-label={
         dirty
           ? open
-            ? "Recolher atividade. Há alterações não salvas."
-            : "Abrir atividade. Há alterações não salvas."
+            ? t("activityCollapseDirty")
+            : t("activityOpenDirty")
           : open
-            ? "Recolher atividade"
-            : "Abrir atividade"
+            ? t("activityCollapse")
+            : t("activityOpen")
       }
       onClick={() => setActivityRailOpen(!open)}
     >
@@ -165,6 +163,7 @@ export function ActivityRailTrigger() {
 }
 
 export function ActivityRail() {
+  const t = useTranslations("settings");
   const isMobile = useIsMobile();
   const dirty = useSaveSession((s) => s.dirty);
   const headingId = useId();
@@ -180,15 +179,15 @@ export function ActivityRail() {
           showCloseButton={false}
           className="gap-0 p-0 sm:max-w-sm"
         >
-          <SheetTitle className="sr-only">Atividade da sessão</SheetTitle>
+          <SheetTitle className="sr-only">{t("activityHeading")}</SheetTitle>
           <SheetDescription className="sr-only">
-            Alterações do save aberto e gravação.
+            {t("activityDescription")}
           </SheetDescription>
           <div className="flex h-full min-h-0 flex-col">
             <div className="flex h-12 shrink-0 items-center gap-2 border-b px-2">
               <RailToggle open={open} dirty={dirty} controlsId={panelId} />
               <span className="font-heading text-sm font-medium">
-                Atividade
+                {t("activityTitle")}
               </span>
             </div>
             <RailBody headingId={headingId} />
@@ -220,7 +219,7 @@ export function ActivityRail() {
             !open && "sr-only",
           )}
         >
-          Atividade
+          {t("activityTitle")}
         </span>
       </div>
       <div

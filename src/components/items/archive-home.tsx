@@ -1,7 +1,9 @@
 "use client";
 
 import { Suspense, useEffect, useId, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useCategoryCopy } from "@/i18n/format";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive } from "lucide-react";
 import { cn } from "cn";
@@ -36,7 +38,6 @@ import { trpc } from "@/lib/trpc";
 import {
   archiveHref,
   SIDEBAR_CATEGORIES,
-  CATEGORY_META,
   type Category,
 } from "@/types/nms";
 
@@ -47,6 +48,9 @@ function ArchiveHomeInner({
   category?: Category;
   storedView?: ArchiveView;
 }) {
+  const t = useTranslations("archive");
+  const common = useTranslations("common");
+  const categories = useCategoryCopy();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -171,15 +175,14 @@ function ArchiveHomeInner({
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">
-          Personal Archive
+          {t("title")}
         </h1>
         <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          O que você guarda fica aqui, mesmo depois de fechar o browser. O save
-          aberto só copia de/para este arquivo.
+          {t("intro")}
         </p>
       </div>
 
-      <nav aria-label="Filtrar por categoria" className="flex flex-wrap gap-2">
+      <nav aria-label={t("filterByCategory")} className="flex flex-wrap gap-2">
         <Link
           href={withQuery("/")}
           className={cn(
@@ -189,10 +192,10 @@ function ArchiveHomeInner({
             }),
           )}
         >
-          All{totalAll ? ` (${totalAll})` : ""}
+          {common("all")}
+          {totalAll ? ` (${totalAll})` : ""}
         </Link>
         {SIDEBAR_CATEGORIES.map((slug) => {
-          const meta = CATEGORY_META[slug];
           const count = counts.data?.[slug] ?? 0;
           const active = category === slug;
           return (
@@ -206,7 +209,7 @@ function ArchiveHomeInner({
                 }),
               )}
             >
-              {meta.label}
+              {categories.label(slug)}
               {count ? ` (${count})` : ""}
             </Link>
           );
@@ -223,7 +226,7 @@ function ArchiveHomeInner({
       />
 
       {grouped && groupedLoading ? (
-        <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
+        <p className="text-sm text-muted-foreground">{common("loadingArchive")}</p>
       ) : grouped && groupedError ? (
         <p className="text-sm text-destructive">{groupedError.message}</p>
       ) : grouped && groupedTotal > 0 ? (
@@ -237,17 +240,14 @@ function ArchiveHomeInner({
           stations={groupedStations.data?.items}
         />
       ) : !grouped && list.isLoading ? (
-        <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
+        <p className="text-sm text-muted-foreground">{common("loadingArchive")}</p>
       ) : list.error ? (
         <p className="text-sm text-destructive">{list.error.message}</p>
       ) : items.length === 0 && filtersOn && categoryTotal > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Nenhum item com esses filtros</CardTitle>
-            <CardDescription>
-              Nada bate com a combinação atual. Limpe os filtros para ver o
-              arquivo de novo.
-            </CardDescription>
+            <CardTitle>{t("noMatchesTitle")}</CardTitle>
+            <CardDescription>{t("noMatchesBody")}</CardDescription>
           </CardHeader>
           <CardContent>
             <button
@@ -255,7 +255,7 @@ function ArchiveHomeInner({
               className={cn(buttonVariants())}
               onClick={() => setState({ tags: [], view: state.view })}
             >
-              Limpar filtros
+              {common("clearFilters")}
             </button>
           </CardContent>
         </Card>
@@ -270,20 +270,20 @@ function ArchiveHomeInner({
               <div>
                 <CardTitle>
                   {category
-                    ? `Nada em ${CATEGORY_META[category].label}`
-                    : "Nada arquivado ainda"}
+                    ? t("emptyCategory", { label: categories.label(category) })
+                    : t("emptyArchive")}
                 </CardTitle>
                 <CardDescription>
                   {category
-                    ? `Abra um save e, em ${CATEGORY_META[category].label}, use Arquivar com uma descrição.`
-                    : "Abra um save e use Arquivar com uma descrição. O que você guardar continua aqui depois de fechar o browser."}
+                    ? t("emptyCategoryHint", { label: categories.label(category) })
+                    : t("emptyArchiveHint")}
                 </CardDescription>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             <Link href="/save" className={cn(buttonVariants())}>
-              Abrir um save
+              {t("openSave")}
             </Link>
           </CardContent>
         </Card>
@@ -304,6 +304,13 @@ function ArchiveHomeInner({
   );
 }
 
+function ArchiveLoading() {
+  const common = useTranslations("common");
+  return (
+    <p className="text-sm text-muted-foreground">{common("loadingArchive")}</p>
+  );
+}
+
 export function ArchiveHome({
   category,
   storedView,
@@ -313,9 +320,7 @@ export function ArchiveHome({
 }) {
   return (
     <Suspense
-      fallback={
-        <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
-      }
+      fallback={<ArchiveLoading />}
     >
       <ArchiveHomeInner category={category} storedView={storedView} />
     </Suspense>

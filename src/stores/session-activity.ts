@@ -105,12 +105,27 @@ export function getSessionActivity() {
   return events;
 }
 
-export function sessionActivityLabel(event: SessionActivityEvent): string {
-  if (event.kind === "change") return event.label || "Alterou o save";
+export type ActivityTranslator = (
+  key:
+    | "changed"
+    | "opened"
+    | "openedNamed"
+    | "saved"
+    | "savedNamed"
+    | "cancelled"
+    | "cancelledNamed",
+  values?: { name: string },
+) => string;
+
+export function sessionActivityLabel(
+  event: SessionActivityEvent,
+  t: ActivityTranslator,
+): string {
+  if (event.kind === "change") return event.label || t("changed");
   const name = event.saveName || event.fileName || "";
-  if (event.kind === "open") return name ? `Abriu save ${name}` : "Abriu save";
-  if (event.kind === "save") return name ? `Salvou ${name}` : "Salvou";
-  return name ? `Cancelou ${name}` : "Cancelou";
+  if (event.kind === "open") return name ? t("openedNamed", { name }) : t("opened");
+  if (event.kind === "save") return name ? t("savedNamed", { name }) : t("saved");
+  return name ? t("cancelledNamed", { name }) : t("cancelled");
 }
 
 const EMPTY_EVENTS: SessionActivityEvent[] = [];

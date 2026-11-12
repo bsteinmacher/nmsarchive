@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { archivedToNmsItem } from "@/lib/archive-export";
@@ -21,6 +22,7 @@ export function ArchiveItemActions({
   item: ArchivedItemSummary;
   onDetails: () => void;
 }) {
+  const t = useTranslations("common");
   const utils = trpc.useUtils();
   const importItem = useSaveSession((s) => s.importItem);
   const saveReady = useSaveSession((s) => s.status === "ready");
@@ -35,9 +37,9 @@ export function ArchiveItemActions({
   async function commitApply(file: NmsItemFile) {
     try {
       const index = await importItem(file);
-      toast.success(`Aplicado no slot ${index + 1} do save aberto.`);
+      toast.success(t("appliedSlot", { slot: index + 1 }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao aplicar");
+      toast.error(err instanceof Error ? err.message : t("failApply"));
     } finally {
       setPending(null);
       setWarning(null);
@@ -50,7 +52,7 @@ export function ArchiveItemActions({
       const file = archivedToNmsItem(detail);
       if (!file) return;
       if (!saveReady) {
-        toast.error("Abra um save para aplicar este item num slot.");
+        toast.error(t("openSaveToApply"));
         return;
       }
       if (usesSlotPicker(file.category)) {
@@ -66,7 +68,7 @@ export function ArchiveItemActions({
       }
       await commitApply(file);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao aplicar");
+      toast.error(err instanceof Error ? err.message : t("failApply"));
     }
   }
 
@@ -76,9 +78,9 @@ export function ArchiveItemActions({
       const file = archivedToNmsItem(detail);
       if (!file) return;
       downloadNmsItemFile(file);
-      toast.success("Exportado .nmsitem");
+      toast.success(t("exportedNmsitem"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no export");
+      toast.error(err instanceof Error ? err.message : t("failExport"));
     }
   }
 
@@ -86,7 +88,7 @@ export function ArchiveItemActions({
     <>
       <div className="flex flex-wrap justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={onDetails}>
-          Ver detalhes
+          {t("details")}
         </Button>
         <ExportMenu
           variant="archive"

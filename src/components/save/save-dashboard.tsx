@@ -1,6 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { useIntegerFormat } from "@/i18n/format";
 import { Download, FileJson, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -55,10 +57,12 @@ function CurrencyStat({
   label,
   value,
   onEdit,
+  editLabel,
 }: {
   label: string;
   value: string;
   onEdit: () => void;
+  editLabel: string;
 }) {
   return (
     <div className="rounded-lg border bg-muted/20 px-3 py-2">
@@ -68,7 +72,7 @@ function CurrencyStat({
           type="button"
           size="icon-xs"
           variant="ghost"
-          aria-label={`Editar ${label}`}
+          aria-label={editLabel}
           className="text-muted-foreground hover:text-foreground"
           onClick={onEdit}
         >
@@ -80,7 +84,16 @@ function CurrencyStat({
   );
 }
 
+function code(chunks: ReactNode) {
+  return <code>{chunks}</code>;
+}
+
 export function SaveDashboard() {
+  const t = useTranslations("save");
+  const common = useTranslations("common");
+  const settings = useTranslations("settings");
+  const archive = useTranslations("archive");
+  const formatInteger = useIntegerFormat();
   const status = useSaveSession((s) => s.status);
   const summary = useSaveSession((s) => s.summary);
   const fileName = useSaveSession((s) => s.fileName);
@@ -131,7 +144,7 @@ export function SaveDashboard() {
       });
     }
     await clear();
-    toast.message("Sessão do save encerrada.");
+    toast.message(t("sessionEnded"));
   }
 
   function requestClose() {
@@ -145,9 +158,9 @@ export function SaveDashboard() {
   async function commitImport(item: NmsItemFile) {
     try {
       const index = await importItem(item);
-      toast.success(`Item importado no slot ${index + 1}`);
+      toast.success(common("importedSlot", { slot: index + 1 }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no import");
+      toast.error(err instanceof Error ? err.message : common("failImport"));
     } finally {
       setPendingItem(null);
       setVersionWarning(null);
@@ -160,7 +173,7 @@ export function SaveDashboard() {
     try {
       item = parseNmsItem(await file.text());
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Arquivo inválido");
+      toast.error(err instanceof Error ? err.message : common("invalidFile"));
       return;
     }
     if (usesSlotPicker(item.category)) {
@@ -176,9 +189,9 @@ export function SaveDashboard() {
     }
     try {
       const index = await importItem(item);
-      toast.success(`Item importado no slot ${index + 1}`);
+      toast.success(common("importedSlot", { slot: index + 1 }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no import");
+      toast.error(err instanceof Error ? err.message : common("failImport"));
     }
   }
 
@@ -186,21 +199,18 @@ export function SaveDashboard() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">
-          Save aberto
+          {t("title")}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          A pasta do jogo é deste computador. O JSON do save aberto fica no
-          IndexedDB. O .hg só passa pelo app local para abrir e gravar de volta.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("intro")}</p>
       </div>
 
       {status === "ready" && summary ? (
         <Card>
           <CardHeader className="border-b">
-            <CardTitle>{summary.saveName || fileName || "Save"}</CardTitle>
+            <CardTitle>{summary.saveName || fileName || t("fallbackName")}</CardTitle>
             <CardDescription>
-              {summary.saveSummary || "Sem SaveSummary"} · mapping{" "}
-              {mappingVersion}
+              {summary.saveSummary || t("noSummary")} ·{" "}
+              {t("mapping", { version: mappingVersion ?? "" })}
             </CardDescription>
             {expeditionAvailable ? (
               <CardAction>
@@ -209,32 +219,35 @@ export function SaveDashboard() {
             ) : null}
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <Stat label="Galaxy" value={summary.galaxyLabel} />
-            <Stat label="Tempo de jogo" value={formatPlayTime(summary.playTimeSec)} />
-            <Stat label="Modo" value={summary.gameModeLabel} />
+            <Stat label={t("galaxy")} value={summary.galaxyLabel} />
+            <Stat label={t("playTime")} value={formatPlayTime(summary.playTimeSec)} />
+            <Stat label={t("mode")} value={summary.gameModeLabel} />
             <div className="col-span-full grid gap-3 sm:grid-cols-3">
               <CurrencyStat
-                label="Units"
-                value={summary.units.toLocaleString("pt-BR")}
+                label={t("units")}
+                value={formatInteger(summary.units)}
+                editLabel={t("editCurrency", { label: t("units") })}
                 onEdit={() => setEditingCurrency("units")}
               />
               <CurrencyStat
-                label="Nanites"
-                value={summary.nanites.toLocaleString("pt-BR")}
+                label={t("nanites")}
+                value={formatInteger(summary.nanites)}
+                editLabel={t("editCurrency", { label: t("nanites") })}
                 onEdit={() => setEditingCurrency("nanites")}
               />
               <CurrencyStat
-                label="Quicksilver"
-                value={summary.specials.toLocaleString("pt-BR")}
+                label={t("quicksilver")}
+                value={formatInteger(summary.specials)}
+                editLabel={t("editCurrency", { label: t("quicksilver") })}
                 onEdit={() => setEditingCurrency("specials")}
               />
             </div>
             <Stat
-              label="Ships"
+              label={t("ships")}
               value={`${summary.shipCount} / ${summary.shipSlots}`}
             />
-            <Stat label="Plataforma" value={summary.platform || "—"} />
-            <Stat label="Versão" value={String(summary.gameVersion)} />
+            <Stat label={t("platform")} value={summary.platform || "—"} />
+            <Stat label={t("version")} value={String(summary.gameVersion)} />
           </CardContent>
           <CardFooter className="flex-wrap gap-2">
             <Button
@@ -243,26 +256,26 @@ export function SaveDashboard() {
                 try {
                   const items = exportAllShips();
                   if (items.length === 0) {
-                    toast.error("Nenhuma Ship preenchida.");
+                    toast.error(t("noFilledShips"));
                     return;
                   }
                   downloadNmsItemZip("ships.nmsitem.zip", items);
                 } catch (err) {
                   toast.error(
-                    err instanceof Error ? err.message : "Falha no export",
+                    err instanceof Error ? err.message : common("failExport"),
                   );
                 }
               }}
             >
               <FileJson />
-              Exportar todas
+              {t("exportAll")}
             </Button>
             <Button
               type="button"
               variant="outline"
               onClick={() => importRef.current?.click()}
             >
-              Importar .nmsitem
+              {t("importNmsitem")}
             </Button>
             <input
               ref={importRef}
@@ -281,7 +294,7 @@ export function SaveDashboard() {
               onClick={requestClose}
             >
               <Trash2 />
-              Fechar save
+              {t("closeSave")}
             </Button>
           </CardFooter>
         </Card>
@@ -290,13 +303,10 @@ export function SaveDashboard() {
           <CardHeader>
             <CardTitle>
               {status === "hydrating" || status === "loading"
-                ? "Carregando o save…"
-                : "Nenhum save aberto"}
+                ? t("loadingSave")
+                : t("noSave")}
             </CardTitle>
-            <CardDescription>
-              Abra a pasta do jogo ou solte um save.hg para ver galáxia, moedas
-              e naves.
-            </CardDescription>
+            <CardDescription>{t("noSaveHint")}</CardDescription>
           </CardHeader>
         </Card>
       )}
@@ -304,11 +314,14 @@ export function SaveDashboard() {
       {unknownKeys.length > 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>Chaves desconhecidas</CardTitle>
+            <CardTitle>{t("unknownKeys")}</CardTitle>
             <CardDescription>
               {newerMapping
-                ? `O MBINCompiler publicou o mapping ${mappingAvailability.data?.remoteVersion} (o cache está em ${mappingAvailability.data?.localVersion}). Atualize o mapping e abra o save de novo.`
-                : `O mapping não cobriu ${unknownKeys.length} chave(s). O parser as manteve como estão.`}
+                ? t("newerMapping", {
+                    remote: mappingAvailability.data?.remoteVersion ?? "",
+                    local: mappingAvailability.data?.localVersion ?? "",
+                  })
+                : t("uncoveredKeys", { count: unknownKeys.length })}
             </CardDescription>
           </CardHeader>
           <CardContent className="font-mono text-xs">
@@ -332,8 +345,8 @@ export function SaveDashboard() {
                       }
                       toast.success(
                         reparsed
-                          ? `mapping.json ${result.libMBIN_version}. O save foi lido de novo.`
-                          : `mapping.json ${result.libMBIN_version}. Abra o save de novo para aplicar.`,
+                          ? t("mappingReparsed", { version: result.libMBIN_version })
+                          : settings("mappingUpdated", { version: result.libMBIN_version }),
                       );
                       await Promise.all([
                         utils.settings.get.invalidate(),
@@ -344,13 +357,13 @@ export function SaveDashboard() {
                       toast.error(
                         err instanceof Error
                           ? err.message
-                          : "Falha ao atualizar mapping",
+                          : settings("mappingFailed"),
                       );
                     }
                   })();
                 }}
               >
-                {updateMapping.isPending ? "Baixando…" : "Atualizar mapping.json"}
+                {updateMapping.isPending ? settings("downloading") : settings("updateMapping")}
               </Button>
             </CardFooter>
           ) : null}
@@ -363,15 +376,10 @@ export function SaveDashboard() {
       />
 
       <CollapsibleCard
-        title="Arquivo avulso"
-        description={
-          <>
-            Sem a pasta, a gravação volta a ser download. O app não lê nem
-            regenera <code>mf_save</code>.
-          </>
-        }
-        expandLabel="Abrir arquivo avulso"
-        collapseLabel="Recolher arquivo avulso"
+        title={t("looseTitle")}
+        description={t.rich("looseDescription", { code })}
+        expandLabel={t("looseExpand")}
+        collapseLabel={t("looseCollapse")}
         expanded={sourcePanel === "loose"}
         onExpandedChange={() => toggleSource("loose")}
         contentClassName="space-y-3"
@@ -384,7 +392,7 @@ export function SaveDashboard() {
           <DropdownMenu>
             <DropdownMenuTrigger render={<Button variant="outline" />}>
               <Download />
-              Baixar cópia
+              {t("downloadCopy")}
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem
@@ -401,13 +409,13 @@ export function SaveDashboard() {
                       toast.error(
                         err instanceof Error
                           ? err.message
-                          : "Falha ao recomprimir",
+                          : common("failRecompress"),
                       );
                     }
                   })();
                 }}
               >
-                Arquivo editado
+                {t("editedFile")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => {
@@ -415,12 +423,12 @@ export function SaveDashboard() {
                     downloadBytes(fileName ?? "save.hg", downloadOriginal());
                   } catch (err) {
                     toast.error(
-                      err instanceof Error ? err.message : "Sem original",
+                      err instanceof Error ? err.message : common("noOriginal"),
                     );
                   }
                 }}
               >
-                Arquivo original
+                {t("originalFile")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -430,17 +438,14 @@ export function SaveDashboard() {
       <Dialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Alterações não salvas</DialogTitle>
-            <DialogDescription>
-              As alterações feitas não foram salvas. Use Salvar neste arquivo
-              ou Baixar arquivo editado.
-            </DialogDescription>
+            <DialogTitle>{t("unsavedTitle")}</DialogTitle>
+            <DialogDescription>{t("unsavedBody")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="secondary" onClick={() => void closeSave()}>
-              Fechar mesmo assim
+              {t("closeAnyway")}
             </Button>
-            <Button onClick={() => setConfirmDiscard(false)}>Voltar</Button>
+            <Button onClick={() => setConfirmDiscard(false)}>{common("back")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -469,10 +474,9 @@ export function SaveDashboard() {
       >
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Versões diferentes</DialogTitle>
+            <DialogTitle>{archive("versionTitle")}</DialogTitle>
             <DialogDescription>
-              {versionWarning} O import não é bloqueado, mas o jogo pode
-              ignorar campos novos.
+              {archive("versionImport", { warning: versionWarning ?? "" })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -483,14 +487,14 @@ export function SaveDashboard() {
                 setVersionWarning(null);
               }}
             >
-              Cancelar
+              {common("cancel")}
             </Button>
             <Button
               onClick={() => {
                 if (pendingItem) void commitImport(pendingItem);
               }}
             >
-              Importar mesmo assim
+              {archive("importAnyway")}
             </Button>
           </DialogFooter>
         </DialogContent>

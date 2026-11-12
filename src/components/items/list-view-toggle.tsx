@@ -1,6 +1,7 @@
 "use client";
 
 import { LayoutGrid, List } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { ArchiveView } from "@/lib/archive-url";
 
@@ -11,10 +12,11 @@ export function ListViewToggle({
   value: ArchiveView;
   onChange: (view: ArchiveView) => void;
 }) {
+  const t = useTranslations("common");
   return (
     <div
       role="group"
-      aria-label="Como listar"
+      aria-label={t("listAs")}
       className="flex gap-1 rounded-lg bg-muted/40 p-1"
     >
       <Button
@@ -25,7 +27,7 @@ export function ListViewToggle({
         onClick={() => onChange("grid")}
       >
         <LayoutGrid aria-hidden="true" />
-        Grade
+        {t("grid")}
       </Button>
       <Button
         type="button"
@@ -35,7 +37,7 @@ export function ListViewToggle({
         onClick={() => onChange("table")}
       >
         <List aria-hidden="true" />
-        Tabela
+        {t("table")}
       </Button>
     </div>
   );

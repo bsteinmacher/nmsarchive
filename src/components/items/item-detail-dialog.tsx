@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useCategoryCopy } from "@/i18n/format";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -33,7 +35,7 @@ import { ConfirmDeleteDialog } from "@/components/items/confirm-delete-dialog";
 import { VersionMismatchDialog } from "@/components/items/version-mismatch-dialog";
 import { usesApplyDepth, usesSlotPicker } from "@/lib/nms/extract/apply-depth";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { CATEGORY_META, isCategory } from "@/types/nms";
+import { isCategory } from "@/types/nms";
 import {
   Dialog,
   DialogBody,
@@ -65,6 +67,9 @@ export function ItemDetailDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("archive");
+  const common = useTranslations("common");
+  const categories = useCategoryCopy();
   const utils = trpc.useUtils();
   const query = trpc.items.get.useQuery(
     { id: itemId ?? "" },
@@ -167,8 +172,8 @@ export function ItemDetailDialog({
       : item?.category;
   const categoryLabel =
     uiCategory && isCategory(uiCategory)
-      ? CATEGORY_META[uiCategory].label
-      : "item";
+      ? categories.label(uiCategory)
+      : common("itemWord");
 
   function toNmsItem(): NmsItemFile | null {
     if (!item) return null;
@@ -178,10 +183,10 @@ export function ItemDetailDialog({
   async function applyItem(file: NmsItemFile) {
     try {
       const index = await importItem(file);
-      toast.success(`Aplicado no slot ${index + 1} do save aberto.`);
+      toast.success(common("appliedSlot", { slot: index + 1 }));
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao aplicar");
+      toast.error(err instanceof Error ? err.message : common("failApply"));
     } finally {
       setPendingItem(null);
       setVersionWarning(null);
@@ -192,7 +197,7 @@ export function ItemDetailDialog({
     const file = toNmsItem();
     if (!file) return;
     if (!saveReady) {
-      toast.error("Abra um save para aplicar este item num slot.");
+      toast.error(common("openSaveToApply"));
       return;
     }
     if (usesSlotPicker(file.category)) {
@@ -238,7 +243,7 @@ export function ItemDetailDialog({
     if (!item) return;
     const trimmed = description.trim();
     if (!trimmed) {
-      setError("O título não pode ficar vazio.");
+      setError(common("emptyTitle"));
       document.getElementById(titleId)?.focus();
       return;
     }
@@ -277,12 +282,12 @@ export function ItemDetailDialog({
         utils.items.listTags.invalidate(),
         utils.logs.list.invalidate(),
       ]);
-      toast.success("Alterações salvas.");
+      toast.success(common("editsSaved"));
       setTags(nextTags);
       setError(null);
       setEditing(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao atualizar");
+      toast.error(err instanceof Error ? err.message : common("failUpdate"));
     }
   }
 
@@ -295,16 +300,16 @@ export function ItemDetailDialog({
         utils.items.counts.invalidate(),
         utils.logs.list.invalidate(),
       ]);
-      toast.success(`${item.name} saiu do arquivo.`);
+      toast.success(t("leftArchive", { name: item.name }));
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao excluir");
+      toast.error(err instanceof Error ? err.message : common("failDelete"));
     }
   }
 
   const title = item
     ? item.description.trim() || item.name
-    : "Item arquivado";
+    : t("archivedItem");
 
   return (
     <>
@@ -323,14 +328,17 @@ export function ItemDetailDialog({
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
               {item
-                ? `${item.shipType || categoryLabel} · ${item.seed}`
-                : "Carregando do arquivo pessoal."}
+                ? t("seedMeta", {
+                    type: item.shipType || categoryLabel,
+                    seed: item.seed,
+                  })
+                : t("loadingPersonal")}
             </DialogDescription>
           </DialogHeader>
 
           <DialogBody className="grid gap-4">
             {query.isLoading ? (
-              <p className="text-sm text-muted-foreground">Carregando item…</p>
+              <p className="text-sm text-muted-foreground">{common("loadingItem")}</p>
             ) : query.error ? (
               <p className="text-sm text-destructive">{query.error.message}</p>
             ) : item ? (
@@ -344,23 +352,23 @@ export function ItemDetailDialog({
               >
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
                   {item.category === "squadron" && item.className ? (
-                    <span>Rank {item.className}</span>
+                    <span>{common("rankValue", { value: item.className })}</span>
                   ) : item.className ? (
-                    <span>Class {item.className}</span>
+                    <span>{common("classValue", { value: item.className })}</span>
                   ) : null}
                   {item.category === "squadron" && item.extra?.race ? (
                     <span>{item.extra.race}</span>
                   ) : null}
                   {item.category === "squadron" &&
                   item.metadata.extra?.unlocked === "false" ? (
-                    <span>Locked</span>
+                    <span>{t("locked")}</span>
                   ) : item.category === "squadron" &&
                     item.metadata.extra?.unlocked === "true" ? (
-                    <span>Unlocked</span>
+                    <span>{t("unlocked")}</span>
                   ) : null}
                   {item.extra?.element ? <span>{item.extra.element}</span> : null}
                   {item.extra?.biome ? (
-                    <span>Biome {item.extra.biome}</span>
+                    <span>{common("biomeValue", { value: item.extra.biome })}</span>
                   ) : null}
                   {item.galaxy != null && item.category === "base" ? (
                     <span>{formatGalaxy(item.galaxy)}</span>
@@ -375,20 +383,24 @@ export function ItemDetailDialog({
                 {saveReady ? (
                   <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
                     {matches.length > 0
-                      ? `Mesmo seed no save aberto: slot ${matches.map((s) => s.slotLabel ?? s.index + 1).join(", ")}.`
+                      ? t("sameSeed", {
+                          slots: matches
+                            .map((s) => s.slotLabel ?? s.index + 1)
+                            .join(", "),
+                        })
                       : uiCategory === "spacestation"
-                        ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim — e recusa se já houver 20 Space Stations."
+                        ? t("noSeedStation")
                         : uiCategory === "deepspace"
-                          ? "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio deste tipo, ou acrescenta no fim do array de bases."
+                          ? t("noSeedDeepspace")
                           : item && item.category === "squadron"
-                            ? "Não há item com este seed no save aberto. Aplicar pergunta se cria num slot vazio ou se substitui um piloto."
+                            ? t("noSeedSquadron")
                           : item && usesApplyDepth(item.category)
-                            ? "Não há item com este seed no save aberto. Aplicar pergunta se cria num slot vazio ou se coloca em cima de uma existente."
-                            : "Não há item com este seed no save aberto. Aplicar usa o primeiro slot vazio (ou substitui o mesmo seed se o array estiver cheio)."}
+                            ? t("noSeedDepth")
+                            : t("noSeedDefault")}
                   </p>
                 ) : (
                   <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-                    Sem save aberto.{" "}
+                    {t("noSaveApplyBefore")}{" "}
                     <Link
                       href="/save"
                       className={cn(
@@ -396,9 +408,9 @@ export function ItemDetailDialog({
                         "h-auto p-0",
                       )}
                     >
-                      Abrir um save
+                      {t("openSave")}
                     </Link>{" "}
-                    para aplicar este item.
+                    {t("noSaveApplyAfter")}
                   </p>
                 )}
 
@@ -422,14 +434,16 @@ export function ItemDetailDialog({
                       itemType: matches[0].itemType,
                       payload: matches[0].payload,
                     }}
-                    saveLabel={`slot ${matches[0].slotLabel ?? matches[0].index + 1}`}
+                    saveLabel={t("slotRef", {
+                      slot: matches[0].slotLabel ?? matches[0].index + 1,
+                    })}
                   />
                 ) : null}
 
                 {editing ? (
                   <>
                     <div className="grid gap-2">
-                      <Label htmlFor={titleId}>Título</Label>
+                      <Label htmlFor={titleId}>{common("title")}</Label>
                       <Input
                         id={titleId}
                         value={description}
@@ -444,7 +458,7 @@ export function ItemDetailDialog({
                       ) : null}
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor={notesId}>Descrição</Label>
+                      <Label htmlFor={notesId}>{common("description")}</Label>
                       <Textarea
                         id={notesId}
                         value={notes}
@@ -465,12 +479,12 @@ export function ItemDetailDialog({
                       />
                     ) : null}
                     <div className="grid gap-2">
-                      <Label htmlFor={tagsId}>Tags</Label>
+                      <Label htmlFor={tagsId}>{common("tags")}</Label>
                       <TagInput
                         id={tagsId}
                         value={tags}
                         onChange={setTags}
-                        placeholder="exotic"
+                        placeholder={t("tagPlaceholder")}
                       />
                     </div>
                     {item.category === "companion" ? (
@@ -497,7 +511,7 @@ export function ItemDetailDialog({
                     <ItemTags tags={item.tags.map((t) => t.label)} />
                     {item.category === "companion" && formatCompanionRank(rank) ? (
                       <p className="text-sm text-muted-foreground">
-                        Rank {formatCompanionRank(rank)}
+                        {common("rankValue", { value: formatCompanionRank(rank) })}
                       </p>
                     ) : null}
                   </>
@@ -517,14 +531,14 @@ export function ItemDetailDialog({
                   onClick={cancelEdit}
                   disabled={update.isPending}
                 >
-                  Cancelar
+                  {common("cancel")}
                 </Button>
                 <Button
                   type="button"
                   onClick={() => void commitEdits()}
                   disabled={!item || update.isPending}
                 >
-                  {update.isPending ? "Salvando…" : "Salvar edição"}
+                  {update.isPending ? common("saving") : common("saveEdits")}
                 </Button>
               </div>
             ) : (
@@ -535,7 +549,7 @@ export function ItemDetailDialog({
                   onClick={() => setConfirmDelete(true)}
                   disabled={!item}
                 >
-                  Excluir
+                  {common("delete")}
                 </Button>
                 <div className="flex flex-wrap justify-end gap-2">
                   <Button
@@ -544,7 +558,7 @@ export function ItemDetailDialog({
                     onClick={startEdit}
                     disabled={!item}
                   >
-                    Editar
+                    {common("edit")}
                   </Button>
                   <Button
                     type="button"
@@ -553,14 +567,14 @@ export function ItemDetailDialog({
                       const file = toNmsItem();
                       if (!file) return;
                       downloadNmsItemFile(file);
-                      toast.success("Exportado .nmsitem");
+                      toast.success(common("exportedNmsitem"));
                     }}
                     disabled={!item}
                   >
-                    Exportar .nmsitem
+                    {common("exportNmsitem")}
                   </Button>
                   <Button type="button" onClick={onApply} disabled={!item}>
-                    Aplicar no save
+                    {common("applyToSave")}
                   </Button>
                 </div>
               </>
@@ -568,9 +582,13 @@ export function ItemDetailDialog({
           </DialogFooter>
           <ConfirmDeleteDialog
             open={confirmDelete && item != null}
-            title={item ? `Excluir ${item.name}?` : "Excluir item?"}
-            description="Esta ação tira o item do arquivo pessoal. O save aberto não muda."
-            confirmLabel="Excluir item"
+            title={
+              item
+                ? common("excludeNamed", { name: item.name })
+                : common("excludeItem")
+            }
+            description={t("deleteArchiveBody")}
+            confirmLabel={common("excludeItemConfirm")}
             pending={remove.isPending}
             onCancel={() => setConfirmDelete(false)}
             onConfirm={() => void onDelete()}

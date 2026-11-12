@@ -1,6 +1,7 @@
 "use client";
 
 import { GripVertical } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "cn";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -38,12 +39,13 @@ export function SaveSlotActions({
   onArchive: (item: ExtractedSlot) => void;
   onExport: (item: ExtractedSlot) => void;
 }) {
+  const t = useTranslations("common");
   const canAct = !item.empty && !item.readonly;
   if (canAct) {
     return (
       <div className="flex flex-wrap justify-end gap-2">
         <Button size="sm" variant="ghost" onClick={() => onSelect(item)}>
-          Ver detalhes
+          {t("details")}
         </Button>
         <ExportMenu
           variant="save"
@@ -56,7 +58,7 @@ export function SaveSlotActions({
   if (item.readonly) {
     return (
       <Button size="sm" variant="ghost" onClick={() => onSelect(item)}>
-        Ver detalhes
+        {t("details")}
       </Button>
     );
   }
@@ -103,7 +105,9 @@ export function SaveSlotGrid({
   onArchive: (item: ExtractedSlot) => void;
   onExport: (item: ExtractedSlot) => void;
 }) {
-  const emptyCopy = emptyMessage ?? getAdapter(category).missingMessage;
+  const t = useTranslations("common");
+  const save = useTranslations("save");
+  const emptyCopy = emptyMessage ?? save(`missing.${category}`);
 
   if (items.length === 0) {
     return (
@@ -164,7 +168,7 @@ export function SaveSlotGrid({
                 >
                   {canOpen ? (
                     <CardOpenTarget
-                      label={`Ver detalhes do slot ${slot}`}
+                      label={t("detailsOfSlot", { slot })}
                       onOpen={() => onSelect(item)}
                     />
                   ) : null}
@@ -173,7 +177,7 @@ export function SaveSlotGrid({
                       type="button"
                       draggable
                       tabIndex={-1}
-                      aria-label={`Reordenar slot ${slot}`}
+                      aria-label={t("reorderSlot", { slot })}
                       aria-grabbed={dragging === item.index}
                       className={cn(
                         buttonVariants({
@@ -215,7 +219,7 @@ export function SaveSlotGrid({
                         !item.empty && "text-foreground",
                       )}
                     >
-                      Slot {slot}
+                      {save("slotLine", { slot })}
                     </p>
                     {item.empty ? (
                       <p className="mt-1 text-sm text-muted-foreground">
