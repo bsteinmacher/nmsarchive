@@ -1,3 +1,6 @@
+import commonMessages from "../../../messages/pt-BR/common.json";
+import archiveMessages from "../../../messages/pt-BR/archive.json";
+
 /**
  * RealityIndex 0–255 no JSON / .nmsitem / Prisma; a UI mostra 1–256.
  * Nomes da wiki / comunidade (lista estável desde Atlas Rises).
@@ -273,13 +276,15 @@ export function galaxyName(index: number): string | undefined {
 export function formatGalaxy(index: number): string {
   const display = index + 1;
   const name = galaxyName(index);
-  return name ? `${display} · ${name}` : `Galaxy ${display}`;
+  return name
+    ? `${display} · ${name}`
+    : archiveMessages.galaxyFallback.replace("{display}", String(display));
 }
 
 /** Converte o número que o jogador vê (1–256) para RealityIndex (0–255). */
 export function parseGalaxyDisplay(display: number): number {
   if (!Number.isInteger(display) || display < 1 || display > 256) {
-    throw new Error("Galáxia na UI deve ser 1–256.");
+    throw new Error(commonMessages.galaxyUiRange);
   }
   return display - 1;
 }

@@ -1,0 +1,53 @@
+{
+  "archiveGroup": "Personal Archive",
+  "openSaveGroup": "Save aberto",
+  "dashboard": "Dashboard",
+  "settings": "Settings",
+  "header": "Personal Archive",
+  "categories": {
+    "ship": {
+      "label": "Naves",
+      "description": "Slots do save aberto (vazios visíveis, arraste para reordenar) e naves no arquivo."
+    },
+    "multitool": {
+      "label": "Multi-ferramentas",
+      "description": "Multi-ferramentas do save (com vazios) e do arquivo pessoal."
+    },
+    "freighter": {
+      "label": "Cargueiras",
+      "description": "Cargueira atual e a base do interior."
+    },
+    "frigate": {
+      "label": "Fragatas",
+      "description": "Frota na ordem da lista do jogo: função, depois classe (S, A, B, C), depois nome. Até 30."
+    },
+    "squadron": {
+      "label": "Esquadrão",
+      "description": "Quatro pilotos. Arraste para reordenar. Arquivar leva o piloto, a nave e se o slot está liberado."
+    },
+    "companion": {
+      "label": "Companheiros",
+      "description": "Pets do save (com vazios) e do arquivo pessoal."
+    },
+    "wonder": {
+      "label": "Maravilhas",
+      "description": "Maravilhas pessoais escolhidas pelo jogador."
+    },
+    "exosuit": {
+      "label": "Exotraje",
+      "description": "Só slots liberados e posição das tecnologias — não o conteúdo de itens."
+    },
+    "base": {
+      "label": "Bases",
+      "description": "Bases planetárias, espaço profundo e estações espaciais. A base da cargueira fica em Cargueiras."
+    },
+    "deepspace": {
+      "label": "Bases no espaço profundo",
+      "description": "Bases orbitais livres (COSMOS). Mesmo array das bases planetárias; não há limite separado no JSON."
+    },
+    "spacestation": {
+      "label": "Estações espaciais",
+      "description": "Estação espacial reivindicada (COSMOS). Até 20 por save; a 21ª é recusada na hora de aplicar."
+    }
+  }
+}

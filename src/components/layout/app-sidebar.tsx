@@ -20,7 +20,9 @@ import {
   Truck,
   Users,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { useCategoryCopy } from "@/i18n/format";
 import {
   Sidebar,
   SidebarContent,
@@ -37,7 +39,6 @@ import {
 } from "@/components/ui/sidebar";
 import {
   archiveHref,
-  CATEGORY_META,
   SIDEBAR_CATEGORIES,
   saveHref,
   type Category,
@@ -59,6 +60,9 @@ const CATEGORY_ICONS: Record<Category, ComponentType<{ className?: string }>> = 
 };
 
 export function AppSidebar() {
+  const nav = useTranslations("nav");
+  const common = useTranslations("common");
+  const categories = useCategoryCopy();
   const pathname = usePathname();
   const saveReady = useSaveSession((s) => s.status === "ready");
   const active = (href: string) => pathname === href;
@@ -76,7 +80,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Personal Archive</SidebarGroupLabel>
+          <SidebarGroupLabel>{nav("archiveGroup")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -85,11 +89,10 @@ export function AppSidebar() {
                   render={<Link href="/" />}
                 >
                   <LayoutGrid />
-                  <span>All</span>
+                  <span>{common("all")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {SIDEBAR_CATEGORIES.map((category) => {
-                const meta = CATEGORY_META[category];
                 const Icon = CATEGORY_ICONS[category];
                 const href = archiveHref(category);
                 return (
@@ -99,7 +102,7 @@ export function AppSidebar() {
                       render={<Link href={href} />}
                     >
                       <Icon />
-                      <span>{meta.label}</span>
+                      <span>{categories.label(category)}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
@@ -109,7 +112,7 @@ export function AppSidebar() {
         </SidebarGroup>
         <SidebarSeparator />
         <SidebarGroup>
-          <SidebarGroupLabel>Save aberto</SidebarGroupLabel>
+          <SidebarGroupLabel>{nav("openSaveGroup")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -118,12 +121,11 @@ export function AppSidebar() {
                   render={<Link href="/save" />}
                 >
                   <LayoutDashboard />
-                  <span>Dashboard</span>
+                  <span>{nav("dashboard")}</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               {saveReady
                 ? SIDEBAR_CATEGORIES.map((category) => {
-                    const meta = CATEGORY_META[category];
                     const Icon = CATEGORY_ICONS[category];
                     const href = saveHref(category);
                     return (
@@ -133,7 +135,7 @@ export function AppSidebar() {
                           render={<Link href={href} />}
                         >
                           <Icon />
-                          <span>{meta.label}</span>
+                          <span>{categories.label(category)}</span>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
@@ -151,7 +153,7 @@ export function AppSidebar() {
               render={<Link href="/settings" />}
             >
               <Settings />
-              <span>Settings</span>
+              <span>{nav("settings")}</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

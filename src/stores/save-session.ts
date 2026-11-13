@@ -1,6 +1,8 @@
 "use client";
 
 import { create } from "zustand";
+import commonMessages from "../../messages/pt-BR/common.json";
+import saveMessages from "../../messages/pt-BR/save.json";
 import { del as idbDel, get as idbGet, set as idbSet } from "idb-keyval";
 import { encodeHgClient, parseHgClient } from "@/lib/nms/client";
 import { detect } from "@/lib/nms/detect";
@@ -128,7 +130,7 @@ export function getMappedJson(): unknown | null {
 async function fetchMapping(): Promise<MappingFile> {
   const res = await fetch("/api/mapping", { cache: "no-store" });
   if (!res.ok) {
-    throw new Error("Não foi possível obter mapping.json do MBINCompiler.");
+    throw new Error(saveMessages.mappingFetch);
   }
   return parseMappingFile(await res.json());
 }
@@ -154,13 +156,13 @@ function assertSaveFile(file: File) {
   const name = file.name.toLowerCase();
   if (name.startsWith("mf_")) {
     throw new Error(
-      "Isso parece um mf_save. Escolha o save.hg, não o arquivo de metadata.",
+      commonMessages.mfSave,
     );
   }
 }
 
 function persistJson() {
-  if (mappedJson == null) throw new Error("Nenhum save aberto.");
+  if (mappedJson == null) throw new Error(commonMessages.noSaveOpen);
   return idbSet(IDB_JSON, mappedJson);
 }
 
@@ -301,10 +303,10 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
 
   importItem: async (item, options) => {
     if (mappedJson == null || !mappingFile) {
-      throw new Error("Nenhum save aberto.");
+      throw new Error(commonMessages.noSaveOpen);
     }
     if (!isCategory(item.category)) {
-      throw new Error("Categoria desconhecida neste arquivo.");
+      throw new Error(commonMessages.unknownCategory);
     }
     const context = get().saveContext;
     const result = applyCategoryItem(
@@ -330,7 +332,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   importShip: async (item, options) => get().importItem(item, options),
 
   clearSlot: async (category, index) => {
-    if (mappedJson == null) throw new Error("Nenhum save aberto.");
+    if (mappedJson == null) throw new Error(commonMessages.noSaveOpen);
     const context = get().saveContext;
     const result = clearCategorySlot(mappedJson, category, index, context);
     if (!result.ok) throw new Error(result.error);
@@ -348,7 +350,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
     const { items, summary } = get();
     const slot = items[category].find((s) => s.index === index);
     if (!slot || slot.empty || slot.readonly || !summary) {
-      throw new Error("Item não encontrado.");
+      throw new Error(commonMessages.itemNotFound);
     }
     return buildNmsItem({
       category,
@@ -364,7 +366,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
 
   exportAllShips: () => {
     const { ships, summary } = get();
-    if (!summary) throw new Error("Nenhum save aberto.");
+    if (!summary) throw new Error(commonMessages.noSaveOpen);
     return ships
       .filter((ship) => !ship.empty)
       .map((ship) =>
@@ -380,11 +382,11 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   },
 
   reorderSlots: async (category, from, to) => {
-    if (mappedJson == null) throw new Error("Nenhum save aberto.");
+    if (mappedJson == null) throw new Error(commonMessages.noSaveOpen);
     if (from === to) return;
     const adapter = getAdapter(category);
     if (!adapter.reorder) {
-      throw new Error("Esta categoria não reordena.");
+      throw new Error(commonMessages.noReorder);
     }
     const context = get().saveContext;
     const result = reorderCategorySlots(mappedJson, category, from, to, context);
@@ -402,7 +404,7 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
   reorderShips: async (from, to) => get().reorderSlots("ship", from, to),
 
   updateCurrencies: async (coins) => {
-    if (mappedJson == null) throw new Error("Nenhum save aberto.");
+    if (mappedJson == null) throw new Error(commonMessages.noSaveOpen);
     const context = get().saveContext;
     const result = setPlayerCurrencies(mappedJson, coins, context);
     if (!result.ok) throw new Error(result.error);
@@ -445,13 +447,13 @@ export const useSaveSession = create<SaveSessionState>((set, get) => ({
 
   downloadRewritten: async () => {
     if (mappedJson == null || !mappingFile) {
-      throw new Error("Nenhum save aberto.");
+      throw new Error(commonMessages.noSaveOpen);
     }
     return encodeHgClient(mappedJson, mappingFile);
   },
 
   downloadOriginal: () => {
-    if (!originalBytes) throw new Error("Bytes originais indisponíveis.");
+    if (!originalBytes) throw new Error(commonMessages.originalBytes);
     return originalBytes;
   },
 

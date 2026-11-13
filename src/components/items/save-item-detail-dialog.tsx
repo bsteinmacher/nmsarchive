@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -42,6 +44,8 @@ export function SaveItemDetailDialog({
   navItems?: ExtractedSlot[];
   onNavigate?: (item: ExtractedSlot) => void;
 }) {
+  const t = useTranslations("archive");
+  const common = useTranslations("common");
   const exportItem = useSaveSession((s) => s.exportItem);
   const clearSlot = useSaveSession((s) => s.clearSlot);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -52,24 +56,24 @@ export function SaveItemDetailDialog({
   const { prev, next } = neighborSlots(navItems, item);
   const slot = item?.slotLabel ?? (item ? String(item.index + 1) : "—");
   const bits = [
-    `Slot ${slot}`,
+    `${common("slot")} ${slot}`,
     item?.category === "squadron"
       ? item.className
-        ? `Rank ${item.className}`
+        ? common("rankValue", { value: item.className })
         : null
       : item?.className
-        ? `Class ${item.className}`
+        ? common("classValue", { value: item.className })
         : null,
     item?.extra.race || null,
     item?.extra.unlocked === "true"
-      ? "Unlocked"
+      ? t("unlocked")
       : item?.extra.unlocked === "false"
-        ? "Locked"
+        ? t("locked")
         : null,
     item?.extra.element || null,
-    item?.extra.biome ? `Biome ${item.extra.biome}` : null,
-    item?.extra.level ? `Level ${item.extra.level}` : null,
-    item?.itemType || null,
+    item?.extra.biome ? common("biomeValue", { value: item.extra.biome }) : null,
+    item?.extra.level ? `${t("columns.level")} ${item.extra.level}` : null,
+    item?.itemType ? gameTermLabel(item.itemType) : null,
     item?.seed || null,
   ].filter(Boolean);
   const canImportModel =
@@ -117,8 +121,8 @@ export function SaveItemDetailDialog({
       if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
       if (isTypingTarget(event.target)) return;
       event.preventDefault();
-      if (event.key === "ArrowLeft" && prev) onNavigate(prev);
-      if (event.key === "ArrowRight" && next) onNavigate(next);
+      if (event.key === "ArrowLeft" && prev) onNavigate?.(prev);
+      if (event.key === "ArrowRight" && next) onNavigate?.(next);
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -129,11 +133,11 @@ export function SaveItemDetailDialog({
     setClearing(true);
     try {
       await clearSlot(item.category, item.index);
-      toast.success("Excluído do save");
+      toast.success(common("deletedFromSave"));
       setConfirmDelete(false);
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao excluir");
+      toast.error(err instanceof Error ? err.message : common("failDelete"));
     } finally {
       setClearing(false);
     }
@@ -161,7 +165,7 @@ export function SaveItemDetailDialog({
                 variant="ghost"
                 className="mt-[-2px] shrink-0"
                 disabled={!prev}
-                aria-label="Item anterior"
+                aria-label={common("previousItem")}
                 onClick={() => prev && onNavigate(prev)}
               >
                 <ChevronLeft />
@@ -169,7 +173,7 @@ export function SaveItemDetailDialog({
             ) : null}
             <div className="min-w-0 flex-1">
               <DialogTitle>
-                Slot {slot}
+                {common("slotTitle", { slot })}
                 {item?.name && !item.empty ? ` · ${item.name}` : ""}
               </DialogTitle>
               <DialogDescription>{bits.join(" · ")}</DialogDescription>
@@ -181,7 +185,7 @@ export function SaveItemDetailDialog({
                 variant="ghost"
                 className="mt-[-2px] mr-6 shrink-0"
                 disabled={!next}
-                aria-label="Próximo item"
+                aria-label={common("nextItem")}
                 onClick={() => next && onNavigate(next)}
               >
                 <ChevronRight />
@@ -197,7 +201,7 @@ export function SaveItemDetailDialog({
         ) : null}
         {item?.filename ? (
           <p className="font-mono text-xs break-all text-muted-foreground">
-            Filename: {item.filename}
+            {common("filename", { name: item.filename })}
           </p>
         ) : null}
         {item && archivedDetail.data ? (
@@ -214,7 +218,7 @@ export function SaveItemDetailDialog({
               itemType: item.itemType,
               payload: item.payload,
             }}
-            saveLabel={`slot ${slot}`}
+            saveLabel={t("slotRef", { slot })}
           />
         ) : null}
         {item ? <JsonTree value={item.payload} /> : null}
@@ -226,7 +230,7 @@ export function SaveItemDetailDialog({
               variant="ghost"
               onClick={() => setConfirmDelete(true)}
             >
-              Excluir
+              {common("delete")}
             </Button>
           ) : null}
           {item && !item.readonly && !item.empty ? (
@@ -237,12 +241,12 @@ export function SaveItemDetailDialog({
                 onArchive?.(item);
               }}
             >
-              Arquivar
+              {common("archive")}
             </Button>
           ) : null}
           {canImportModel ? (
             <Button type="button" variant="outline" onClick={() => setImportModel(true)}>
-              Importar modelo
+              {t("importModel")}
             </Button>
           ) : null}
           {item && !item.readonly && !item.empty ? (
@@ -253,29 +257,33 @@ export function SaveItemDetailDialog({
                   downloadNmsItemFile(
                     exportItem(item.category, item.index),
                   );
-                  toast.success("Exportado .nmsitem");
+                  toast.success(common("exportedNmsitem"));
                 } catch (err) {
                   toast.error(
-                    err instanceof Error ? err.message : "Falha no export",
+                    err instanceof Error ? err.message : common("failExport"),
                   );
                 }
               }}
             >
-              Exportar .nmsitem
+              {common("exportNmsitem")}
             </Button>
           ) : null}
         </DialogFooter>
           <ConfirmDeleteDialog
             open={confirmDelete && item != null}
-            title={item ? `Excluir ${item.name}?` : "Excluir item?"}
+            title={
+              item
+                ? common("excludeNamed", { name: item.name })
+                : common("excludeItem")
+            }
             description={
               item?.category === "frigate"
-                ? "Ela sai da frota. O arquivo pessoal não muda."
+                ? t("frigateDelete")
                 : item?.category === "squadron"
-                  ? "O slot fica vazio e bloqueado. O arquivo pessoal não muda."
-                  : "O slot fica vazio. O arquivo pessoal não muda."
+                  ? t("squadronDelete")
+                  : t("slotDelete")
             }
-            confirmLabel="Excluir do save"
+            confirmLabel={common("excludeFromSave")}
             pending={clearing}
             onCancel={() => setConfirmDelete(false)}
             onConfirm={() => void onClear()}

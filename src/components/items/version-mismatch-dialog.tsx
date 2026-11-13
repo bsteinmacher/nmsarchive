@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +22,8 @@ export function VersionMismatchDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("common");
+  const archive = useTranslations("archive");
   return (
     <Dialog
       open={open}
@@ -30,17 +33,16 @@ export function VersionMismatchDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Versões diferentes</DialogTitle>
+          <DialogTitle>{archive("versionTitle")}</DialogTitle>
           <DialogDescription>
-            {warning} O apply não é bloqueado, mas o jogo pode ignorar campos
-            novos.
+            {archive("versionApply", { warning: warning ?? "" })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
-            Cancelar
+            {t("cancel")}
           </Button>
-          <Button onClick={onConfirm}>Aplicar mesmo assim</Button>
+          <Button onClick={onConfirm}>{archive("applyAnyway")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

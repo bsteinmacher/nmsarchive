@@ -9,6 +9,7 @@ import {
   type SaveStorage,
 } from "@/lib/nms/save-files";
 import { DATA_DIR } from "@/server/paths";
+import saveMessages from "../../messages/pt-BR/save.json";
 
 const CONFIG_PATH = path.join(DATA_DIR, "local-game.json");
 const MAX_BYTES = 64 * 1024 * 1024;
@@ -102,14 +103,14 @@ export function isInside(parent: string, candidate: string): boolean {
 
 export function saveFilePath(saveDir: string, name: string): string {
   if (name !== path.basename(name) || name.includes("\0")) {
-    throw new GameFolderError("Nome de arquivo inválido.", 400);
+    throw new GameFolderError(saveMessages.invalidFileName, 400);
   }
   if (!identifySaveFile(name)) {
-    throw new GameFolderError("Só entra arquivo save.hg.", 400);
+    throw new GameFolderError(saveMessages.onlyHg, 400);
   }
   const full = path.resolve(saveDir, name);
   if (path.dirname(full) !== path.resolve(saveDir)) {
-    throw new GameFolderError("O arquivo precisa ficar na pasta do jogo.", 400);
+    throw new GameFolderError(saveMessages.fileMustStay, 400);
   }
   return full;
 }
@@ -301,13 +302,13 @@ export async function selectGameFolder(home: string, requested: string): Promise
   try {
     real = await fs.realpath(requested);
   } catch {
-    throw new GameFolderError("Essa pasta não existe.", 404);
+    throw new GameFolderError(saveMessages.folderMissing, 404);
   }
   if (!isInside(homeReal, real)) {
-    throw new GameFolderError("A pasta precisa estar neste computador, na sua conta.", 400);
+    throw new GameFolderError(saveMessages.folderMustBeLocal, 400);
   }
   if ((await newestSaveStamp(real)) == null) {
-    throw new GameFolderError("Nenhum save.hg nessa pasta.", 400);
+    throw new GameFolderError(saveMessages.noHg, 400);
   }
   const config = await readConfig();
   await writeConfig({ ...config, saveDir: real, dismissed: false });
@@ -322,10 +323,10 @@ export function zenityDirectoryArgs(startDir: string): string[] {
 export function zenityDirectoryResult(code: number | null, stdout: string): string | null {
   if (code === 1) return null;
   if (code !== 0) {
-    throw new GameFolderError("Não consegui abrir o seletor de pasta.", 500);
+    throw new GameFolderError(saveMessages.pickerFailed, 500);
   }
   const picked = stdout.trim();
-  if (!picked) throw new GameFolderError("O seletor não devolveu a pasta.", 500);
+  if (!picked) throw new GameFolderError(saveMessages.pickerEmpty, 500);
   return picked;
 }
 
@@ -346,7 +347,7 @@ async function zenityBin(): Promise<string | null> {
 export async function pickDirectoryDialog(startDir: string): Promise<string | null> {
   const bin = await zenityBin();
   if (!bin) {
-    throw new GameFolderError("Não achei um seletor de pasta neste computador.", 500);
+    throw new GameFolderError(saveMessages.pickerMissing, 500);
   }
   const child = spawn(bin, zenityDirectoryArgs(startDir), { stdio: ["ignore", "pipe", "pipe"] });
   let stdout = "";
@@ -356,7 +357,7 @@ export async function pickDirectoryDialog(startDir: string): Promise<string | nu
   });
   const code = await new Promise<number | null>((resolve, reject) => {
     child.on("error", () => {
-      reject(new GameFolderError("Não consegui abrir o seletor de pasta.", 500));
+      reject(new GameFolderError(saveMessages.pickerFailed, 500));
     });
     child.on("close", (status) => resolve(status));
   });
@@ -375,16 +376,16 @@ export async function readSaveFile(
 ): Promise<{ bytes: Buffer; lastModified: number }> {
   const status = await gameFolderStatus(home);
   if (!status.selectedPath) {
-    throw new GameFolderError("Nenhuma pasta do jogo escolhida.", 404);
+    throw new GameFolderError(saveMessages.noFolder, 404);
   }
   const target = saveFilePath(status.selectedPath, name);
   let stat;
   try {
     stat = await fs.stat(target);
   } catch {
-    throw new GameFolderError("Esse arquivo não está na pasta.", 404);
+    throw new GameFolderError(saveMessages.fileNotInFolder, 404);
   }
-  if (!stat.isFile()) throw new GameFolderError("Esse arquivo não está na pasta.", 404);
+  if (!stat.isFile()) throw new GameFolderError(saveMessages.fileNotInFolder, 404);
   return { bytes: await fs.readFile(target), lastModified: Math.round(stat.mtimeMs) };
 }
 
@@ -397,21 +398,21 @@ export async function writeSaveInPlace(options: {
   expectedModified?: number | null;
 }): Promise<{ backupName: string; lastModified: number }> {
   if (options.bytes.byteLength > MAX_BYTES) {
-    throw new GameFolderError("Arquivo grande demais.", 413);
+    throw new GameFolderError(saveMessages.fileTooBig, 413);
   }
   const target = saveFilePath(options.saveDir, options.name);
   let currentStat;
   try {
     currentStat = await fs.stat(target);
   } catch {
-    throw new GameFolderError("Esse arquivo não está na pasta.", 404);
+    throw new GameFolderError(saveMessages.fileNotInFolder, 404);
   }
   const lastModified = Math.round(currentStat.mtimeMs);
   if (
     options.expectedModified != null &&
     Math.abs(Math.round(options.expectedModified) - lastModified) > 1
   ) {
-    throw new GameFolderError("O arquivo no disco mudou.", 409, lastModified);
+    throw new GameFolderError(saveMessages.diskChanged, 409, lastModified);
   }
   await fs.mkdir(options.backupDir, { recursive: true });
   const backupRoot = await fs.realpath(options.backupDir);
@@ -426,7 +427,7 @@ export async function writeSaveInPlace(options: {
     // The stamp is free.
   }
   if (path.dirname(path.resolve(backupPath)) !== backupRoot) {
-    throw new GameFolderError("O backup sairia da pasta escolhida.", 400);
+    throw new GameFolderError(saveMessages.backupWouldLeave, 400);
   }
   const current = await fs.readFile(target);
   await fs.writeFile(backupPath, current);
@@ -451,7 +452,7 @@ export async function writeSelectedSave(
 ): Promise<{ backupName: string; lastModified: number; fileName: string }> {
   const status = await gameFolderStatus(home);
   if (!status.selectedPath || !status.backupDir) {
-    throw new GameFolderError("Nenhuma pasta do jogo escolhida.", 404);
+    throw new GameFolderError(saveMessages.noFolder, 404);
   }
   const written = await writeSaveInPlace({
     saveDir: status.selectedPath,

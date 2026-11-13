@@ -1,3 +1,4 @@
+import saveMessages from "../../../messages/pt-BR/save.json";
 import { detect } from "./detect";
 import { listShips } from "./extract/ships";
 import {
@@ -30,7 +31,7 @@ export type ParseResult = {
 export function parseHg(bytes: Uint8Array, mapping: MappingFile): ParseResult {
   const kind = detect(bytes);
   if (kind === "unknown") {
-    throw new Error("Arquivo não é um save .hg reconhecido (JSON ou LZ4)");
+    throw new Error(saveMessages.unrecognizedHg);
   }
 
   let jsonBytes: Uint8Array;
@@ -49,7 +50,7 @@ export function parseHg(bytes: Uint8Array, mapping: MappingFile): ParseResult {
   const json = deobfuscate(raw, index, unknownKeys);
   if (!isReadableSave(json)) {
     throw new Error(
-      "O save ainda está ofuscado. Atualize o mapping.json (MBINCompiler).",
+      saveMessages.obfuscatedSave,
     );
   }
 

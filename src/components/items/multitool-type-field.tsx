@@ -1,6 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Label } from "@/components/ui/label";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { isMultitoolType, MULTITOOL_TYPES } from "@/lib/nms/multitool-type";
 import { cn } from "cn";
 
@@ -21,11 +23,12 @@ export function MultitoolTypeField({
   onChange: (type: string) => void;
   disabled?: boolean;
 }) {
+  const t = useTranslations("archive");
   const extra = value && !isMultitoolType(value) ? value : null;
 
   return (
     <div className="grid gap-2">
-      <Label htmlFor={id}>Type</Label>
+      <Label htmlFor={id}>{t("columns.itemType")}</Label>
       <select
         id={id}
         className={selectClass}
@@ -33,17 +36,16 @@ export function MultitoolTypeField({
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
       >
-        <option value="">Escolha o tipo</option>
+        <option value="">{t("chooseType")}</option>
         {MULTITOOL_TYPES.map((type) => (
           <option key={type} value={type}>
-            {type}
+            {gameTermLabel(type)}
           </option>
         ))}
-        {extra ? <option value={extra}>{extra}</option> : null}
+        {extra ? <option value={extra}>{gameTermLabel(extra)}</option> : null}
       </select>
       <p className="text-xs text-muted-foreground">
-        Sentinel, Atlantid, Exotic / Royal e Voltaic Staff vêm do filename.
-        Pistol, Rifle, Experimental e Alien você escolhe.
+        {t("multitoolTypeHint")}
       </p>
     </div>
   );

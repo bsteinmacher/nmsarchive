@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,23 +34,31 @@ import { isCategory } from "@/types/nms";
 import { cn } from "cn";
 import { VersionMismatchDialog } from "./version-mismatch-dialog";
 
-function freighterRoleError(destIndex: number, payload: unknown): string | null {
+function freighterRoleError(
+  destIndex: number,
+  payload: unknown,
+  fleet: string,
+  current: string,
+): string | null {
   const kind = asString(asRecord(payload)?.kind);
-  if (destIndex === 0 && kind !== "current") {
-    return "Esta cargueira é da frota e não entra no slot Atual.";
-  }
-  if (destIndex !== 0 && kind === "current") {
-    return "Esta cargueira é a atual e só entra no slot Atual.";
-  }
+  if (destIndex === 0 && kind !== "current") return fleet;
+  if (destIndex !== 0 && kind === "current") return current;
   return null;
 }
 
-function slotCaption(slot: ExtractedSlot): string {
+function slotCaption(
+  slot: ExtractedSlot,
+  emptyLabel: string,
+  classLabel: (value: string) => string,
+): string {
   const label = slot.slotLabel ?? String(slot.index + 1);
-  const type = [slot.itemType, slot.className ? `Class ${slot.className}` : ""]
+  const type = [
+    slot.itemType ? gameTermLabel(slot.itemType) : "",
+    slot.className ? classLabel(slot.className) : "",
+  ]
     .filter(Boolean)
     .join(" · ");
-  const name = slot.empty ? "Slot vazio" : slot.name;
+  const name = slot.empty ? emptyLabel : slot.name;
   return type ? `${name} · ${label} · ${type}` : `${name} · ${label}`;
 }
 
@@ -74,6 +84,10 @@ export function ApplyToSaveDialog({
   destSlot?: ExtractedSlot | null;
   onApplied?: (index: number) => void;
 }) {
+  const t = useTranslations("archive");
+  const common = useTranslations("common");
+  const caption = (slot: ExtractedSlot) =>
+    slotCaption(slot, t("emptySlot"), (value) => common("classValue", { value }));
   const importItem = useSaveSession((s) => s.importItem);
   const sessionItems = useSaveSession((s) => s.items);
   const formKey = open
@@ -161,7 +175,12 @@ export function ApplyToSaveDialog({
     draft.target === "overlay" &&
     (overlaySlot?.category === "freighter" || destSlot?.category === "freighter") &&
     file
-      ? freighterRoleError(overlaySlot?.index ?? destSlot?.index ?? 0, file.payload)
+      ? freighterRoleError(
+          overlaySlot?.index ?? destSlot?.index ?? 0,
+          file.payload,
+          t("fleetFreighter"),
+          t("currentFreighter"),
+        )
       : null;
 
   const confirmDisabled =
@@ -189,22 +208,22 @@ export function ApplyToSaveDialog({
             };
       const index = await importItem(item, options);
       const destName = overlaySlot?.name ?? destSlot?.name;
-      const slotName = destName ?? `slot ${index + 1}`;
+      const slotName = destName ?? t("slotRef", { slot: index + 1 });
       toast.success(
         draft.target === "new"
-          ? `Criado no slot ${index + 1} do save aberto.`
+          ? t("createdInSlot", { slot: index + 1 })
           : category && usesApplyDepth(category) && draft.depth === "model"
-            ? `Re-skin aplicado em ${slotName}.`
+            ? t("reskinApplied", { slot: slotName })
             : category && usesApplyDepth(category)
-              ? `Trocado em ${slotName}.`
-              : `Aplicado em ${slotName}.`,
+              ? t("swappedAt", { slot: slotName })
+              : t("appliedAt", { slot: slotName }),
       );
       setMismatch(null);
       setQueued(null);
       onOpenChange(false);
       onApplied?.(index);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao aplicar");
+      toast.error(err instanceof Error ? err.message : common("failApply"));
     } finally {
       setPending(false);
     }
@@ -223,7 +242,7 @@ export function ApplyToSaveDialog({
   }
 
   const pickingArchive = needsPicker;
-  const title = destSlot && sourceFile == null ? "Importar modelo" : "Aplicar no save";
+  const title = destSlot && sourceFile == null ? t("importModel") : t("applyTitle");
 
   return (
     <>
@@ -232,28 +251,28 @@ export function ApplyToSaveDialog({
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
-              {category === "squadron"
-                ? "Entra no primeiro slot vazio do esquadrão, ou substitui um piloto. O registro inteiro é copiado."
-                : "Criar no primeiro slot vazio, ou colocar em cima de um item do save. Inventário de naves e cargueiras fica vazio."}
+              {category === "squadron" ? t("squadronApply") : t("defaultApply")}
             </DialogDescription>
           </DialogHeader>
           <DialogBody className="grid gap-4">
             {pickingArchive ? (
               list.isLoading ? (
-                <p className="text-sm text-muted-foreground">Carregando arquivo…</p>
+                <p className="text-sm text-muted-foreground">{common("loadingArchive")}</p>
               ) : list.error ? (
                 <p className="text-sm text-destructive">{list.error.message}</p>
               ) : list.data && list.data.items.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhum item desta categoria no arquivo.
+                  {t("noneInCategory")}
                 </p>
               ) : (
                 <div className="grid gap-2">
-                  <p className="text-sm font-medium">Do arquivo</p>
+                  <p className="text-sm font-medium">{t("fromArchive")}</p>
                   {list.data?.items.map((archived) => {
                     const bits = [
-                      archived.shipType,
-                      archived.className ? `Class ${archived.className}` : "",
+                      archived.shipType ? gameTermLabel(archived.shipType) : "",
+                      archived.className
+                        ? common("classValue", { value: archived.className })
+                        : "",
                     ].filter(Boolean);
                     const selected = archived.id === draft.pickedId;
                     const thumb = screenshotPublicUrl(archived.screenshotPath);
@@ -301,7 +320,7 @@ export function ApplyToSaveDialog({
             ) : null}
 
             <fieldset className="grid gap-2">
-              <legend className="text-sm font-medium">Destino</legend>
+              <legend className="text-sm font-medium">{t("destination")}</legend>
               <button
                 type="button"
                 aria-pressed={draft.target === "new"}
@@ -313,12 +332,12 @@ export function ApplyToSaveDialog({
                 onClick={() => setDraft({ ...draft, target: "new" })}
               >
                 <span className="block text-sm font-medium">
-                  Criar no primeiro slot vazio
+                  {t("createEmpty")}
                 </span>
                 <span className="block text-sm text-muted-foreground">
-                  {canCreate
-                    ? `Entra em ${slotCaption(emptySlot)}.`
-                    : "Não há slot vazio nesta categoria."}
+                  {canCreate && emptySlot
+                    ? t("entersSlot", { slot: caption(emptySlot) })
+                    : t("noEmptySlot")}
                 </span>
               </button>
               <button
@@ -332,14 +351,14 @@ export function ApplyToSaveDialog({
                 onClick={() => setDraft({ ...draft, target: "overlay" })}
               >
                 <span className="block text-sm font-medium">
-                  Colocar em cima de uma existente
+                  {t("overlayExisting")}
                 </span>
                 <span className="block text-sm text-muted-foreground">
                   {filled.length === 0
-                    ? "Nenhum item preenchido neste save."
+                    ? t("noneFilled")
                     : category === "squadron"
-                      ? "O piloto inteiro entra neste slot."
-                      : "Escolha o slot e se é re-skin ou troca completa."}
+                      ? t("squadronOverlay")
+                      : t("chooseDepth")}
                 </span>
               </button>
             </fieldset>
@@ -347,7 +366,7 @@ export function ApplyToSaveDialog({
             {draft.target === "overlay" && filled.length > 0 ? (
               <div className="grid gap-2">
                 <label htmlFor="apply-overlay-slot" className="text-sm font-medium">
-                  Slot
+                  {common("slot")}
                 </label>
                 <select
                   id="apply-overlay-slot"
@@ -362,13 +381,13 @@ export function ApplyToSaveDialog({
                 >
                   {filled.map((slot) => (
                     <option key={slot.index} value={slot.index}>
-                      {slotCaption(slot)}
+                      {caption(slot)}
                     </option>
                   ))}
                 </select>
                 {category && usesApplyDepth(category) ? (
                 <fieldset className="grid gap-2">
-                  <legend className="text-sm font-medium">Como aplicar</legend>
+                  <legend className="text-sm font-medium">{t("howToApply")}</legend>
                   {APPLY_OVERLAY_MODES.map((mode) => (
                     <button
                       key={mode.id}
@@ -380,15 +399,17 @@ export function ApplyToSaveDialog({
                       )}
                       onClick={() => setDraft({ ...draft, depth: mode.id })}
                     >
-                      <span className="block text-sm font-medium">{mode.label}</span>
+                      <span className="block text-sm font-medium">
+                        {mode.id === "model" ? t("reskin") : t("swap")}
+                      </span>
                       <span className="block text-sm text-muted-foreground">
-                        {mode.hint}
+                        {mode.id === "model" ? t("reskinHint") : t("swapHint")}
                       </span>
                     </button>
                   ))}
                   {draft.depth === "model" ? (
                     <div className="grid gap-2 pt-1">
-                      <p className="text-sm font-medium">O que levar do item</p>
+                      <p className="text-sm font-medium">{t("whatToTake")}</p>
                       <div className="grid gap-1.5">
                         {applyPartOptions(category).map((part) => (
                           <label
@@ -409,7 +430,21 @@ export function ApplyToSaveDialog({
                                 })
                               }
                             />
-                            {part.label}
+                            {t(
+                              part.id === "name"
+                                ? "partName"
+                                : part.id === "model"
+                                  ? "partModel"
+                                  : part.id === "class"
+                                    ? "partClass"
+                                    : part.id === "slots"
+                                      ? "partSlots"
+                                      : part.id === "inventory"
+                                        ? "partInventory"
+                                        : part.id === "technologies"
+                                          ? "partTech"
+                                          : "partOrigin",
+                            )}
                           </label>
                         ))}
                       </div>
@@ -422,10 +457,11 @@ export function ApplyToSaveDialog({
 
             {typeChanges && overlaySlot ? (
               <p className="text-sm">
-                {destType} passa a ser {sourceType}.
-                {draft.depth === "model"
-                  ? " A tech que ficar neste slot pode não servir no tipo novo."
-                  : " Slots e tecnologias vêm da origem."}
+                {t("typeBecomes", {
+                  dest: gameTermLabel(destType),
+                  source: gameTermLabel(sourceType),
+                })}
+                {draft.depth === "model" ? t("techMayNotFit") : t("slotsFromOrigin")}
               </p>
             ) : null}
             {roleError ? (
@@ -434,7 +470,7 @@ export function ApplyToSaveDialog({
           </DialogBody>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
+              {common("cancel")}
             </Button>
             <Button
               type="button"
@@ -442,10 +478,10 @@ export function ApplyToSaveDialog({
               disabled={confirmDisabled}
             >
               {pending
-                ? "Aplicando…"
+                ? common("applying")
                 : destSlot && sourceFile == null
-                  ? "Importar"
-                  : "Aplicar"}
+                  ? common("import")
+                  : common("apply")}
             </Button>
           </DialogFooter>
         </DialogContent>

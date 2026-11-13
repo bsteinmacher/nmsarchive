@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useCategoryCopy } from "@/i18n/format";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +26,7 @@ import { CompanionRankField } from "@/components/items/companion-rank-field";
 import { MultitoolTypeField } from "@/components/items/multitool-type-field";
 import { ScreenshotField } from "@/components/items/screenshot-field";
 import { TagInput } from "@/components/items/tag-input";
-import { getAdapter, isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
+import { isFreighterBaseSlot, type ExtractedSlot } from "@/lib/nms/extract";
 import { archiveMultitoolType } from "@/lib/nms/multitool-type";
 import {
   companionClassFromRank,
@@ -47,6 +49,9 @@ export function ArchiveItemDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("archive");
+  const common = useTranslations("common");
+  const categories = useCategoryCopy();
   const summary = useSaveSession((s) => s.summary);
   const fileName = useSaveSession((s) => s.fileName);
   const sha256 = useSaveSession((s) => s.sha256);
@@ -67,7 +72,6 @@ export function ArchiveItemDialog({
   const [error, setError] = useState<string | null>(null);
   const [formKey, setFormKey] = useState("");
   const pending = createMeta.isPending || archive.isPending;
-  const adapter = getAdapter(category);
   const itemKey = open && item ? `${item.category}:${item.index}` : "";
 
   function applyDefaults(slot: ExtractedSlot | null) {
@@ -103,12 +107,12 @@ export function ArchiveItemDialog({
     if (!item || item.empty || item.readonly) return;
     const trimmed = description.trim();
     if (!trimmed) {
-      setError("Escreva um título. Ele aparece no arquivo pessoal.");
+      setError(common("writeTitle"));
       document.getElementById(titleId)?.focus();
       return;
     }
     if (!summary || !sha256) {
-      toast.error("Abra um save antes de arquivar.");
+      toast.error(common("openSaveBeforeArchive"));
       return;
     }
     setError(null);
@@ -168,7 +172,7 @@ export function ArchiveItemDialog({
       reset();
       onOpenChange(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao arquivar");
+      toast.error(err instanceof Error ? err.message : common("failArchive"));
     }
   }
 
@@ -192,10 +196,10 @@ export function ArchiveItemDialog({
           noValidate
         >
         <DialogHeader>
-          <DialogTitle>Arquivar {item?.name ?? adapter.label}</DialogTitle>
-          <DialogDescription>
-            Copia este item para o SQLite. O save.hg fica só neste browser.
-          </DialogDescription>
+          <DialogTitle>
+            {t("archiveTitle", { name: item?.name ?? categories.label(category) })}
+          </DialogTitle>
+          <DialogDescription>{t("archiveDescription")}</DialogDescription>
         </DialogHeader>
         <DialogBody className="grid gap-4">
           {item?.warning ? (
@@ -205,30 +209,26 @@ export function ArchiveItemDialog({
           ) : null}
           {item && isFreighterBaseSlot(item) ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-              Arquivar a Ship não inclui esta construção. Guarde os dois se
-              quiser o interior noutro save.
+              {t("freighterBaseNote")}
             </p>
           ) : null}
           {category === "exosuit" ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-              Só slots, posições de tech e supercharged. Substâncias e produtos
-              do Exosuit não entram no arquivo.
+              {t("exosuitNote")}
             </p>
           ) : null}
           {category === "deepspace" ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-              Deep Space entra no mesmo array das bases planetárias. Não há
-              limite separado no JSON.
+              {t("deepSpaceNote")}
             </p>
           ) : null}
           {category === "spacestation" ? (
             <p className="rounded-lg border bg-muted/20 px-3 py-2 text-sm">
-              O jogo aceita até 20 Space Stations por save. Aplicar a 21ª
-              falha com uma mensagem clara.
+              {t("stationNote")}
             </p>
           ) : null}
           <div className="grid gap-2">
-            <Label htmlFor={titleId}>Título</Label>
+            <Label htmlFor={titleId}>{common("title")}</Label>
             <Input
               id={titleId}
               name="title"
@@ -243,32 +243,31 @@ export function ArchiveItemDialog({
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                Obrigatório. Aparece no arquivo pessoal.
+                {t("titleRequired")}
               </p>
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor={notesId}>Descrição</Label>
+            <Label htmlFor={notesId}>{common("description")}</Label>
             <Textarea
               id={notesId}
               name="notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Onde encontrou, o que quiser lembrar."
+              placeholder={t("notesPlaceholder")}
             />
           </div>
           {category === "ship" ? (
             <div className="grid gap-2">
-              <Label htmlFor={`${tagsId}-type`}>Type</Label>
+              <Label htmlFor={`${tagsId}-type`}>{t("columns.itemType")}</Label>
               <Input
                 id={`${tagsId}-type`}
                 value={shipType}
                 onChange={(e) => setShipType(e.target.value)}
-                placeholder="Interceptor"
+                placeholder={t("shipTypePlaceholder")}
               />
               <p className="text-xs text-muted-foreground">
-                Detectado do filename. Interceptor e Living Ship às vezes vêm
-                como Fighter — ajuste se precisar.
+                {t("shipTypeHint")}
               </p>
             </div>
           ) : null}
@@ -284,15 +283,15 @@ export function ArchiveItemDialog({
             />
           ) : null}
           <div className="grid gap-2">
-            <Label htmlFor={tagsId}>Tags</Label>
+            <Label htmlFor={tagsId}>{common("tags")}</Label>
             <TagInput
               id={tagsId}
               value={tags}
               onChange={setTags}
-              placeholder="exotic"
+              placeholder={t("tagPlaceholder")}
             />
             <p className="text-xs text-muted-foreground">
-              Opcional. Digite para ver tags já usadas.
+              {t("tagsOptional")}
             </p>
           </div>
           <ScreenshotField
@@ -319,10 +318,10 @@ export function ArchiveItemDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              Cancelar
+              {common("cancel")}
             </Button>
             <Button type="submit" disabled={pending}>
-              {pending ? "Arquivando…" : "Arquivar"}
+              {pending ? common("archiving") : common("archive")}
             </Button>
           </DialogFooter>
         </form>

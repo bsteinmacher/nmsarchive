@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { isArchivedFreighterBase } from "@/lib/archive-match";
 import type { ArchiveView } from "@/lib/archive-url";
 import type { Category } from "@/types/nms";
@@ -69,29 +70,30 @@ export function GroupedArchiveSections({
   deepspace?: ArchivedItemSummary[];
   stations?: ArchivedItemSummary[];
 }) {
+  const t = useTranslations("archive");
   const { current, interior } = splitFreighterArchive(freighters);
 
   if (group === "freighter") {
     return (
       <div className="grid min-w-0 gap-8">
         <ArchiveSection
-          title="Freighter"
-          description="O slot atual arquivado."
+          title={t("freighterTitle")}
+          description={t("freighterDescription")}
           category="freighter"
           items={current}
           view={view}
           onSelect={onSelect}
-          empty="Nenhuma Freighter no arquivo."
+          empty={t("freighterEmpty")}
         />
         <ArchiveSection
           id="freighter-base"
-          title="Freighter base"
-          description="Interior da cargueira. Arquivar a Freighter não inclui esta construção."
+          title={t("freighterBaseTitle")}
+          description={t("freighterBaseDescription")}
           category="base"
           items={interior}
           view={view}
           onSelect={onSelect}
-          empty="Nenhuma Freighter base no arquivo."
+          empty={t("freighterBaseEmpty")}
         />
       </div>
     );
@@ -100,33 +102,33 @@ export function GroupedArchiveSections({
   return (
     <div className="grid min-w-0 gap-8">
       <ArchiveSection
-        title="Planet Bases"
-        description="Bases planetárias e de Ship."
+        title={t("planetBasesTitle")}
+        description={t("planetBasesDescription")}
         category="base"
         items={planetBases}
         view={view}
         onSelect={onSelect}
-        empty="Nenhuma base planetária no arquivo."
+        empty={t("planetBasesEmpty")}
       />
       <ArchiveSection
         id="deepspace"
-        title="Deep Space"
-        description="Bases orbitais livres (COSMOS)."
+        title={t("deepSpaceTitle")}
+        description={t("deepSpaceDescription")}
         category="deepspace"
         items={deepspace}
         view={view}
         onSelect={onSelect}
-        empty="Nenhuma Deep Space no arquivo."
+        empty={t("deepSpaceEmpty")}
       />
       <ArchiveSection
         id="spacestations"
-        title="Space Stations"
-        description="Estações reivindicadas. O jogo aceita até 20 por save."
+        title={t("stationsTitle")}
+        description={t("stationsDescription")}
         category="spacestation"
         items={stations}
         view={view}
         onSelect={onSelect}
-        empty="Nenhuma Space Station no arquivo."
+        empty={t("stationsEmpty")}
       />
     </div>
   );

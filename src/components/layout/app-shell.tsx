@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   ActivityRail,
   ActivityRailTrigger,
@@ -8,13 +11,16 @@ import { SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const t = useTranslations("common");
+  const nav = useTranslations("nav");
+
   return (
     <>
       <a
         href="#conteudo"
         className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-lg focus:bg-background focus:px-3 focus:py-2 focus:ring-3 focus:ring-ring/50"
       >
-        Ir ao conteúdo
+        {t("skipToContent")}
       </a>
       <AppSidebar />
       <SidebarInset className="h-svh max-h-svh overflow-hidden">
@@ -22,7 +28,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
           <span className="text-sm text-muted-foreground">
-            Personal Archive
+            {nav("header")}
           </span>
           <div className="ml-auto md:hidden">
             <ActivityRailTrigger />

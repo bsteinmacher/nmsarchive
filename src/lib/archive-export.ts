@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import commonMessages from "../../messages/pt-BR/common.json";
 import {
   archiveEnvelopeCategory,
 } from "@/lib/archive-match";
@@ -16,7 +17,7 @@ export function archivedToNmsItem(item: ArchivedItemDetail): NmsItemFile | null 
     extra: item.metadata.extra,
   });
   if (!envelope || !isCategory(envelope)) {
-    toast.error("Categoria desconhecida neste arquivo.");
+    toast.error(commonMessages.unknownCategory);
     return null;
   }
   return buildNmsItem({

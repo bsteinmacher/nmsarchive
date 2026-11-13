@@ -1,6 +1,8 @@
 "use client";
 
 import { create } from "zustand";
+import commonMessages from "../../messages/pt-BR/common.json";
+import saveMessages from "../../messages/pt-BR/save.json";
 import { set as idbSet } from "idb-keyval";
 import {
   askPermission,
@@ -200,7 +202,7 @@ async function fileFor(name: string): Promise<File> {
   if (handle) return handle.getFile();
   const loose = looseFiles.get(name);
   if (loose) return loose;
-  throw new Error("Esse arquivo não está mais na pasta.");
+  throw new Error(commonMessages.fileMissingFolder);
 }
 
 async function openHandle(name: string) {
@@ -320,7 +322,7 @@ async function scan(options: { autoload: boolean; reloadSelected: boolean }) {
       savePermission: "granted",
       error:
         slots.length === 0
-          ? "Nenhum save.hg nessa pasta. No Steam o nome termina em st_ e o número da conta."
+          ? saveMessages.noHgSteam
           : null,
     });
 
@@ -390,7 +392,7 @@ async function applyLocal(
     boundName: bound,
     diskStale,
     error:
-      status.selectedPath && slots.length === 0 ? "Nenhum save.hg nessa pasta." : null,
+      status.selectedPath && slots.length === 0 ? saveMessages.noHg : null,
   });
 
   const shouldOpen = Boolean(

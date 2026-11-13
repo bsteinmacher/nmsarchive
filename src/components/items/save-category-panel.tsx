@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useCategoryCopy, useColumnHeader } from "@/i18n/format";
 import Link from "next/link";
 import { GripVertical } from "lucide-react";
 import { toast } from "sonner";
@@ -46,11 +48,7 @@ import {
 import { downloadNmsItemFile } from "@/lib/nmsitem-zip";
 import { trpc } from "@/lib/trpc";
 import { useSaveSession } from "@/stores/save-session";
-import {
-  CATEGORY_META,
-  isReorderableCategory,
-  type Category,
-} from "@/types/nms";
+import { isReorderableCategory, type Category } from "@/types/nms";
 
 function SlotTable({
   category,
@@ -92,7 +90,10 @@ function SlotTable({
   onExport: (item: ExtractedSlot) => void;
   screenshotUrl?: (item: ExtractedSlot) => string | null;
 }) {
-  const emptyCopy = emptyMessage ?? getAdapter(category).missingMessage;
+  const common = useTranslations("common");
+  const save = useTranslations("save");
+  const header = useColumnHeader();
+  const emptyCopy = emptyMessage ?? save(`missing.${category}`);
 
   if (items.length === 0) {
     return (
@@ -126,19 +127,19 @@ function SlotTable({
               {showReorder ? (
                 <TableHead className="w-10" aria-hidden={!reorderable || undefined}>
                   {reorderable ? (
-                    <span className="sr-only">Reordenar</span>
+                    <span className="sr-only">{common("reorder")}</span>
                   ) : null}
                 </TableHead>
               ) : null}
-              <TableHead className={listColumnClass("slot")}>Slot</TableHead>
-              <TableHead>Name</TableHead>
+              <TableHead className={listColumnClass("slot")}>{common("slot")}</TableHead>
+              <TableHead>{common("name")}</TableHead>
               {visibleColumns.map((col) => (
                 <TableHead key={col.id} className={listColumnClass(col.id)}>
-                  {col.header}
+                  {header(col)}
                 </TableHead>
               ))}
               <TableHead className="w-64 text-right">
-                Ações
+                {common("actions")}
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -187,7 +188,7 @@ function SlotTable({
                         type="button"
                         draggable
                         tabIndex={-1}
-                        aria-label={`Reordenar slot ${slot}`}
+                        aria-label={common("reorderSlot", { slot })}
                         aria-grabbed={dragging === item.index}
                         className={cn(
                           buttonVariants({
@@ -280,8 +281,10 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
   );
   const archivedItems = archived.data?.items ?? [];
 
+  const t = useTranslations("save");
+  const common = useTranslations("common");
+  const categories = useCategoryCopy();
   const adapter = getAdapter(category);
-  const meta = CATEGORY_META[category];
   const reorderable = isReorderableCategory(category);
   const primary = items.filter((item) => {
     if (item.group === "automatic") return false;
@@ -327,18 +330,18 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     if (from === to || to < 0) return;
     try {
       await reorderSlots(cat, from, to);
-      setLiveMessage(`Slot ${from + 1} trocado com o slot ${to + 1}.`);
+      setLiveMessage(common("slotMoved", { from: from + 1, to: to + 1 }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao reordenar");
+      toast.error(err instanceof Error ? err.message : common("failReorder"));
     }
   }
 
   function onExport(item: ExtractedSlot) {
     try {
       downloadNmsItemFile(exportItem(item.category, item.index));
-      toast.success("Exportado .nmsitem");
+      toast.success(common("exportedNmsitem"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no export");
+      toast.error(err instanceof Error ? err.message : common("failExport"));
     }
   }
 
@@ -346,10 +349,8 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Carregando sessão</CardTitle>
-          <CardDescription>
-            Recuperando o save do IndexedDB neste browser.
-          </CardDescription>
+          <CardTitle>{t("loadingSession")}</CardTitle>
+          <CardDescription>{t("loadingSessionHint")}</CardDescription>
         </CardHeader>
       </Card>
     );
@@ -359,15 +360,14 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Nenhum save aberto</CardTitle>
+          <CardTitle>{t("noOpenSave")}</CardTitle>
           <CardDescription>
-            Carregue um save.hg no dashboard para ver {meta.label} do save
-            aberto.
+            {t("loadSaveHint", { label: categories.label(category) })}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Link href="/save" className={cn(buttonVariants())}>
-            Ir ao dashboard
+            {t("goDashboard")}
           </Link>
         </CardContent>
       </Card>
@@ -378,31 +378,35 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
     category === "frigate" ? FLEET_FRIGATE_LIMIT : listed.length;
   const caption =
     category === "exosuit"
-      ? "Exosuit layout"
+      ? t("exosuitCaption")
       : category === "freighter"
-        ? "Freighter atual"
-        : `${adapter.label} no save (${filled} preenchida${filled === 1 ? "" : "s"} / ${slotCount} slot${slotCount === 1 ? "" : "s"})`;
+        ? t("freighterCaption")
+        : t("filledCaption", {
+            label: categories.label(category),
+            filled,
+            slots: slotCount,
+          });
 
   const description =
     category === "frigate"
-      ? "Até 30 fragatas, na ordem da lista do jogo: função, classe (S, A, B, C) e nome. O JSON só tem as que existem; aplicar acrescenta no fim."
+      ? t("frigateDescription")
       : category === "squadron"
-        ? "Quatro pilotos. Arraste para reordenar. Arquivar leva o piloto, a nave e se o slot está liberado."
+        ? t("squadronDescription")
       : reorderable
-    ? "Arraste pela alça para trocar de lugar — slots vazios entram na troca e o array não muda de tamanho."
+    ? t("reorderDescription")
     : category === "exosuit"
-      ? "Só quantidade de slots e posição das tecnologias. Substâncias e produtos ficam no save, fora do arquivo."
+      ? t("exosuitDescription")
       : category === "base"
-        ? "Bases planetárias e de Ship. Deep Space e Space Stations ficam nas seções abaixo. A base da Freighter fica em Freighters."
+        ? t("baseDescription")
         : category === "deepspace"
-          ? "Bases orbitais livres. Entram no mesmo array das bases planetárias; não há limite separado no JSON."
+          ? t("deepspaceDescription")
           : category === "spacestation"
-            ? "Estação espacial reivindicada. O jogo aceita até 20 por save; a 21ª é recusada ao aplicar."
+            ? t("stationDescription")
             : category === "wonder"
-          ? "Personal Wonders (escolha do jogador). Records automáticos ficam na lista abaixo, só leitura."
+          ? t("wonderDescription")
           : category === "freighter"
-            ? "Só o slot atual. A frota extra de cargueiras continua no JSON, mas não aparece aqui."
-            : meta.description;
+            ? t("freighterDescription")
+            : categories.description(category);
 
   const screenshotUrl = (item: ExtractedSlot) =>
     archivedScreenshotUrl(archivedItems, item);
@@ -468,11 +472,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
           description={description}
           emptyMessage={
             category === "base"
-              ? "Nenhuma base planetária ou de Ship neste save. Interior da Freighter fica em Freighters."
+              ? t("emptyPlanet")
               : category === "deepspace"
-                ? "Nenhuma base Deep Space neste save. O jogo adiciona uma quando você constrói com o Deep-Space Base Computer."
+                ? t("emptyDeepspace")
                 : category === "spacestation"
-                  ? "Nenhuma Space Station reivindicada neste save. O jogo aceita até 20 por save."
+                  ? t("emptyStation")
                   : undefined
           }
           screenshotUrl={screenshotUrl}
@@ -490,11 +494,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             columns={baseColumns}
             caption={
               interiorBases.length <= 1
-                ? "Freighter base"
-                : `Freighter base (${interiorBases.length})`
+                ? t("freighterBaseCaption")
+                : t("freighterBaseCount", { count: interiorBases.length })
             }
-            description="A construção do interior. Arquivar a Freighter não inclui esta construção."
-            emptyMessage="Este save não tem uma base de Freighter. O jogo cria uma quando você constrói no interior."
+            description={t("freighterBaseBody")}
+            emptyMessage={t("emptyFreighterBase")}
             screenshotUrl={screenshotUrl}
             {...idleHandlers}
             onSelect={setSelected}
@@ -510,9 +514,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             reorderable={false}
             sectionId="deepspace"
             columns={getAdapter("deepspace").columns}
-            caption={`Deep Space (${planetDeepSpace.filter((item) => !item.empty).length})`}
-            description="Bases orbitais livres (COSMOS). Mesmo array das bases planetárias."
-            emptyMessage="Nenhuma base Deep Space neste save."
+            caption={t("deepSpaceCount", {
+              count: planetDeepSpace.filter((item) => !item.empty).length,
+            })}
+            description={t("deepSpaceBody")}
+            emptyMessage={t("emptyDeepspaceShort")}
             screenshotUrl={screenshotUrl}
             {...idleHandlers}
             onSelect={setSelected}
@@ -525,9 +531,11 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
             reorderable={false}
             sectionId="spacestations"
             columns={getAdapter("spacestation").columns}
-            caption={`Space Stations (${planetStations.filter((item) => !item.empty).length} / 20)`}
-            description="Estação espacial reivindicada. O jogo aceita até 20 por save."
-            emptyMessage="Nenhuma Space Station reivindicada neste save."
+            caption={t("stationsCount", {
+              count: planetStations.filter((item) => !item.empty).length,
+            })}
+            description={t("stationsBody")}
+            emptyMessage={t("emptyStationShort")}
             screenshotUrl={screenshotUrl}
             {...idleHandlers}
             onSelect={setSelected}
@@ -547,8 +555,8 @@ export function SaveCategoryPanel({ category }: { category: Category }) {
               { id: "stat", header: "Stat" },
               { id: "seed", header: "Seed" },
             ]}
-            caption={`Records automáticos (${automatic.length})`}
-            description="Descobertas que o jogo guarda sozinho. Só leitura — não vão para o arquivo nem para .nmsitem."
+            caption={t("automaticCaption", { count: automatic.length })}
+            description={t("automaticBody")}
             screenshotUrl={screenshotUrl}
             {...idleHandlers}
             onSelect={setSelected}

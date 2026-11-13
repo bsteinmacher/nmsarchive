@@ -1,11 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { formatOperationLabel, logSubject } from "@/lib/operation-labels";
 import { sessionActivityLabel } from "@/stores/session-activity";
+import settings from "../../messages/pt-BR/settings.json";
+
+const operations = settings.operations as Record<string, string>;
+const activity = settings.activity;
+
+function activityText(
+  key: keyof typeof activity,
+  values?: { name: string },
+) {
+  const template = activity[key];
+  return values ? template.replaceAll("{name}", values.name) : template;
+}
 
 describe("operation-labels", () => {
   it("traduz ações conhecidas e deixa o resto como está", () => {
-    expect(formatOperationLabel("archive")).toBe("Arquivou");
-    expect(formatOperationLabel("custom_op")).toBe("custom_op");
+    expect(formatOperationLabel("archive", (key) => operations[key])).toBe(
+      "Arquivou",
+    );
+    expect(formatOperationLabel("custom_op", (key) => operations[key])).toBe(
+      "custom_op",
+    );
   });
 
   it("tira o assunto do item, do arquivo ou do rótulo", () => {
@@ -40,15 +56,15 @@ describe("sessionActivityLabel", () => {
   }
 
   it("usa o nome do save e o arquivo como fallback", () => {
-    expect(sessionActivityLabel(event("open", { saveName: "Main" }))).toBe(
+    expect(sessionActivityLabel(event("open", { saveName: "Main" }), activityText)).toBe(
       "Abriu save Main",
     );
-    expect(sessionActivityLabel(event("save", { fileName: "save2.hg" }))).toBe(
+    expect(sessionActivityLabel(event("save", { fileName: "save2.hg" }), activityText)).toBe(
       "Salvou save2.hg",
     );
-    expect(sessionActivityLabel(event("cancel"))).toBe("Cancelou");
+    expect(sessionActivityLabel(event("cancel"), activityText)).toBe("Cancelou");
     expect(
-      sessionActivityLabel(event("change", { label: "Aplicou Golden Vector" })),
+      sessionActivityLabel(event("change", { label: "Aplicou Golden Vector" }), activityText),
     ).toBe("Aplicou Golden Vector");
   });
 });

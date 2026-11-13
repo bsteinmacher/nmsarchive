@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { downloadBytes } from "@/lib/download";
 import type { SaveInPlaceResult } from "@/stores/save-location";
@@ -12,18 +15,34 @@ function currentSaveNames(fileName?: string) {
   };
 }
 
+export function useSaveReportCopy() {
+  const t = useTranslations("save");
+  return {
+    unbound: t("unbound"),
+    downloaded: (backup: string, file: string) =>
+      t("downloadedPair", { backup, file }),
+    saved: (file: string, backup: string) =>
+      t("savedWithBackup", { file, backup }),
+  };
+}
+
+type SaveReportCopy = {
+  unbound: string;
+  downloaded: (backup: string, file: string) => string;
+  saved: (file: string, backup: string) => string;
+};
+
 export async function reportSaveInPlace(
   result: SaveInPlaceResult,
   onStale: () => void,
+  copy: SaveReportCopy,
 ): Promise<boolean> {
   if (result.status === "stale") {
     onStale();
     return false;
   }
   if (result.status === "unbound") {
-    toast.error(
-      "Esse save não está ligado à pasta. Abra o arquivo de novo, ou baixe uma cópia.",
-    );
+    toast.error(copy.unbound);
     return false;
   }
   if (result.status === "cancelled") {
@@ -34,12 +53,10 @@ export async function reportSaveInPlace(
     downloadBytes(result.backupName, result.backupBytes);
     downloadBytes(result.fileName, result.bytes);
     pushSessionActivity("save", currentSaveNames(result.fileName));
-    toast.success(
-      `Backup ${result.backupName} e o save ${result.fileName} foram baixados.`,
-    );
+    toast.success(copy.downloaded(result.backupName, result.fileName));
     return true;
   }
   pushSessionActivity("save", currentSaveNames(result.fileName));
-  toast.success(`Salvo em ${result.fileName}. Backup ${result.backupName}.`);
+  toast.success(copy.saved(result.fileName, result.backupName));
   return true;
 }

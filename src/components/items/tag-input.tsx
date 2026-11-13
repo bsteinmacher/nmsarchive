@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
@@ -27,6 +28,7 @@ export function TagInput({
   placeholder?: string;
   describedBy?: string;
 }) {
+  const t = useTranslations("common");
   const listId = useId();
   const optionId = useId();
   const tags = trpc.items.listTags.useQuery({});
@@ -143,7 +145,7 @@ export function TagInput({
               variant="ghost"
               size="icon-xs"
               className="size-6"
-              aria-label={`Remover tag ${label}`}
+              aria-label={t("removeTag", { label })}
               onClick={() => removeAt(index)}
             >
               <X aria-hidden="true" />

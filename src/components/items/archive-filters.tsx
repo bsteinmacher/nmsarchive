@@ -1,6 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { useCategoryCopy } from "@/i18n/format";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ListViewToggle } from "@/components/items/list-view-toggle";
@@ -40,6 +43,9 @@ export function ArchiveFilters({
   onChange: (next: ArchiveUrlState) => void;
   resultCount?: number;
 }) {
+  const t = useTranslations("archive");
+  const common = useTranslations("common");
+  const categories = useCategoryCopy();
   const qId = `${idPrefix}-q`;
   const classId = `${idPrefix}-class`;
   const typeId = `${idPrefix}-type`;
@@ -54,12 +60,12 @@ export function ArchiveFilters({
     <div className="grid gap-6">
       <div className="grid gap-3">
         <div className="grid gap-1.5">
-          <Label htmlFor={qId}>Buscar</Label>
+          <Label htmlFor={qId}>{common("search")}</Label>
           <Input
             id={qId}
             type="search"
             value={state.q ?? ""}
-            placeholder="Título ou descrição"
+            placeholder={t("searchPlaceholder")}
             autoComplete="off"
             onChange={(e) =>
               onChange({
@@ -71,7 +77,7 @@ export function ArchiveFilters({
         </div>
         <div className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <div className="grid min-w-0 gap-1.5">
-            <Label htmlFor={classId}>Class</Label>
+            <Label htmlFor={classId}>{t("columns.className")}</Label>
             <select
               id={classId}
               className={selectClass}
@@ -83,16 +89,16 @@ export function ArchiveFilters({
                 })
               }
             >
-              <option value="">Qualquer</option>
+              <option value="">{common("any")}</option>
               {classOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {common("classValue", { value: option.value })}
                 </option>
               ))}
             </select>
           </div>
           <div className="grid min-w-0 gap-1.5">
-            <Label htmlFor={typeId}>Type</Label>
+            <Label htmlFor={typeId}>{t("columns.itemType")}</Label>
             <select
               id={typeId}
               className={selectClass}
@@ -104,28 +110,28 @@ export function ArchiveFilters({
                 })
               }
             >
-              <option value="">Qualquer</option>
+              <option value="">{common("any")}</option>
               {typeGroups.map((group) => (
-                <optgroup key={group.id} label={group.label}>
+                <optgroup key={group.id} label={categories.label(group.id)}>
                   {group.types.map((value) => (
                     <option key={`${group.id}-${value}`} value={value}>
-                      {value}
+                      {gameTermLabel(value)}
                     </option>
                   ))}
                 </optgroup>
               ))}
               {state.itemType && !flatTypes.includes(state.itemType) ? (
-                <option value={state.itemType}>{state.itemType}</option>
+                <option value={state.itemType}>{gameTermLabel(state.itemType)}</option>
               ) : null}
             </select>
           </div>
           <div className="grid min-w-0 gap-1.5">
-            <Label htmlFor={tagsId}>Tags</Label>
+            <Label htmlFor={tagsId}>{common("tags")}</Label>
             <TagInput
               id={tagsId}
               value={state.tags}
               onChange={(tags) => onChange({ ...state, tags })}
-              placeholder="exotic"
+              placeholder={t("tagPlaceholder")}
               describedBy={tagsHintId}
             />
           </div>
@@ -133,7 +139,7 @@ export function ArchiveFilters({
             id={tagsHintId}
             className="text-pretty text-xs leading-snug text-muted-foreground sm:col-span-2 lg:col-span-1 lg:col-start-3"
           >
-            Todas as tags escolhidas precisam bater.
+            {t("tagsHint")}
           </p>
         </div>
       </div>
@@ -141,8 +147,8 @@ export function ArchiveFilters({
         <div className="flex flex-wrap items-center gap-3">
           <p role="status" className="text-sm text-muted-foreground">
             {resultCount == null
-              ? "Filtrando…"
-              : `${resultCount} ${resultCount === 1 ? "item" : "itens"}`}
+              ? common("filtering")
+              : common("resultCount", { count: resultCount })}
           </p>
           {active ? (
             <Button
@@ -156,7 +162,7 @@ export function ArchiveFilters({
                 })
               }
             >
-              Limpar filtros
+              {common("clearFilters")}
             </Button>
           ) : null}
         </div>

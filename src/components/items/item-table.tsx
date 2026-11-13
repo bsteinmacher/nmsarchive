@@ -1,6 +1,13 @@
 "use client";
 
-import { matchingSlotsForArchived, sessionCategoryForArchived } from "@/lib/archive-match";
+import { useTranslations } from "next-intl";
+import {
+  archiveUiCategory,
+  matchingSlotsForArchived,
+  sessionCategoryForArchived,
+} from "@/lib/archive-match";
+import { useCategoryCopy, useColumnHeader } from "@/i18n/format";
+import { gameTermLabel } from "@/i18n/game-terms";
 import { type AdapterColumn } from "@/lib/nms/extract";
 import {
   archiveColumnValue,
@@ -9,7 +16,7 @@ import {
   tableTagLabels,
 } from "@/lib/list-columns";
 import type { ArchivedItemSummary } from "@/types/archive";
-import type { Category } from "@/types/nms";
+import { isCategory, type Category } from "@/types/nms";
 import { useSaveSession } from "@/stores/save-session";
 import {
   Table,
@@ -32,6 +39,9 @@ export function ItemTable({
   columns?: readonly AdapterColumn[];
   onSelect: (id: string) => void;
 }) {
+  const t = useTranslations("common");
+  const header = useColumnHeader();
+  const categories = useCategoryCopy();
   const sessionItems = useSaveSession((s) => s.items);
   const saveReady = useSaveSession((s) => s.status === "ready");
   const columns = columnsProp ?? archiveDataColumns(category);
@@ -48,15 +58,15 @@ export function ItemTable({
       </colgroup>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
+          <TableHead>{t("name")}</TableHead>
           {columns.map((col) => (
             <TableHead key={col.id} className={listColumnClass(col.id)}>
-              {col.header}
+              {header(col)}
             </TableHead>
           ))}
-          <TableHead className={listColumnClass("tags")}>Tags</TableHead>
+          <TableHead className={listColumnClass("tags")}>{t("tags")}</TableHead>
           <TableHead className={listColumnClass("actions")}>
-            <span className="sr-only">Ações</span>
+            <span className="sr-only">{t("actions")}</span>
           </TableHead>
         </TableRow>
       </TableHeader>
@@ -80,14 +90,25 @@ export function ItemTable({
                   </span>
                   {slots.length > 0 ? (
                     <span className="mt-1 block text-xs font-normal text-muted-foreground">
-                      No save · slot {slots[0].slotLabel ?? slots[0].index + 1}
+                      {t("inSaveSlot", {
+                        slot: slots[0].slotLabel ?? slots[0].index + 1,
+                      })}
                     </span>
                   ) : null}
                 </button>
               </TableCell>
               {columns.map((col) => (
                 <TableCell key={col.id} className="whitespace-nowrap">
-                  {archiveColumnValue(item, col) || "—"}
+                  {col.id === "category"
+                    ? (() => {
+                        const ui = archiveUiCategory(item);
+                        return isCategory(ui)
+                          ? categories.label(ui)
+                          : item.category;
+                      })()
+                    : (col.id === "itemType"
+                        ? gameTermLabel(archiveColumnValue(item, col))
+                        : archiveColumnValue(item, col)) || "—"}
                 </TableCell>
               ))}
               <TableCell className="whitespace-normal text-muted-foreground">

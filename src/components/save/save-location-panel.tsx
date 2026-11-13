@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
+import { useMediumDateTime, useShortDateTime } from "@/i18n/format";
 import { FolderOpen, RefreshCw, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { CollapsibleCard } from "@/components/layout/collapsible-card";
@@ -14,10 +16,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { fsErrorMessage } from "@/lib/nms/fs-access";
-import { reportSaveInPlace } from "@/components/save/save-in-place";
+import { reportSaveInPlace, useSaveReportCopy } from "@/components/save/save-in-place";
 import {
   newestSave,
-  saveKindLabel,
   storageFromFolderName,
   type SaveFileEntry,
   type SaveSlot,
@@ -28,25 +29,8 @@ import { useSaveSession } from "@/stores/save-session";
 const selectClass =
   "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30";
 
-function formatModified(ms: number) {
-  return new Date(ms).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function fileOptionLabel(file: SaveFileEntry, newestName: string | undefined) {
-  const when = new Date(file.lastModified).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const recent = file.name === newestName ? " · mais recente" : "";
-  return `${saveKindLabel(file.kind)} · ${file.name} · ${when}${recent}`;
+function code(chunks: ReactNode) {
+  return <code>{chunks}</code>;
 }
 
 async function run(action: () => Promise<void>) {
@@ -58,6 +42,7 @@ async function run(action: () => Promise<void>) {
 }
 
 function UnselectedFolder() {
+  const t = useTranslations("save");
   const selectLocalFolder = useSaveLocation((s) => s.selectLocalFolder);
   const [customPath, setCustomPath] = useState("");
   const [picking, setPicking] = useState(false);
@@ -67,7 +52,7 @@ function UnselectedFolder() {
     try {
       const res = await fetch("/api/game-folder/pick", { method: "POST" });
       const body = (await res.json()) as { path?: string; cancelled?: boolean; error?: string };
-      if (!res.ok) throw new Error(body.error ?? "Não consegui abrir o seletor de pasta.");
+      if (!res.ok) throw new Error(body.error ?? t("pickerFailed"));
       if (body.cancelled || !body.path) return;
       await selectLocalFolder(body.path);
     } finally {
@@ -86,8 +71,7 @@ function UnselectedFolder() {
       }}
     >
       <p className="text-sm text-muted-foreground">
-        Escolha a pasta da conta, ou cole o caminho. No Steam ela se chama{" "}
-        <code>st_</code> e o número, no GOG <code>DefaultUser</code>.
+        {t.rich("folderHint", { code })}
       </p>
       <Button
         type="button"
@@ -96,18 +80,18 @@ function UnselectedFolder() {
         onClick={() => void run(chooseFromDialog)}
       >
         <FolderOpen />
-        {picking ? "Escolhendo…" : "Escolher pasta"}
+        {picking ? t("choosing") : t("chooseFolder")}
       </Button>
       <div className="flex items-center gap-2">
         <input
           className={`${selectClass} flex-1`}
           value={customPath}
-          placeholder="/caminho/da/pasta/st_…"
-          aria-label="Caminho da pasta dos saves"
+          placeholder={t("pathPlaceholder")}
+          aria-label={t("pathLabel")}
           onChange={(event) => setCustomPath(event.target.value)}
         />
         <Button type="submit" variant="outline" disabled={!customPath.trim() || picking}>
-          Usar este caminho
+          {t("usePath")}
         </Button>
       </div>
     </form>
@@ -121,6 +105,11 @@ export function SaveLocationPanel({
   expanded: boolean;
   onToggle: () => void;
 }) {
+  const t = useTranslations("save");
+  const common = useTranslations("common");
+  const formatModified = useMediumDateTime();
+  const formatShort = useShortDateTime();
+  const reportCopy = useSaveReportCopy();
   const supported = useSaveLocation((s) => s.supported);
   const hydrated = useSaveLocation((s) => s.hydrated);
   const saveFolderName = useSaveLocation((s) => s.saveFolderName);
@@ -177,32 +166,31 @@ export function SaveLocationPanel({
     const mode =
       selectedMode ??
       slot.files.map((file) => modeOf(file.name)).find(Boolean);
-    return mode ? `Slot ${slot.slot} · ${mode}` : `Slot ${slot.slot}`;
+    return mode
+      ? t("slotOption", { slot: slot.slot, mode })
+      : t("slotOnly", { slot: slot.slot });
   }
 
   async function onSave(force = false) {
     const result = await saveInPlace(force);
-    await reportSaveInPlace(result, () => setConfirmStale(true));
+    await reportSaveInPlace(result, () => setConfirmStale(true), reportCopy);
   }
 
   return (
     <>
     <CollapsibleCard
-      title="Pasta do jogo"
-      description="A pasta do jogo neste computador. Cada slot mostra o save do jogador e o automático, e o mais recente fica pré-selecionado. Salvar grava nesse mesmo arquivo, depois de um backup com data e hora."
-      expandLabel="Abrir pasta do jogo"
-      collapseLabel="Recolher pasta do jogo"
+      title={t("folderTitle")}
+      description={t("folderDescription")}
+      expandLabel={t("folderExpand")}
+      collapseLabel={t("folderCollapse")}
       expanded={expanded}
       onExpandedChange={() => onToggle()}
       contentClassName="grid gap-4"
     >
         {!hydrated ? (
-          <p className="text-sm text-muted-foreground">Procurando a pasta do jogo…</p>
+          <p className="text-sm text-muted-foreground">{t("searchingFolder")}</p>
         ) : !supported ? (
-          <p className="text-sm text-muted-foreground">
-            Este navegador não deixa escolher uma pasta. Use Chromium, ou abra
-            um save.hg avulso abaixo.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("browserNoFolder")}</p>
         ) : !saveFolderName ? (
           <UnselectedFolder />
         ) : savePermission !== "granted" ? (
@@ -212,7 +200,7 @@ export function SaveLocationPanel({
               onClick={() => void run(() => resumeSaveFolder())}
             >
               <FolderOpen />
-              Continuar com {saveFolderName}
+              {t("continueWith", { name: saveFolderName })}
             </Button>
           </div>
         ) : (
@@ -220,7 +208,7 @@ export function SaveLocationPanel({
             <div className="grid gap-4 sm:grid-cols-2">
               {localFolders.length > 1 ? (
                 <label className="grid gap-1.5 sm:col-span-2">
-                  <span className="text-xs text-muted-foreground">Conta</span>
+                  <span className="text-xs text-muted-foreground">{t("account")}</span>
                   <select
                     className={selectClass}
                     value={saveFolderPath ?? ""}
@@ -238,11 +226,11 @@ export function SaveLocationPanel({
                 </label>
               ) : null}
               <div className="grid gap-1">
-                <p className="text-xs text-muted-foreground">Origem</p>
+                <p className="text-xs text-muted-foreground">{t("origin")}</p>
                 <p className="text-sm">{storageFromFolderName(saveFolderName)}</p>
               </div>
               <div className="grid gap-1">
-                <p className="text-xs text-muted-foreground">Pasta</p>
+                <p className="text-xs text-muted-foreground">{t("folder")}</p>
                 <div className="flex min-w-0 items-center gap-1">
                   <p
                     className="min-w-0 flex-1 truncate font-mono text-sm"
@@ -255,7 +243,7 @@ export function SaveLocationPanel({
                     variant="secondary"
                     size="icon-xs"
                     className="shrink-0 rounded-full"
-                    aria-label="Remover pasta selecionada"
+                    aria-label={t("removeFolder")}
                     disabled={busy}
                     onClick={() => void run(() => clearLocalFolder())}
                   >
@@ -264,7 +252,7 @@ export function SaveLocationPanel({
                 </div>
               </div>
               <label className="grid gap-1.5 sm:col-span-2">
-                <span className="text-xs text-muted-foreground">Slot</span>
+                <span className="text-xs text-muted-foreground">{t("slot")}</span>
                 <select
                   className={selectClass}
                   value={slotNumber != null ? String(slotNumber) : ""}
@@ -273,7 +261,7 @@ export function SaveLocationPanel({
                     void run(() => selectSlot(Number(event.target.value)));
                   }}
                 >
-                  {slots.length === 0 ? <option value="">Nenhum</option> : null}
+                  {slots.length === 0 ? <option value="">{common("none")}</option> : null}
                   {slots.map((slot) => (
                     <option key={slot.slot} value={String(slot.slot)}>
                       {slotLabel(slot)}
@@ -282,7 +270,7 @@ export function SaveLocationPanel({
                 </select>
               </label>
               <label className="grid gap-1.5 sm:col-span-2">
-                <span className="text-xs text-muted-foreground">Arquivo</span>
+                <span className="text-xs text-muted-foreground">{t("file")}</span>
                 <select
                   className={selectClass}
                   value={selectedName ?? ""}
@@ -291,42 +279,44 @@ export function SaveLocationPanel({
                     void run(() => selectFile(event.target.value));
                   }}
                 >
-                  {files.length === 0 ? <option value="">Nenhum</option> : null}
-                  {files.map((file) => (
+                  {files.length === 0 ? <option value="">{common("none")}</option> : null}
+                  {files.map((file) => {
+                    const when = formatShort(file.lastModified);
+                    const kind = file.kind === "auto" ? t("autoSave") : t("playerSave");
+                    const recent = file.name === newest?.name ? t("mostRecent") : "";
+                    return (
                     <option key={file.name} value={file.name}>
-                      {fileOptionLabel(file, newest?.name)}
+                      {`${kind} · ${file.name} · ${when}${recent}`}
                     </option>
-                  ))}
+                    );
+                  })}
                 </select>
               </label>
             </div>
 
             <div className="grid gap-1 text-sm text-muted-foreground">
               <p>
-                Modificado{" "}
+                {t("modified")}{" "}
                 <span className="text-foreground">
                   {selected ? formatModified(selected.lastModified) : "—"}
                 </span>
               </p>
               <p>
-                Backup em{" "}
+                {t("backupIn")}{" "}
                 <span className="font-mono text-foreground">
-                  {backupFolderName ?? "Documentos/NMS Archive"}
+                  {backupFolderName ?? t("defaultBackup")}
                 </span>
               </p>
               {sameFolder ? (
                 <p>
-                  A pasta de backup tem o mesmo nome da pasta do jogo. Os
-                  arquivos levam a data no nome e não entram na lista de slots.
+                  {t("sameBackupName")}
                 </p>
               ) : null}
             </div>
 
             {diskStale ? (
               <p className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm">
-                Esse arquivo mudou no disco desde a última leitura. Recarregue,
-                ou salve por cima — o backup leva a versão que está no disco
-                agora.
+                {t("diskStale")}
               </p>
             ) : null}
 
@@ -338,7 +328,7 @@ export function SaveLocationPanel({
                 onClick={() => void run(() => reloadFromDisk())}
               >
                 <RefreshCw />
-                Recarregar
+                {t("reload")}
               </Button>
               {linked ? (
                 <Button
@@ -347,7 +337,7 @@ export function SaveLocationPanel({
                   onClick={() => void run(() => onSave(false))}
                 >
                   <Save />
-                  {writing ? "Salvando…" : "Salvar neste arquivo"}
+                  {writing ? common("saving") : t("saveHere")}
                 </Button>
               ) : (
                 <Button
@@ -359,7 +349,7 @@ export function SaveLocationPanel({
                   }}
                 >
                   <FolderOpen />
-                  Abrir este arquivo
+                  {t("openThisFile")}
                 </Button>
               )}
             </div>
@@ -374,15 +364,12 @@ export function SaveLocationPanel({
       <Dialog open={confirmStale} onOpenChange={setConfirmStale}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>O arquivo no disco mudou</DialogTitle>
-            <DialogDescription>
-              Salvar substitui essa versão. O backup, com data e hora no nome,
-              guarda o que está no disco agora.
-            </DialogDescription>
+            <DialogTitle>{t("diskChangedSaveTitle")}</DialogTitle>
+            <DialogDescription>{t("diskChangedSaveBody")}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmStale(false)}>
-              Cancelar
+              {common("cancel")}
             </Button>
             <Button
               onClick={() => {
@@ -390,7 +377,7 @@ export function SaveLocationPanel({
                 void run(() => onSave(true));
               }}
             >
-              Salvar por cima
+              {t("overwrite")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -400,6 +387,7 @@ export function SaveLocationPanel({
 }
 
 export function SaveFolderSettings() {
+  const t = useTranslations("save");
   const hydrated = useSaveLocation((s) => s.hydrated);
   const saveFolderPath = useSaveLocation((s) => s.saveFolderPath);
   const backupFolderName = useSaveLocation((s) => s.backupFolderName);
@@ -407,26 +395,26 @@ export function SaveFolderSettings() {
 
   return (
     <CollapsibleCard
-      title="Pasta do jogo"
-      description="O app neste computador abre e grava o save.hg. O backup fica em Documentos."
-      expandLabel="Abrir pasta do jogo"
-      collapseLabel="Recolher pasta do jogo"
+      title={t("folderTitle")}
+      description={t("folderSettingsDescription")}
+      expandLabel={t("folderExpand")}
+      collapseLabel={t("folderCollapse")}
       contentClassName="grid gap-3 text-sm"
     >
         {!hydrated ? (
-          <p className="text-muted-foreground">Procurando a pasta do jogo…</p>
+          <p className="text-muted-foreground">{t("searchingFolder")}</p>
         ) : !saveFolderPath ? (
           <UnselectedFolder />
         ) : (
           <p className="flex min-w-0 items-center gap-1">
-            <span className="text-muted-foreground">Saves · </span>
+            <span className="text-muted-foreground">{t("savesLabel")}</span>
             <code className="min-w-0 flex-1 truncate">{saveFolderPath}</code>
             <Button
               type="button"
               variant="secondary"
               size="icon-xs"
               className="shrink-0 rounded-full"
-              aria-label="Remover pasta selecionada"
+              aria-label={t("removeFolder")}
               onClick={() => void run(() => clearLocalFolder())}
             >
               <X />
@@ -434,11 +422,11 @@ export function SaveFolderSettings() {
           </p>
         )}
         <p>
-          <span className="text-muted-foreground">Backups · </span>
+          <span className="text-muted-foreground">{t("backupsLabel")}</span>
           {backupFolderName ? (
             <code>{backupFolderName}</code>
           ) : (
-            "Documentos/NMS Archive"
+            t("defaultBackup")
           )}
         </p>
     </CollapsibleCard>

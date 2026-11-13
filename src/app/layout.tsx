@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { AppShell } from "@/components/layout/app-shell";
 import { AppProviders } from "@/components/providers";
 import "./globals.css";
@@ -14,21 +15,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "NMS Archive",
-  description:
-    "Arquivo pessoal de Ships, Multi Tools e descobertas de No Man's Sky.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common");
+  return {
+    title: t("metaTitle"),
+    description: t("metaDescription"),
+  };
+}
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     <html
-      lang="pt-BR"
+      lang={locale}
       suppressHydrationWarning
       className={`h-full ${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="min-h-full font-sans antialiased">
-        <AppProviders>
+        <AppProviders locale={locale} messages={messages}>
           <AppShell>{children}</AppShell>
         </AppProviders>
       </body>

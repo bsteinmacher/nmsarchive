@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -22,13 +23,14 @@ export function ExportMenu({
   onApply?: () => void;
   onDownload: () => void;
 }) {
+  const t = useTranslations("common");
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         disabled={disabled}
         render={<Button size="sm" variant="outline" />}
       >
-        Exportar
+        {t("export")}
         <ChevronDown className="size-3.5 opacity-70" aria-hidden="true" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
@@ -38,7 +40,7 @@ export function ExportMenu({
               onArchive?.();
             }}
           >
-            Personal Archive
+            {t("personalArchive")}
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem
@@ -46,10 +48,10 @@ export function ExportMenu({
               onApply?.();
             }}
           >
-            Aplicar no save
+            {t("applyToSave")}
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={onDownload}>Baixar .nmsitem</DropdownMenuItem>
+        <DropdownMenuItem onClick={onDownload}>{t("downloadNmsitem")}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

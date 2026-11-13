@@ -1,6 +1,8 @@
 "use client";
 
 import { useId, useState, type FormEvent } from "react";
+import { useTranslations } from "next-intl";
+import { useIntegerFormat } from "@/i18n/format";
 import { AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -24,13 +26,16 @@ import { useSaveSession } from "@/stores/save-session";
 
 export type CurrencyField = keyof PlayerCurrencies;
 
-const FIELD_META: Record<
-  CurrencyField,
-  { label: string; verb: string }
-> = {
-  units: { label: "Units", verb: "Salvar Units" },
-  nanites: { label: "Nanites", verb: "Salvar Nanites" },
-  specials: { label: "Quicksilver", verb: "Salvar Quicksilver" },
+const FIELD_KEYS: Record<CurrencyField, "units" | "nanites" | "quicksilver"> = {
+  units: "units",
+  nanites: "nanites",
+  specials: "quicksilver",
+};
+
+const VERB_KEYS: Record<CurrencyField, "saveUnits" | "saveNanites" | "saveQuicksilver"> = {
+  units: "saveUnits",
+  nanites: "saveNanites",
+  specials: "saveQuicksilver",
 };
 
 function parseInteger(raw: string): number | null {
@@ -48,6 +53,9 @@ export function CurrencyEditDialog({
   field: CurrencyField | null;
   onClose: () => void;
 }) {
+  const t = useTranslations("save");
+  const common = useTranslations("common");
+  const formatInteger = useIntegerFormat();
   const summary = useSaveSession((s) => s.summary);
   const updateCurrencies = useSaveSession((s) => s.updateCurrencies);
   const inputId = useId();
@@ -56,7 +64,8 @@ export function CurrencyEditDialog({
   const [fieldKey, setFieldKey] = useState<CurrencyField | null>(null);
   const [value, setValue] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const meta = field ? FIELD_META[field] : null;
+  const label = field ? t(FIELD_KEYS[field]) : null;
+  const verb = field ? t(VERB_KEYS[field]) : common("save");
   const parsed = parseInteger(value);
   const unitsOutOfRange =
     field === "units" && parsed != null && unitsOutsideRange(parsed);
@@ -71,21 +80,19 @@ export function CurrencyEditDialog({
   }
 
   async function commit() {
-    if (!field || !meta) return;
+    if (!field || !label) return;
     const parsedValue = parseInteger(value);
     if (parsedValue == null) {
-      setError(`Use um número inteiro para ${meta.label}.`);
+      setError(t("integerRequired", { label }));
       document.getElementById(inputId)?.focus();
       return;
     }
     try {
       await updateCurrencies({ [field]: parsedValue });
-      toast.success(
-        `${meta.label} atualizado neste save. Para levar ao jogo, use Salvar neste arquivo ou Baixar arquivo editado.`,
-      );
+      toast.success(t("currencySaved", { label }));
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha ao gravar");
+      toast.error(err instanceof Error ? err.message : common("failWrite"));
     }
   }
 
@@ -103,14 +110,14 @@ export function CurrencyEditDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Editar {meta?.label ?? "moeda"}</DialogTitle>
-          <DialogDescription>
-            Só este valor. Fica no save aberto até você baixar o .hg.
-          </DialogDescription>
+          <DialogTitle>
+            {t("currencyTitle", { label: label ?? t("currencyFallback") })}
+          </DialogTitle>
+          <DialogDescription>{t("currencyBody")}</DialogDescription>
         </DialogHeader>
         <form className="grid gap-4" onSubmit={onSubmit} noValidate>
           <div className="grid gap-2">
-            <Label htmlFor={inputId}>{meta?.label ?? "Valor"}</Label>
+            <Label htmlFor={inputId}>{label ?? t("value")}</Label>
             <Input
               id={inputId}
               name={field ?? "currency"}
@@ -130,8 +137,10 @@ export function CurrencyEditDialog({
             />
             {field === "units" ? (
               <p id={hintId} className="text-xs text-muted-foreground">
-                No jogo vai de {UNITS_MIN.toLocaleString("pt-BR")} a{" "}
-                {UNITS_MAX.toLocaleString("pt-BR")} (cerca de 4,29 bilhões).
+                {t("unitsRange", {
+                  min: formatInteger(UNITS_MIN),
+                  max: formatInteger(UNITS_MAX),
+                })}
               </p>
             ) : null}
             {error ? (
@@ -149,18 +158,17 @@ export function CurrencyEditDialog({
                   aria-hidden="true"
                 />
                 <span>
-                  Fora do intervalo do jogo (0 a{" "}
-                  {UNITS_MAX.toLocaleString("pt-BR")}).
+                  {t("unitsOut", { max: formatInteger(UNITS_MAX) })}
                 </span>
               </p>
             ) : null}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
-              Cancelar
+              {common("cancel")}
             </Button>
             <Button type="button" onClick={() => void commit()}>
-              {meta?.verb ?? "Salvar"}
+              {verb}
             </Button>
           </DialogFooter>
         </form>

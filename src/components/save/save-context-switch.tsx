@@ -1,15 +1,17 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import type { SaveContext } from "@/lib/nms/player";
 import { useSaveSession } from "@/stores/save-session";
 
-const OPTIONS: { id: SaveContext; label: string }[] = [
-  { id: "main", label: "Principal" },
-  { id: "expedition", label: "Expedição" },
+const OPTIONS: { id: SaveContext; label: "main" | "expedition" }[] = [
+  { id: "main", label: "main" },
+  { id: "expedition", label: "expedition" },
 ];
 
 export function SaveContextSwitch({ disabled = false }: { disabled?: boolean }) {
+  const t = useTranslations("save");
   const available = useSaveSession((s) => s.expeditionAvailable);
   const current = useSaveSession((s) => s.saveContext);
   const setSaveContext = useSaveSession((s) => s.setSaveContext);
@@ -19,7 +21,7 @@ export function SaveContextSwitch({ disabled = false }: { disabled?: boolean }) 
     <div
       className="flex rounded-lg border p-0.5"
       role="group"
-      aria-label="Contexto do save"
+      aria-label={t("contextLabel")}
     >
       {OPTIONS.map((option) => {
         const selected = current === option.id;
@@ -33,7 +35,7 @@ export function SaveContextSwitch({ disabled = false }: { disabled?: boolean }) 
             disabled={disabled}
             onClick={() => setSaveContext(option.id)}
           >
-            {option.label}
+            {t(option.label)}
           </Button>
         );
       })}

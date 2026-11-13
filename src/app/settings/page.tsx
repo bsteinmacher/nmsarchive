@@ -1,8 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CollapsibleCard } from "@/components/layout/collapsible-card";
+import { LocaleSelect } from "@/components/settings/locale-select";
+import { useShortDateTime } from "@/i18n/format";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -23,17 +26,14 @@ function formatBytes(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MiB`;
 }
 
-function formatWhen(iso: string | Date) {
-  const date = typeof iso === "string" ? new Date(iso) : iso;
-  return date.toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function code(chunks: ReactNode) {
+  return <code>{chunks}</code>;
 }
 
 export default function SettingsPage() {
+  const t = useTranslations("settings");
+  const common = useTranslations("common");
+  const formatWhen = useShortDateTime();
   const utils = trpc.useUtils();
   const settings = trpc.settings.get.useQuery();
   const logs = trpc.logs.list.useQuery({ limit: 40 });
@@ -55,23 +55,22 @@ export default function SettingsPage() {
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-medium tracking-tight">
-          Settings
+          {t("title")}
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pastas do save e dos backups, banco local e mapping.json. O conteúdo
-          do .hg não passa por aqui.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("intro")}</p>
       </div>
+
+      <LocaleSelect />
 
       <SaveFolderSettings />
 
       <TagsPanel />
 
       <CollapsibleCard
-        title="Banco local"
-        description="SQLite do arquivo pessoal. Informativo — o path não muda nesta fase."
-        expandLabel="Abrir banco local"
-        collapseLabel="Recolher banco local"
+        title={t("databaseTitle")}
+        description={t("databaseDescription")}
+        expandLabel={t("databaseExpand")}
+        collapseLabel={t("databaseCollapse")}
         contentClassName="grid gap-2 text-sm"
       >
         <p>
@@ -79,7 +78,7 @@ export default function SettingsPage() {
           <code>{settings.data?.databaseUrl ?? "…"}</code>
         </p>
         <p>
-          <span className="text-muted-foreground">Arquivo · </span>
+          <span className="text-muted-foreground">{t("databaseFile")}</span>
           <code className="break-all">
             {settings.data?.databasePath ?? "…"}
           </code>
@@ -90,15 +89,10 @@ export default function SettingsPage() {
       </CollapsibleCard>
 
       <CollapsibleCard
-        title="Backup e restore"
-        description={
-          <>
-            Cópia em <code>data/backups/</code> antes de arquivar. Guardamos as
-            20 mais recentes.
-          </>
-        }
-        expandLabel="Abrir backup e restore"
-        collapseLabel="Recolher backup e restore"
+        title={t("backupTitle")}
+        description={t.rich("backupDescription", { code })}
+        expandLabel={t("backupExpand")}
+        collapseLabel={t("backupCollapse")}
         contentClassName="grid gap-4"
       >
           <div className="flex flex-wrap gap-2">
@@ -108,18 +102,20 @@ export default function SettingsPage() {
                 void (async () => {
                   try {
                     const result = await backup.mutateAsync();
-                    toast.success(`Backup ${result.fileName}`);
+                    toast.success(
+                      t("backupToast", { fileName: result.fileName ?? "" }),
+                    );
                     await refreshAll();
                   } catch (err) {
                     toast.error(
-                      err instanceof Error ? err.message : "Falha no backup",
+                      err instanceof Error ? err.message : t("backupFailed"),
                     );
                   }
                 })();
               }}
               disabled={backup.isPending}
             >
-              {backup.isPending ? "Copiando…" : "Fazer backup agora"}
+              {backup.isPending ? t("copying") : t("backupNow")}
             </Button>
             <Button
               type="button"
@@ -127,7 +123,7 @@ export default function SettingsPage() {
               onClick={() => fileRef.current?.click()}
               disabled={restoreUpload.isPending || busy}
             >
-              Restaurar .db…
+              {t("restoreDb")}
             </Button>
             <input
               ref={fileRef}
@@ -147,12 +143,12 @@ export default function SettingsPage() {
                       fileName: file.name,
                     });
                     toast.success(
-                      "Banco restaurado. Recarregue a página para ver os itens.",
+                      t("restoredReload"),
                     );
                     window.location.reload();
                   } catch (err) {
                     toast.error(
-                      err instanceof Error ? err.message : "Falha no restore",
+                      err instanceof Error ? err.message : t("restoreFailed"),
                     );
                   } finally {
                     setBusy(false);
@@ -165,10 +161,10 @@ export default function SettingsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Arquivo</TableHead>
-                  <TableHead>Tamanho</TableHead>
-                  <TableHead>Quando</TableHead>
-                  <TableHead className="text-right">Ação</TableHead>
+                  <TableHead>{t("file")}</TableHead>
+                  <TableHead>{t("size")}</TableHead>
+                  <TableHead>{t("when")}</TableHead>
+                  <TableHead className="text-right">{common("action")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,21 +187,21 @@ export default function SettingsPage() {
                                 fileName: row.fileName,
                               });
                               toast.success(
-                                `Restaurado ${row.fileName}. Recarregue a página.`,
+                                t("restoredFile", { fileName: row.fileName }),
                               );
                               window.location.reload();
                             } catch (err) {
                               toast.error(
                                 err instanceof Error
                                   ? err.message
-                                  : "Falha no restore",
+                                  : t("restoreFailed"),
                               );
                             }
                           })();
                         }}
                         disabled={restore.isPending}
                       >
-                        Restaurar
+                        {t("restore")}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -214,25 +210,22 @@ export default function SettingsPage() {
             </Table>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Nenhum backup ainda. Arquivar uma Ship cria o primeiro.
+              {t("noBackups")}
             </p>
           )}
       </CollapsibleCard>
 
       <CollapsibleCard
-        title="mapping.json"
-        description={
-          <>
-            Cache em <code>data/mapping.json</code>, baixado do MBINCompiler.
-            Depois de atualizar, abra o save de novo.
-          </>
-        }
-        expandLabel="Abrir mapping.json"
-        collapseLabel="Recolher mapping.json"
+        title={t("mappingTitle")}
+        description={t.rich("mappingDescription", { code })}
+        expandLabel={t("mappingExpand")}
+        collapseLabel={t("mappingCollapse")}
         contentClassName="flex flex-wrap items-center gap-3"
       >
         <p className="text-sm text-muted-foreground">
-          libMBIN {settings.data?.mappingVersion ?? "carregando…"}
+          {t("mappingLib", {
+            version: settings.data?.mappingVersion ?? t("mappingLoading"),
+          })}
         </p>
         <Button
           type="button"
@@ -242,49 +235,55 @@ export default function SettingsPage() {
               try {
                 const result = await updateMapping.mutateAsync();
                 toast.success(
-                  `mapping.json ${result.libMBIN_version}. Abra o save de novo para aplicar.`,
+                  t("mappingUpdated", { version: result.libMBIN_version }),
                 );
                 await refreshAll();
               } catch (err) {
                 toast.error(
                   err instanceof Error
                     ? err.message
-                    : "Falha ao atualizar mapping",
+                    : t("mappingFailed"),
                 );
               }
             })();
           }}
           disabled={updateMapping.isPending}
         >
-          {updateMapping.isPending ? "Baixando…" : "Atualizar mapping.json"}
+          {updateMapping.isPending ? t("downloading") : t("updateMapping")}
         </Button>
       </CollapsibleCard>
 
       <CollapsibleCard
-        title="Log de operações"
-        description="Archive, backup, restore, tags e atualização de mapping."
-        expandLabel="Abrir log de operações"
-        collapseLabel="Recolher log de operações"
+        title={t("logTitle")}
+        description={t("logDescription")}
+        expandLabel={t("logExpand")}
+        collapseLabel={t("logCollapse")}
       >
           {logs.isLoading ? (
-            <p className="text-sm text-muted-foreground">Carregando…</p>
+            <p className="text-sm text-muted-foreground">{common("loading")}</p>
           ) : !logs.data?.length ? (
             <p className="text-sm text-muted-foreground">
-              Nenhuma operação registrada.
+              {t("noOperations")}
             </p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Ação</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Quando</TableHead>
+                  <TableHead>{common("action")}</TableHead>
+                  <TableHead>{t("item")}</TableHead>
+                  <TableHead>{t("when")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {logs.data.map((row) => (
                   <TableRow key={row.id}>
-                    <TableCell>{formatOperationLabel(row.action)}</TableCell>
+                    <TableCell>
+                      {formatOperationLabel(row.action, (key) =>
+                        t.has(`operations.${key}`)
+                          ? t(`operations.${key}`)
+                          : undefined,
+                      )}
+                    </TableCell>
                     <TableCell className="max-w-[16rem] truncate">
                       {logSubject(row) ?? "—"}
                     </TableCell>

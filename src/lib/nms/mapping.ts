@@ -1,3 +1,5 @@
+import saveMessages from "../../../messages/pt-BR/save.json";
+
 export const MAPPING_URL =
   "https://github.com/monkeyman192/MBINCompiler/releases/latest/download/mapping.json";
 
@@ -16,19 +18,19 @@ export type MappingIndex = {
 
 export function parseMappingFile(data: unknown): MappingFile {
   if (!data || typeof data !== "object") {
-    throw new Error("mapping.json inválido");
+    throw new Error(saveMessages.mappingInvalid);
   }
   const rec = data as Record<string, unknown>;
   if (!Array.isArray(rec.Mapping)) {
-    throw new Error("mapping.json sem array Mapping");
+    throw new Error(saveMessages.mappingNoArray);
   }
   const Mapping: MappingEntry[] = rec.Mapping.map((entry, i) => {
     if (!entry || typeof entry !== "object") {
-      throw new Error(`mapping.json: entrada ${i} inválida`);
+      throw new Error(saveMessages.mappingEntry.replace("{index}", String(i)));
     }
     const item = entry as Record<string, unknown>;
     if (typeof item.Key !== "string" || typeof item.Value !== "string") {
-      throw new Error(`mapping.json: entrada ${i} sem Key/Value`);
+      throw new Error(saveMessages.mappingEntryKeys.replace("{index}", String(i)));
     }
     return { Key: item.Key, Value: item.Value };
   });
