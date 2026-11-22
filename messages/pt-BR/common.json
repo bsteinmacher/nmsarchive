@@ -15,6 +15,7 @@
   "description": "Descrição",
   "name": "Name",
   "slot": "Slot",
+  "slotTitle": "Slot {slot}",
   "any": "Qualquer",
   "details": "Ver detalhes",
   "archive": "Arquivar",
