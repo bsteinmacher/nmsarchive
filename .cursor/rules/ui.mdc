@@ -1,0 +1,31 @@
+---
+description: Padrões de diálogo, card, sidebar e save aberto
+globs:
+  - src/components/**
+  - src/app/**
+alwaysApply: false
+---
+
+# Interface
+
+Título, fechar e rodapé do diálogo ficam fixos. Só o miolo rola. Excluir abre confirmação por cima do diálogo, em qualquer categoria. O botão Excluir fica no mesmo lugar em todos os diálogos, com texto e contorno vermelhos. A cor e a posição ainda não estão uniformes.
+
+O card inteiro abre o detalhe, e o botão Ver detalhes permanece. No save, o título do card é o slot; Arquivar fica no detalhe, não no card. O detalhe do save tem anterior e próximo, no clique e nas setas. O nome é uma linha. Cancelar fica ao lado de Salvar.
+
+A coluna da direita segue o modelo da sidebar: recolhida mostra só o ícone, abre na primeira alteração, lista só a sessão. O histórico permanente fica em Settings. Salvar oferece gravar neste arquivo e baixar o arquivo editado. Os nomes de download são “Arquivo editado” e “Arquivo original”.
+
+Fechar save com alteração pendente: Voltar é a ação em destaque; Fechar mesmo assim é a ação secundária, à esquerda.
+
+No dashboard, o resumo vem primeiro. Pasta do jogo e arquivo avulso são acordeões; um aberto esconde o outro; os dois começam fechados. O cabeçalho inteiro do card abre e fecha. Settings usa o mesmo card, cada bloco começa fechado, inclusive o seletor de idioma. O seletor ainda está solto acima dos cards.
+
+Sidebar, de cima para baixo: Exotraje, Multi-ferramentas, Companions, Naves, Cargueiras, Fragatas, Esquadrão, Bases, Wonders. Deep Space e Space Station ficam dentro de Bases, não no menu. Save aberto fica abaixo e só lista categorias com sessão. Settings fica acima de Theme.
+
+Arquivo e save usam a mesma tabela, sem caixa cinza só de um lado. Seed e galaxy não são colunas. No arquivo, a escolha grade/tabela permanece ao trocar de categoria.
+
+Cada parte de Cargueiras e de Bases fica num card, no arquivo e no save. Isso ainda não está no código.
+
+Não recriar a calculadora de tempo de expedição das fragatas. A calculadora da fragata em si fica para depois.
+
+Skills de interface não mudam parser, mapping nem Prisma.
+
+Não adicionar ícone ou imagem da Hello Games. Classe, moeda e tipo são texto. O chrome vem do `lucide-react`. Screenshot enviada pela pessoa fica em `data/screenshots/`.

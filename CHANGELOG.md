@@ -1,6 +1,6 @@
 # Changelog
 
-O projeto segue as fases de [`PLAN.md`](./PLAN.md). Este arquivo registra o que mudou para quem atualiza o Docker ou arquivos `.nmsitem`.
+O mapa da documentação está em [`docs/README.md`](./docs/README.md). Este arquivo registra o que mudou para quem atualiza o Docker ou arquivos `.nmsitem`.
 
 ## Política de versão do `.nmsitem`
 
@@ -34,7 +34,7 @@ Constante no código: `NMSITEM_SCHEMA_VERSION` em `src/lib/nmsitem.ts`.
 - Em `/save`, o app neste computador acha a pasta do jogo, abre o save mais recente e grava por cima do mesmo arquivo. Antes, copia um backup `saveN-YYYY-MM-DD-HH-MM-SS.hg` para Documentos (`NMS Archive`). A rota local só responde em localhost.
 - Companions no arquivo pessoal mostram **Element** e **Biome** (tabela, cards e detalhes). Já estava no extra; a lista não exibia. A busca também casa esses campos.
 - Em **Ver detalhes** do save aberto, **Excluir** esvazia o slot (o array do jogo não encolhe). Em nave, também limpa peças/cores e o casco da Corvette. Não apaga o arquivo pessoal.
-- Frigates do save aberto reordenam por arrastar, como naves, multi-tools e companions.
+- Fragatas do save aberto não reordenam por arrastar. O jogo ordena a lista sozinho. Naves, multi-tools, companions e esquadrão continuam reordenando.
 - `FleetFrigates` não pré-aloca 30 vazios: o JSON só tem as fragatas existentes (teto **30**). Aplicar acrescenta no fim; Excluir tira do array.
 
 ## 0.1.0 — Fase 5
@@ -48,7 +48,7 @@ Deploy self-hosted e documentação do arquivo pessoal.
 - `GET /api/health` (200 se o SQLite responde; 503 caso contrário).
 - `npm run mapping:update` (`scripts/update-mapping.ts`) para baixar o `mapping.json` do MBINCompiler.
 - Lista completa das 256 galáxias em `src/lib/nms/galaxies.ts`.
-- README de captura de save, backup do SQLite, aviso de risco (Ironman/expedição) e política deste envelope.
+- README de captura de save, backup do SQLite, aviso de risco (Permadeath/expedição) e política deste envelope.
 
 ### Notes
 

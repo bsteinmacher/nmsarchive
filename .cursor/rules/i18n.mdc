@@ -1,0 +1,17 @@
+---
+description: Textos-fonte em inglês e catálogos do next-intl
+globs:
+  - src/i18n/**
+  - messages/**
+alwaysApply: false
+---
+
+# Idioma
+
+Código, chaves gravadas, tags automáticas e textos-fonte ficam em inglês. Tudo que a pessoa vê passa pelo next-intl. Não hardcodar português em componente.
+
+Hoje o único catálogo é `messages/pt-BR`, e `locales` em `src/i18n/locales.ts` é só `pt-BR`. Os próximos catálogos são en-US, espanhol e talvez russo. Não tratar um catálogo que ainda não existe como proibido.
+
+Nomes de tipo de nave e de multi-tool continuam gravados em inglês. A tela mostra o rótulo traduzido. `gameTermLabel` é o mecanismo atual desses nomes. Tags (`Ship`, `Ice`, `Toxic Biome`) não passam por essa tradução.
+
+Personal Archive, All, Settings e Theme são os textos-fonte em inglês desses controles. O nome visível de cada categoria sai do catálogo, no português oficial do jogo quando o locale é pt-BR.

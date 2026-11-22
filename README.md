@@ -2,7 +2,7 @@
 
 Arquivo pessoal de descobertas de **No Man's Sky**: naves, multi-ferramentas, cargueiras, fragatas, companions, wonders, bases planetárias, Deep Space, Space Station e o layout do traje. Você abre um save para **copiar para o arquivo** e **devolver** o que guardou — o save não é o produto.
 
-O plano está em [`PLAN.md`](./PLAN.md). Política de versão do envelope `.nmsitem` e histórico: [`CHANGELOG.md`](./CHANGELOG.md).
+O mapa da documentação está em [`docs/README.md`](./docs/README.md). Política de versão do envelope `.nmsitem` e histórico: [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## Status
 
@@ -14,7 +14,7 @@ O save completo **nunca** vai para o servidor.
 
 Editar save pode corromper o slot. Ao gravar pela pasta do jogo, o app copia o arquivo do disco para a pasta de backup (`save4-YYYY-MM-DD-HH-MM-SS.hg`) antes de substituir. Em Permadeath, guarde também uma cópia sua. O `mf_save*.hg` não é alterado.
 
-**Não use em Ironman / Permadeath / expedição sem essa cópia.** O jogo pode recusar o save ou avançar a expedição com dados errados. O app não é um editor oficial da Hello Games.
+**Não use em Permadeath / expedição sem essa cópia.** O jogo pode recusar o save ou avançar a expedição com dados errados. O app não é um editor oficial da Hello Games.
 
 ## O que não entra no arquivo
 
@@ -114,11 +114,9 @@ Vitest cobre LZ4, mapping e, se existir, `.others/save2.hg` (gitignored). Sem es
 
 ### Ícones e imagens
 
-Ícones estáticos do jogo (classe S/A/B/C, moedas, tipos…) ficam em `public/icons/`: PNG com fundo transparente, nome minúsculo em kebab-case, uma pasta por família. Exemplo: `public/icons/class/s.png` → `/icons/class/s.png`.
+O projeto não usa ícone nem imagem da Hello Games. Classe, moeda e tipo aparecem como texto. O chrome da interface (lixeira, tema, grid) vem do `lucide-react`.
 
-Chrome da interface (lixeira, tema, grid) vem do `lucide-react`, não de arquivo. Screenshots que o usuário sobe vão para `data/screenshots/` (gitignored) — não misturar com os ícones versionados.
-
-Convenção completa: [`PLAN.md` §4.1](./PLAN.md#41-ícones-e-imagens-estáticas).
+Screenshot que a pessoa envia vai para `data/screenshots/` (gitignored).
 
 ## Saves locais de fixture
 

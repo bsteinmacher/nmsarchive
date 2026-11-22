@@ -1,0 +1,41 @@
+---
+description: Invariantes do NMS Archive que valem em qualquer conversa
+alwaysApply: true
+---
+
+# NMS Archive
+
+O arquivo pessoal é o produto. O save aberto é onde se copia um item para o arquivo e se devolve ao jogo.
+
+Antes de criar tela, modal, card, tag ou export, procure em `docs/features/` e no código. Reuse Dialog, DropdownMenu, Button, TagInput, cards, sidebar e o envelope `.nmsitem` v1. Não crie um sistema paralelo.
+
+Código e testes vencem `docs/`, que vencem este resumo.
+
+## Não fazer
+
+- Enviar o `.hg` completo ao servidor. O POST leva o item arquivado e metadados, com o SHA-256 calculado no cliente.
+- Subir `NMSITEM_SCHEMA_VERSION` sem o schema do arquivo quebrar. O payload pode crescer e a versão continua 1.
+- Copiar GoatFungus ou libNOM, ou prometer compatibilidade binária com os exports deles.
+- Editar recompensa de conta ou liberar expedição que a pessoa não fez.
+- Implementar Fase 6 ou Colossal Archive neste repositório.
+- Commitar save, ou qualquer arquivo em `.others/`.
+- Tratar inventário de substâncias como categoria. O traje arquiva só layout e posição de tecnologia.
+- Colocar ícone ou imagem da Hello Games no projeto. Classe, moeda e tipo ficam em texto. O chrome usa `lucide-react`.
+- Gravar a expedição no `PlayerStateData` principal. Expedição é `ExpeditionContext`.
+
+## Como o app roda hoje
+
+Docker escuta em `127.0.0.1`. A imagem não vê a pasta da Steam; gravar no arquivo do jogo exige o processo nesta máquina. A forma de distribuir o app ainda não está decidida.
+
+Permadeath e expedição pedem uma cópia própria do save. Este não é um editor oficial da Hello Games.
+
+Um item é uma linha no SQLite e um arquivo `.nmsitem`.
+
+## Onde está o resto
+
+- Formato do save, slots e apply: rule `save-format`
+- Interface: rule `ui`
+- Tags e categorias: rule `tags-and-categories`
+- Idioma: rule `i18n`
+- Mapa: `docs/README.md`
+- Decisões: `docs/decisions.md`
