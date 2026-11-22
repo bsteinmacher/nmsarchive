@@ -1,3 +1,3 @@
 @AGENTS.md
 
-Ícones e imagens estáticas do jogo: `public/icons/` (PNG transparente, kebab-case, agrupados por tipo). Chrome da UI: `lucide-react`. Screenshots do usuário: `data/screenshots/`. Convenção em PLAN.md §4.1.
+Sem ícone ou imagem da Hello Games. Chrome da UI: `lucide-react`. Screenshots da pessoa: `data/screenshots/`. Convenção em docs/architecture.md.

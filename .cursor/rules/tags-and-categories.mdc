@@ -1,0 +1,28 @@
+---
+description: Tags automáticas, ordem e o que cada categoria mostra
+globs:
+  - src/lib/auto-tags.ts
+  - src/lib/type-groups.ts
+  - src/types/nms.ts
+alwaysApply: false
+---
+
+# Tags
+
+A tag de classe é a letra mais a palavra Class: `S Class`, `SSS Class`. As automáticas são pílulas. A segunda linha “Class A - Type …” não aparece no card. Manuais vêm depois das automáticas. O diálogo de arquivar já traz as automáticas. Ao editar de novo, as automáticas voltam para a frente.
+
+Ordem em nave, cargueira, fragata e esquadrão: classe, tipo, tag da categoria (`Ship`, `Freighter`, `Frigate`, `Squadron`).
+
+Ordem em companion: classe, elemento (`Ice`), espécie, `Level N`, bioma com sufixo (`Frozen Biome`). Elemento e bioma gravados ficam em inglês. Espécie `UI_…` guarda só o miolo (`FIEND`). A classe sai do rank anotado; sem rank, não há tag de classe.
+
+Multi-tool: dropdown com Pistol, Rifle, Experimental, Alien, Exotic / Royal, Sentinel, Atlantid, Voltaic Staff. O valor gravado é inglês; a tela traduz. Trocar o dropdown reescreve a tag. `Atlas Staff` e `Staff` viram `Voltaic Staff`. Ordem: classe, tipo, `Multi-tool`.
+
+`SENTINELSHIP` é Interceptor e `BIOSHIP` é Living Ship, não Fighter. Mudar o tipo da nave no arquivar reescreve a tag, do mesmo jeito que a multi-tool. Esse rewrite ainda não está no código.
+
+Tag de galáxia é só o nome (`Euclid`), sem índice. Entra em base planetária, deep space e space station. Não entra na base da cargueira. Não existe tag de quantidade de objetos. O código ainda grava `1 · Euclid` só em `category === "base"` e ainda emite a tag de objetos.
+
+Filtro de classe em All e Companions: SSS, SS, S, A, B, C e Qualquer. Nas outras categorias: S, A, B, C. O valor filtrado é a letra, não `S Class`.
+
+Settings cria, renomeia e apaga tags, com confirmação na exclusão.
+
+Fragatas e esquadrão são itens próprios do menu, não seções dentro de Cargueiras.

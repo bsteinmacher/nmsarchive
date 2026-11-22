@@ -1,0 +1,47 @@
+---
+description: Formato do save .hg, slots, reorder e apply
+globs:
+  - src/lib/nms/**
+  - src/stores/**
+alwaysApply: false
+---
+
+# Save
+
+Round-trip do JSON é Latin-1, um byte por caractere (`bytesToLatin1`). Não usar o `TextDecoder` rotulado `latin1`. Não reescrever IDs procedurais. UTF-8 lossy só na tela.
+
+Gravar reofusca as chaves com o `mapping.json` e comprime em LZ4 block: magic `0xFEEDA1E5`, header de 16 bytes, bloco no máximo `0x80000`. Não é frame LZ4. Chave desconhecida permanece no JSON, entra em `unknownKeys`, e a UI pede para atualizar o mapping. Não regenerar `mf_save.hg`.
+
+A pasta do jogo é escolhida uma vez. Abre o `save*.hg` mais recente e grava por cima dele. Antes, copia o arquivo do disco para `Documentos/NMS Archive` como `saveN-YYYY-MM-DD-HH-MM-SS.hg`. Se o arquivo mudou desde a leitura, não sobrescreve.
+
+Galáxia gravada é `RealityIndex` `0–255`. A UI mostra índice+1. Não somar 1 ao gravar.
+
+## Slots
+
+Naves, multi-tools e companions são arrays de tamanho fixo. Mostrar vazios. Arrastar troca dois índices, o length não muda, não compactar, sem atalho de teclado. Item novo cai no primeiro vazio e o array não cresce. Lista cheia com o mesmo seed (exceto `0x0`) substitui esse slot. Multi-tool é `Multitools[]`, não `WeaponOwnership`.
+
+Reordenar nave move `ShipOwnership`, o índice da nave ativa, o slot de `CharacterCustomisationData` e o `PlayerShipBase` daquele índice. Slots 0–5 mapeiam índices 3–8; 6–11 mapeiam 17–22. Jogador, multi-tool, veículo e cargueira nesse array não entram no swap.
+
+Arquivar nave customizada leva `ownership`, `customisation` e `hull` dentro do envelope v1. Arquivo antigo, só `ShipOwnership`, importa sem herdar visual nem casco de outra nave.
+
+A tela mostra uma cargueira, `CurrentFreighter` índice 0, e a base interior nessa página. Não listar `FreighterFleet` como slots e não apagar essa frota do JSON. A base da cargueira continua `category: base` no banco e não aparece em Bases.
+
+Fragatas: teto 30, sem vazio pré-alocado, aplicar no fim, excluir tira do array. A tela ordena por função, classe e nome. Não há arrastar: o jogo ordena sozinho.
+
+Companion se identifica pela mistura das sementes genéticas mais `CreatureID`, não por `CreatureSeed`. Reordenar também move `UnlockedPetSlots`, acessórios e `PetBattleTeam`. Rank de ataque, agilidade e vida é anotação do arquivo e não volta no save.
+
+## Apply
+
+Em nave, multi-tool e cargueira, perguntar se cria no primeiro vazio ou cobre um slot. Por cima: Re-skin ou Trocar.
+
+Re-skin marca o que vem do arquivo. Padrão de nave e multi-tool: modelo e classe. Padrão da cargueira: nome, modelo e origem; classe desmarcada. Inventário começa desmarcado e o checkbox existe.
+
+Trocar e slot novo deixam a carga vazia. Tecnologia pode ir na troca. Staff leva `CustomisationData`. Reordenar o slot ativo da multi-tool leva a arma na mão.
+
+Esquadrão: quatro slots fixos, sem re-skin. O quinto é recusado. Reordenar move piloto e flag juntos.
+
+Deep Space entra por append, sem teto e sem reusar vazio de planeta. Space Station tem teto 20 e reusa vazio do próprio tipo. As duas são seções dentro de Bases, não itens do menu.
+
+Base planetária avisa quando `Objects` passa de 50. Traje: só layout e tech; aplicar não apaga substância.
+
+Ainda não no código: ao arquivar companion, guardar o nível atual; no `.nmsitem`, gravar o nível mínimo do jogo (conferir `PetBattlerTreatsEaten`, sem chutar 0 ou 1); ao aplicar, a pessoa escolhe qualquer nível até 30.

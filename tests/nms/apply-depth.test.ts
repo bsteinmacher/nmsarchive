@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { applyItem, reorderCategory } from "@/lib/nms/extract";
+import { applyTargetSlots } from "@/lib/nms/extract/apply-depth";
 import { applyShip } from "@/lib/nms/extract/ships";
+import type { ExtractedSlot } from "@/lib/nms/extract/types";
 import { getPlayerState } from "@/lib/nms/player";
 import { asArray, asRecord, asString } from "@/lib/nms/value";
 
@@ -756,5 +758,48 @@ describe("apply multitool and freighter", () => {
     ]);
     expect(asRecord(player?.FreighterInventory_Cargo)?.Slots).toEqual([]);
     expect(asRecord(player?.FreighterInventory)?.Name).toBe("inv");
+  });
+});
+
+function freighterSlot(
+  index: number,
+  overrides: Partial<ExtractedSlot> = {},
+): ExtractedSlot {
+  return {
+    category: "freighter",
+    index,
+    name: "",
+    seed: "0x1",
+    extra: {},
+    payload: {},
+    empty: false,
+    className: "S",
+    itemType: "Freighter",
+    filename: "",
+    ...overrides,
+  };
+}
+
+describe("applyTargetSlots", () => {
+  it("cargueira só oferece o índice 0, mesmo com frota no extrator", () => {
+    const slots = [
+      freighterSlot(0),
+      freighterSlot(1),
+      freighterSlot(2, { readonly: true }),
+    ];
+    expect(applyTargetSlots("freighter", slots).map((slot) => slot.index)).toEqual([
+      0,
+    ]);
+  });
+
+  it("nave mantém os outros slots editáveis", () => {
+    const slots = [
+      freighterSlot(0, { category: "ship" }),
+      freighterSlot(1, { category: "ship" }),
+      freighterSlot(2, { category: "ship", readonly: true }),
+    ];
+    expect(applyTargetSlots("ship", slots).map((slot) => slot.index)).toEqual([
+      0, 1,
+    ]);
   });
 });
